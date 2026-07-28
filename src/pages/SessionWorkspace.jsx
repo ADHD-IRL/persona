@@ -16,6 +16,9 @@ import { buildDecisionFraming } from '@/lib/decisionContext';
 import { useElapsed, fmtDuration } from '@/hooks/useElapsed';
 import ProcessingBar from '@/components/ui/ProcessingBar';
 import NextSteps from '@/components/session/NextSteps';
+import SessionKillChains from '@/components/session/SessionKillChains';
+import SessionMitigations from '@/components/session/SessionMitigations';
+import SessionRiskHeader from '@/components/session/SessionRiskHeader';
 import AnalysisStages from '@/components/session/AnalysisStages';
 import { buildGroups } from '@/components/threatmap/mapUtils';
 import WrButton from '@/components/ui/WrButton';
@@ -26,7 +29,7 @@ import RiskRegistry from '@/components/session/RiskRegistry';
 import SessionProgressBar from '@/components/session/SessionProgressBar';
 import SynthesisSummary from '@/components/session/SynthesisSummary';
 
-const TABS = ['ROUND 1','ROUND 2','SYNTHESIS','THREATS','SOURCES','SETTINGS'];
+const TABS = ['ROUND 1','ROUND 2','SYNTHESIS','KILL CHAINS','THREATS','MITIGATIONS','SOURCES','SETTINGS'];
 
 class SynthesisErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -1349,6 +1352,27 @@ const briefAllAgents = async () => {
     }
   };
 
+  // "Run Full Session": drive Round 1 → Round 2 → Synthesis with one click.
+  // generateRound(2) already cascades into synthesis, so we only need to chain
+  // R1 → R2. The effect below advances to R2 once R1 is complete.
+  const [runningFull, setRunningFull] = useState(false);
+  const runFullSession = () => {
+    if (!sessionAgents.length || generatingAll) return;
+    setRunningFull(true);
+    if (sessionAgents.every(sa => sa.round1_assessment)) generateRound(2);
+    else generateRound(1);
+  };
+  useEffect(() => {
+    if (!runningFull || generatingAll || generatingSynthesis) return;
+    if (!sessionAgents.length) { setRunningFull(false); return; }
+    const allR1 = sessionAgents.every(sa => sa.round1_assessment);
+    const allR2 = sessionAgents.every(sa => sa.round2_rebuttal);
+    if (allR2 || synthesis?.raw_text) { setRunningFull(false); return; }
+    if (allR1) generateRound(2);   // R1 done → advance to R2 (which auto-synthesizes)
+    // If R1 isn't complete and nothing is running, a step failed — stop chaining.
+    else setRunningFull(false);
+  }, [runningFull, generatingAll, generatingSynthesis, sessionAgents, synthesis]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const generateSingleAgent = async (sa, round) => {
     const agent = getAgent(sa.agent_id);
     if (!agent) return;
@@ -1646,13 +1670,15 @@ const briefAllAgents = async () => {
             if (sessionMitigations.length) done.add('act');
             if (decisionMeta?.decision?.status === 'decided') done.add('decide');
             const current = tab === 'ROUND 1' ? 'round1' : tab === 'ROUND 2' ? 'round2'
-              : tab === 'SYNTHESIS' ? 'synthesis' : tab === 'THREATS' ? 'findings' : 'setup';
+              : tab === 'SYNTHESIS' ? 'synthesis'
+              : (tab === 'KILL CHAINS' || tab === 'THREATS') ? 'findings'
+              : tab === 'MITIGATIONS' ? 'act' : 'setup';
             const go = (stage) => {
               if (stage === 'round1') setTab('ROUND 1');
               else if (stage === 'round2') setTab('ROUND 2');
               else if (stage === 'synthesis') setTab('SYNTHESIS');
-              else if (stage === 'findings') setTab('THREATS');
-              else if (stage === 'act') navigate(`/mitigations?session=${id}`);
+              else if (stage === 'findings') setTab('KILL CHAINS');
+              else if (stage === 'act') setTab('MITIGATIONS');
               else if (stage === 'decide' && session?.decision_id) navigate(`/decisions/${session.decision_id}`);
             };
             return <div className="mt-2"><AnalysisStages current={current} done={done} onNavigate={go} /></div>;
@@ -1690,7 +1716,7 @@ const briefAllAgents = async () => {
               {generatingAll ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <WrButton size="sm" variant="secondary" onClick={() => { cancelRef.current = true; }} style={{ borderColor: '#C0392B', color: '#C0392B' }}>
+                    <WrButton size="sm" variant="secondary" onClick={() => { cancelRef.current = true; setRunningFull(false); }} style={{ borderColor: '#C0392B', color: '#C0392B' }}>
                       <StopCircle className="w-3.5 h-3.5" /> Stop
                     </WrButton>
                   </TooltipTrigger>
@@ -1698,10 +1724,21 @@ const briefAllAgents = async () => {
                 </Tooltip>
               ) : (
                 <>
+                  {!sessionAgents.every(sa => sa.round2_rebuttal) && sessionAgents.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <WrButton size="sm" onClick={runFullSession} disabled={generatingAll}>
+                          <Sparkles className="w-3.5 h-3.5" /> Run Full Session
+                        </WrButton>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Run Round 1 → Round 2 → Synthesis in one go</TooltipContent>
+                    </Tooltip>
+                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <WrButton
                         size="sm"
+                        variant="secondary"
                         onClick={() => generateRound(round)}
                         disabled={generatingAll || sessionAgents.every(sa => round === 1 ? sa.round1_assessment : sa.round2_rebuttal)}
                       >
@@ -1989,6 +2026,14 @@ const briefAllAgents = async () => {
 
         {tab === 'SYNTHESIS' && (
           <SynthesisErrorBoundary key={synthesis?.id || 'synth'}>
+            {synthesis?.raw_text && (
+              <SessionRiskHeader
+                sessionAgents={sessionAgents}
+                threats={threats}
+                chains={sessionChains}
+                mitigations={sessionMitigations}
+              />
+            )}
             <SynthesisSummary
               synthesis={synthesis}
               sessionAgents={sessionAgents}
@@ -2029,11 +2074,32 @@ const briefAllAgents = async () => {
                     mitigationsCount={sessionMitigations.length}
                     coverageGaps={gaps}
                     onCatalogThreats={() => setTab('THREATS')}
+                    onBreakChains={() => setTab('KILL CHAINS')}
+                    onTrackMitigations={() => setTab('MITIGATIONS')}
                   />
                 </div>
               );
             })()}
           </SynthesisErrorBoundary>
+        )}
+
+        {tab === 'KILL CHAINS' && (
+          <div className="max-w-4xl">
+            <SessionKillChains
+              db={db}
+              sessionId={id}
+              chains={sessionChains}
+              scenarioContext={(session?.context_override ? session.context_override + '\n\n' : '') + (scenario?.context_document || '')}
+              existingMitigations={sessionMitigations}
+              onAnalyzed={load}
+            />
+          </div>
+        )}
+
+        {tab === 'MITIGATIONS' && (
+          <div className="max-w-4xl">
+            <SessionMitigations db={db} mitigations={sessionMitigations} onChange={load} />
+          </div>
         )}
 
         {tab === 'THREATS' && (
