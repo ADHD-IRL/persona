@@ -18,6 +18,7 @@ import ProcessingBar from '@/components/ui/ProcessingBar';
 import NextSteps from '@/components/session/NextSteps';
 import SessionKillChains from '@/components/session/SessionKillChains';
 import SessionMitigations from '@/components/session/SessionMitigations';
+import SessionRiskHeader from '@/components/session/SessionRiskHeader';
 import AnalysisStages from '@/components/session/AnalysisStages';
 import { buildGroups } from '@/components/threatmap/mapUtils';
 import WrButton from '@/components/ui/WrButton';
@@ -2025,6 +2026,14 @@ const briefAllAgents = async () => {
 
         {tab === 'SYNTHESIS' && (
           <SynthesisErrorBoundary key={synthesis?.id || 'synth'}>
+            {synthesis?.raw_text && (
+              <SessionRiskHeader
+                sessionAgents={sessionAgents}
+                threats={threats}
+                chains={sessionChains}
+                mitigations={sessionMitigations}
+              />
+            )}
             <SynthesisSummary
               synthesis={synthesis}
               sessionAgents={sessionAgents}
