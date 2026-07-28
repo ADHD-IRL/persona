@@ -12,6 +12,8 @@ export default function NextSteps({
   mitigationsCount = 0,
   coverageGaps = null,       // number, or null if not computed
   onCatalogThreats,
+  onBreakChains,             // in-session tab switch (falls back to navigation)
+  onTrackMitigations,
 }) {
   const navigate = useNavigate();
 
@@ -30,15 +32,15 @@ export default function NextSteps({
       done: false,
       status: chainsCount > 0 ? `${chainsCount} chain${chainsCount !== 1 ? 's' : ''} extracted` : 'No chains found in synthesis',
       cta: chainsCount > 0 ? 'Analyze' : null,
-      onClick: chainsCount > 0 ? () => navigate(`/chain-breaker?session=${sessionId}`) : null,
+      onClick: chainsCount > 0 ? (onBreakChains || (() => navigate(`/chain-breaker?session=${sessionId}`))) : null,
     },
     {
       icon: ShieldCheck, color: '#27AE60',
       title: 'Track the mitigations',
       done: mitigationsCount > 0,
-      status: mitigationsCount > 0 ? `${mitigationsCount} registered` : 'Register from the chain breaker',
-      cta: mitigationsCount > 0 ? 'Open register' : null,
-      onClick: mitigationsCount > 0 ? () => navigate(`/mitigations?session=${sessionId}`) : null,
+      status: mitigationsCount > 0 ? `${mitigationsCount} registered` : 'Auto-generated when you break the chains',
+      cta: 'Open register',
+      onClick: onTrackMitigations || (() => navigate(`/mitigations?session=${sessionId}`)),
     },
     {
       icon: Map, color: '#2E86AB',
