@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Globe, Target, AlertTriangle,
-  Bot, Link2, Swords, BarChart3, Wifi, Map,
+  Bot, Link2, Swords, BarChart3, Wifi, Map, ChevronDown, ChevronRight,
   Shield, BookOpen, Brain, GitCompare, Settings2, Scissors, FlaskConical, ShieldCheck, GitBranch, BookMarked, Braces
 } from 'lucide-react';
 
 // Menu is ordered as the actual workflow: build a reusable library, plan the
-// engagement, run the red team, then act on what it surfaces.
+// engagement, run the red team, review the output. Kill chains, chain breaking,
+// mitigations and coverage all live INSIDE a session now — the cross-session
+// versions are roll-up libraries, collapsed under "Analyze" so the primary
+// path stays short.
 const primary = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
 ];
@@ -27,7 +31,6 @@ const groups = [
     items: [
       { path: '/decisions', icon: GitBranch, label: 'Decisions' },
       { path: '/scenarios', icon: Target, label: 'Scenarios' },
-      { path: '/threats', icon: AlertTriangle, label: 'Threats' },
     ],
   },
   {
@@ -39,19 +42,22 @@ const groups = [
     ],
   },
   {
-    title: '4 · Act on Findings',
-    hint: 'Coverage, chains & mitigation',
+    title: '4 · Review',
+    hint: 'Share what the session found',
     items: [
-      { path: '/threatmap', icon: Map, label: 'Threat Map' },
-      { path: '/chains', icon: Link2, label: 'Chains' },
-      { path: '/chain-breaker', icon: Scissors, label: 'Chain Breaker' },
-      { path: '/mitigations', icon: ShieldCheck, label: 'Mitigations' },
       { path: '/reports', icon: BarChart3, label: 'Reports' },
     ],
   },
   {
-    title: 'Insights',
+    title: 'Analyze',
+    hint: 'Cross-session libraries',
+    collapsible: true,
     items: [
+      { path: '/threatmap', icon: Map, label: 'Threat Map' },
+      { path: '/threats', icon: AlertTriangle, label: 'Threats' },
+      { path: '/chains', icon: Link2, label: 'Chains' },
+      { path: '/chain-breaker', icon: Scissors, label: 'Chain Breaker' },
+      { path: '/mitigations', icon: ShieldCheck, label: 'Mitigations' },
       { path: '/agent-analytics', icon: Brain, label: 'Agent Analytics' },
       { path: '/compare', icon: GitCompare, label: 'Compare' },
     ],
@@ -65,6 +71,49 @@ const groups = [
     ],
   },
 ];
+
+function NavGroup({ group, isActive }) {
+  const hasActiveChild = group.items.some(i => isActive(i.path));
+  // Collapsed by default; opens automatically when you're inside one of its pages.
+  const [open, setOpen] = useState(!group.collapsible || hasActiveChild);
+  const expanded = group.collapsible ? (open || hasActiveChild) : true;
+
+  return (
+    <div>
+      <div className="mx-4 mt-3 mb-1 border-t" style={{ borderColor: 'var(--wr-border)' }} />
+      {group.collapsible ? (
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="w-full flex items-center justify-between px-5 pt-1 pb-0.5 text-left"
+        >
+          <div>
+            <p className="text-xs font-bold tracking-widest font-mono" style={{ color: hasActiveChild ? 'var(--wr-amber)' : 'var(--wr-text-muted)' }}>
+              {group.title.toUpperCase()}
+            </p>
+            {group.hint && (
+              <p className="text-xs mt-0.5" style={{ color: 'var(--wr-text-muted)', opacity: 0.55 }}>{group.hint}</p>
+            )}
+          </div>
+          {expanded
+            ? <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }} />
+            : <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }} />}
+        </button>
+      ) : (
+        <div className="px-5 pt-1 pb-0.5">
+          <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
+            {group.title.toUpperCase()}
+          </p>
+          {group.hint && (
+            <p className="text-xs mt-0.5" style={{ color: 'var(--wr-text-muted)', opacity: 0.55 }}>{group.hint}</p>
+          )}
+        </div>
+      )}
+      {expanded && group.items.map(item => (
+        <NavLink key={item.path} {...item} active={isActive(item.path)} />
+      ))}
+    </div>
+  );
+}
 
 function NavLink({ path, icon: Icon, label, active }) {
   return (
@@ -110,23 +159,8 @@ export default function Sidebar({ stats }) {
           ))}
         </div>
 
-        {groups.map((group, gi) => (
-          <div key={group.title}>
-            <div className="mx-4 mt-3 mb-1 border-t" style={{ borderColor: 'var(--wr-border)' }} />
-            <div className="px-5 pt-1 pb-0.5">
-              <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
-                {group.title.toUpperCase()}
-              </p>
-              {group.hint && (
-                <p className="text-xs mt-0.5" style={{ color: 'var(--wr-text-muted)', opacity: 0.55 }}>
-                  {group.hint}
-                </p>
-              )}
-            </div>
-            {group.items.map(item => (
-              <NavLink key={item.path} {...item} active={isActive(item.path)} />
-            ))}
-          </div>
+        {groups.map(group => (
+          <NavGroup key={group.title} group={group} isActive={isActive} />
         ))}
       </nav>
 
