@@ -1351,6 +1351,27 @@ const briefAllAgents = async () => {
     }
   };
 
+  // "Run Full Session": drive Round 1 → Round 2 → Synthesis with one click.
+  // generateRound(2) already cascades into synthesis, so we only need to chain
+  // R1 → R2. The effect below advances to R2 once R1 is complete.
+  const [runningFull, setRunningFull] = useState(false);
+  const runFullSession = () => {
+    if (!sessionAgents.length || generatingAll) return;
+    setRunningFull(true);
+    if (sessionAgents.every(sa => sa.round1_assessment)) generateRound(2);
+    else generateRound(1);
+  };
+  useEffect(() => {
+    if (!runningFull || generatingAll || generatingSynthesis) return;
+    if (!sessionAgents.length) { setRunningFull(false); return; }
+    const allR1 = sessionAgents.every(sa => sa.round1_assessment);
+    const allR2 = sessionAgents.every(sa => sa.round2_rebuttal);
+    if (allR2 || synthesis?.raw_text) { setRunningFull(false); return; }
+    if (allR1) generateRound(2);   // R1 done → advance to R2 (which auto-synthesizes)
+    // If R1 isn't complete and nothing is running, a step failed — stop chaining.
+    else setRunningFull(false);
+  }, [runningFull, generatingAll, generatingSynthesis, sessionAgents, synthesis]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const generateSingleAgent = async (sa, round) => {
     const agent = getAgent(sa.agent_id);
     if (!agent) return;
@@ -1694,7 +1715,7 @@ const briefAllAgents = async () => {
               {generatingAll ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <WrButton size="sm" variant="secondary" onClick={() => { cancelRef.current = true; }} style={{ borderColor: '#C0392B', color: '#C0392B' }}>
+                    <WrButton size="sm" variant="secondary" onClick={() => { cancelRef.current = true; setRunningFull(false); }} style={{ borderColor: '#C0392B', color: '#C0392B' }}>
                       <StopCircle className="w-3.5 h-3.5" /> Stop
                     </WrButton>
                   </TooltipTrigger>
@@ -1702,10 +1723,21 @@ const briefAllAgents = async () => {
                 </Tooltip>
               ) : (
                 <>
+                  {!sessionAgents.every(sa => sa.round2_rebuttal) && sessionAgents.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <WrButton size="sm" onClick={runFullSession} disabled={generatingAll}>
+                          <Sparkles className="w-3.5 h-3.5" /> Run Full Session
+                        </WrButton>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Run Round 1 → Round 2 → Synthesis in one go</TooltipContent>
+                    </Tooltip>
+                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <WrButton
                         size="sm"
+                        variant="secondary"
                         onClick={() => generateRound(round)}
                         disabled={generatingAll || sessionAgents.every(sa => round === 1 ? sa.round1_assessment : sa.round2_rebuttal)}
                       >
