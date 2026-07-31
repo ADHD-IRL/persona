@@ -6,7 +6,7 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { generateRound1, generateRound2, generateRound0, generateReaction, generateSynthesis as generateSynthesisLLM, extractSessionThreats } from '@/lib/llm';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, RefreshCw, ChevronDown, ChevronUp, Sparkles, AlertCircle, Save, BarChart2, ShieldAlert, Check, X, BookOpen, MessageSquare, BellRing, StopCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, ChevronDown, ChevronUp, Sparkles, AlertCircle, Save, BarChart2, ShieldAlert, Check, X, BookOpen, MessageSquare, BellRing, StopCircle, Trash2, Users } from 'lucide-react';
 import SeverityBadge from '@/components/ui/SeverityBadge';
 import EvidenceLedger from '@/components/session/EvidenceLedger';
 import { riskScore, riskBandFromScore, likelihoodLabel, impactLabel } from '@/lib/risk';
@@ -1181,8 +1181,9 @@ export default function SessionWorkspace() {
     if (!searchParams.get('autoSynth') || autoSynthFiredRef.current) return;
     if (!session || generatingSynthesis) return;
     if (synthesis) return; // already done
+    // Panel sessions synthesize from the transcript, so they have no rounds to wait on.
     const allR2Done = sessionAgents.length > 0 && sessionAgents.every(sa => sa.round2_rebuttal);
-    if (!allR2Done) return;
+    if (session.mode !== 'panel' && !allR2Done) return;
     autoSynthFiredRef.current = true;
     setTab('SYNTHESIS');
     generateSynthesis();
@@ -1498,15 +1499,40 @@ const briefAllAgents = async () => {
       const agentMap = Object.fromEntries(freshAgentDefs.map(a => [a.id, a]));
       const scenarioDef = freshScenarios.find(s => s.id === sess?.scenario_id);
 
+      let synthAgents = freshAgents.map(sa => ({
+        ...sa,
+        agentName: agentMap[sa.agent_id]?.name,
+        discipline: agentMap[sa.agent_id]?.discipline,
+      }));
+      let synthContext = scenarioDef?.context_document || '';
+
+      // Panel/live-event sessions carry their content in the transcript rather
+      // than round assessments. Fold each SME's contributions into the
+      // assessment slot (in memory only) so the existing synthesis pipeline —
+      // and its chain/threat extraction — works unchanged.
+      if (sess?.mode === 'panel') {
+        const msgs = await db.SessionMessage.filter({ session_id: id }).catch(() => []);
+        const byAgent = {};
+        for (const m of msgs) {
+          if (m.role !== 'agent' || !m.agent_id || !m.content) continue;
+          (byAgent[m.agent_id] = byAgent[m.agent_id] || []).push(m.content);
+        }
+        synthAgents = synthAgents.map(sa => ({
+          ...sa,
+          round1_assessment: sa.round1_assessment || (byAgent[sa.agent_id] || []).join('\n\n') || null,
+        }));
+        const humanTurns = msgs
+          .filter(m => m.role === 'user' && m.content)
+          .map(m => `${m.author_name || 'Team'}: ${m.content}`)
+          .join('\n');
+        if (humanTurns) synthContext += `\n\nLIVE EVENT — TEAM DISCUSSION:\n${humanTurns}`;
+      }
+
       setSynthStatus('Streaming synthesis...');
       const res = await generateSynthesisLLM({
         session: sess,
-        sessionAgents: freshAgents.map(sa => ({
-          ...sa,
-          agentName: agentMap[sa.agent_id]?.name,
-          discipline: agentMap[sa.agent_id]?.discipline,
-        })),
-        scenarioContext: scenarioDef?.context_document || '',
+        sessionAgents: synthAgents,
+        scenarioContext: synthContext,
         onToken: (_tok, full) => setSynthStreamText(full),
       });
 
@@ -1690,6 +1716,13 @@ const briefAllAgents = async () => {
               <WrButton size="sm" style={{ backgroundColor: 'rgba(46,134,171,0.15)', borderColor: 'rgba(46,134,171,0.4)', color: '#2E86AB' }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#2E86AB', display: 'inline-block', marginRight: 4 }} />
                 Enter Debate Room
+              </WrButton>
+            </Link>
+          )}
+          {session.mode === 'panel' && (
+            <Link to={`/sessions/${id}/panel`}>
+              <WrButton size="sm" style={{ backgroundColor: 'rgba(155,89,182,0.15)', borderColor: 'rgba(155,89,182,0.4)', color: '#9B59B6' }}>
+                <Users className="w-3.5 h-3.5" /> Enter Panel Room
               </WrButton>
             </Link>
           )}

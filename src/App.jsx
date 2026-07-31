@@ -35,6 +35,7 @@ import DecisionDetail from '@/pages/DecisionDetail';
 import KnowledgeBase from '@/pages/KnowledgeBase';
 import WhatIfSimulator from '@/pages/WhatIfSimulator';
 import LiveDebateRoom from '@/pages/LiveDebateRoom';
+import PanelRoom from '@/pages/PanelRoom';
 
 const LoadingScreen = () => (
   <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'var(--wr-bg-primary)' }}>
@@ -87,6 +88,7 @@ const AppRoutes = () => {
         <Route path="/sessions/new"         element={<NewSession />} />
         <Route path="/sessions/:id"         element={<SessionWorkspace />} />
         <Route path="/sessions/:id/live"    element={<LiveDebateRoom />} />
+        <Route path="/sessions/:id/panel"   element={<PanelRoom />} />
         <Route path="/sessions/:id/results" element={<SessionResults />} />
         <Route path="/reports"              element={<Reports />} />
         <Route path="/threatmap"            element={<ThreatMap />} />

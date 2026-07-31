@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
-import { Swords, Plus, X, ChevronRight, Zap, BarChart2, Globe, Link2, Sparkles, Loader2, AlertCircle, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Swords, Plus, X, ChevronRight, Zap, BarChart2, Globe, Link2, Sparkles, Loader2, AlertCircle, UserPlus, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import WrButton from '@/components/ui/WrButton';
 import SeverityBadge, { agentDefaultSeverityTitle } from '@/components/ui/SeverityBadge';
@@ -24,6 +24,13 @@ const MODES = [
     label: 'Live Debate',
     description: 'Real-time streaming debate room. Watch agents think, interject with questions, and direct the conversation.',
     color: '#F0A500',
+  },
+  {
+    id: 'panel',
+    icon: Users,
+    label: 'Expert Panel',
+    description: 'A standing panel that works the problem with your team. SMEs speak up when a topic is theirs, defer when it is not, and argue with each other — for expertise you cannot convene in person.',
+    color: '#9B59B6',
   },
 ];
 

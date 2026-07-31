@@ -11,6 +11,7 @@ const TABLE = {
   SessionSynthesis: 'session_syntheses',
   SessionMessage:   'session_messages',
   SessionSource:    'session_sources',
+  SessionParticipant: 'session_participants',
   AppConfig:        'app_configs',
   Workspace:        'workspaces',
   WorkspaceMember:  'workspace_members',
