@@ -6,7 +6,7 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { generateRound1, generateRound2, generateRound0, generateReaction, generateSynthesis as generateSynthesisLLM, extractSessionThreats } from '@/lib/llm';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, RefreshCw, ChevronDown, ChevronUp, Sparkles, AlertCircle, Save, BarChart2, ShieldAlert, Check, X, BookOpen, MessageSquare, BellRing, StopCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, ChevronDown, ChevronUp, Sparkles, AlertCircle, Save, BarChart2, ShieldAlert, Check, X, BookOpen, MessageSquare, BellRing, StopCircle, Trash2, Users } from 'lucide-react';
 import SeverityBadge from '@/components/ui/SeverityBadge';
 import EvidenceLedger from '@/components/session/EvidenceLedger';
 import { riskScore, riskBandFromScore, likelihoodLabel, impactLabel } from '@/lib/risk';
@@ -1690,6 +1690,13 @@ const briefAllAgents = async () => {
               <WrButton size="sm" style={{ backgroundColor: 'rgba(46,134,171,0.15)', borderColor: 'rgba(46,134,171,0.4)', color: '#2E86AB' }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#2E86AB', display: 'inline-block', marginRight: 4 }} />
                 Enter Debate Room
+              </WrButton>
+            </Link>
+          )}
+          {session.mode === 'panel' && (
+            <Link to={`/sessions/${id}/panel`}>
+              <WrButton size="sm" style={{ backgroundColor: 'rgba(155,89,182,0.15)', borderColor: 'rgba(155,89,182,0.4)', color: '#9B59B6' }}>
+                <Users className="w-3.5 h-3.5" /> Enter Panel Room
               </WrButton>
             </Link>
           )}

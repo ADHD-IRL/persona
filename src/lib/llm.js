@@ -629,6 +629,60 @@ Be direct. Name names. Change your position if persuaded.${CITATION_INSTRUCTION}
   return callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 1100, onToken, onDone });
 }
 
+// --- generatePanelTurn ---
+// A turn in Panel Mode: the SME is a working member of a standing expert panel
+// sitting with a human team, not an assistant answering a prompt. Short,
+// conversational, addresses people by name, and yields when the topic is
+// outside its competence (the behavior that makes a panel feel real).
+export async function generatePanelTurn({
+  agent, roster = [], transcript = [], scenarioContext = '', floorReason = '',
+  shouldDefer = false, deferTo = [], onToken, onDone,
+}) {
+  const rosterLines = roster
+    .map(r => `- ${r.name}${r.discipline ? ` (${r.discipline})` : ''}${r.isHuman ? ' [human teammate]' : ''}`)
+    .join('\n');
+
+  const convo = transcript
+    .map(m => `${m.speaker}: ${m.content}`)
+    .join('\n\n');
+
+  const deferBlock = shouldDefer
+    ? `\nTHIS TOPIC IS OUTSIDE YOUR COMPETENCE. Do not answer it substantively. In ONE sentence, say so plainly and hand it to ${deferTo.length ? deferTo.join(' or ') : 'whoever on this panel owns it'} — by name if they are on the roster. Experts earn trust by knowing their limits.`
+    : `\nYou have the floor because: ${floorReason || 'this is your area'}. Speak to what YOU specifically add.`;
+
+  const prompt = `${buildPersonaHeader(agent, { round: 2 })}
+
+You are a member of a standing expert panel convened for this engagement. Real
+people are in the room with you. This is a working conversation, not a written
+assessment.
+
+PANEL & TEAM IN THE ROOM:
+${rosterLines || '(just you)'}
+
+ENGAGEMENT CONTEXT:
+${(scenarioContext || '').slice(0, 1500)}
+
+CONVERSATION SO FAR:
+${convo || '(the session is just opening)'}
+${deferBlock}
+
+Speak now, in first person, as yourself.
+- 40-110 words. Conversational. No headings, no bullet lists, no preamble.
+- Respond to what was actually just said. Name the person or expert you are
+  agreeing with, building on, or pushing back against.
+- Add something only you would notice from your discipline — do not restate
+  points already made.
+- If you disagree, say so directly and say why.
+- If you need something from another expert or from the team, ask them for it.${CITATION_INSTRUCTION}`;
+
+  return callAnthropicStream({
+    messages: [{ role: 'user', content: prompt }],
+    maxTokens: 400,
+    onToken,
+    onDone,
+  });
+}
+
 export async function generateAgentReply({ agent, question, priorMessages, scenarioContext, onToken, onDone }) {
   const contextLines = (priorMessages || []).slice(-6).map(m =>
     m.agentName ? `${m.agentName}: ${m.content.slice(0, 300)}` : `Facilitator: ${m.content}`

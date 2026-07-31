@@ -189,6 +189,7 @@ export default function Sessions() {
             const status = STATUS_CONFIG[session.status] || STATUS_CONFIG.pending;
             const isDraft = status.draft;
             const isLive  = session.mode === 'live';
+            const isPanel = session.mode === 'panel';
 
             const sas      = saBySession[session.id] || [];
             const synth    = synthBySession[session.id];
@@ -260,6 +261,12 @@ export default function Sessions() {
                             style={{ backgroundColor: 'rgba(46,134,171,0.12)', color: '#2E86AB', border: '1px solid rgba(46,134,171,0.3)' }}>
                             {!isDraft && <Radio style={{ width: 8, height: 8 }} />}
                             LIVE
+                          </span>
+                        )}
+                        {isPanel && (
+                          <span className="text-xs px-1.5 py-0.5 rounded font-mono"
+                            style={{ backgroundColor: 'rgba(155,89,182,0.12)', color: '#9B59B6', border: '1px solid rgba(155,89,182,0.3)' }}>
+                            PANEL
                           </span>
                         )}
                         {topSev && (

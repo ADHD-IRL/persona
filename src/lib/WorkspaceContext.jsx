@@ -144,6 +144,7 @@ export const WorkspaceProvider = ({ children }) => {
       SessionSynthesis: scopedEntity(e.SessionSynthesis, workspace.id, user.id, { noCreatedBy: true }),
       SessionMessage:   scopedEntity(e.SessionMessage, workspace.id, user.id, { noCreatedBy: true }),
       SessionSource:    scopedEntity(e.SessionSource, workspace.id, user.id, { noCreatedBy: true }),
+      SessionParticipant: scopedEntity(e.SessionParticipant, workspace.id, user.id, { noCreatedBy: true }),
       AppConfig:        scopedEntity(e.AppConfig, workspace.id, user.id),
       Mitigation:          scopedEntity(e.Mitigation, workspace.id, user.id, { noCreatedBy: true }),
       Decision:            scopedEntity(e.Decision, workspace.id, user.id, { noCreatedBy: true }),
