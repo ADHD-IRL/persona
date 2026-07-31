@@ -636,7 +636,7 @@ Be direct. Name names. Change your position if persuaded.${CITATION_INSTRUCTION}
 // outside its competence (the behavior that makes a panel feel real).
 export async function generatePanelTurn({
   agent, roster = [], transcript = [], scenarioContext = '', floorReason = '',
-  shouldDefer = false, deferTo = [], onToken, onDone,
+  shouldDefer = false, deferTo = [], wasListening = false, onToken, onDone,
 }) {
   const rosterLines = roster
     .map(r => `- ${r.name}${r.discipline ? ` (${r.discipline})` : ''}${r.isHuman ? ' [human teammate]' : ''}`)
@@ -649,6 +649,10 @@ export async function generatePanelTurn({
   const deferBlock = shouldDefer
     ? `\nTHIS TOPIC IS OUTSIDE YOUR COMPETENCE. Do not answer it substantively. In ONE sentence, say so plainly and hand it to ${deferTo.length ? deferTo.join(' or ') : 'whoever on this panel owns it'} — by name if they are on the roster. Experts earn trust by knowing their limits.`
     : `\nYou have the floor because: ${floorReason || 'this is your area'}. Speak to what YOU specifically add.`;
+
+  const listenBlock = wasListening
+    ? `\nYou have been sitting in on this discussion without speaking, tracking it as it went. Several points have been raised since you last spoke. Respond to the discussion AS A WHOLE — the thread that matters most from your discipline — not just the final line. Lead with the thing you have been waiting to say.`
+    : '';
 
   const prompt = `${buildPersonaHeader(agent, { round: 2 })}
 
@@ -664,7 +668,7 @@ ${(scenarioContext || '').slice(0, 1500)}
 
 CONVERSATION SO FAR:
 ${convo || '(the session is just opening)'}
-${deferBlock}
+${deferBlock}${listenBlock}
 
 Speak now, in first person, as yourself.
 - 40-110 words. Conversational. No headings, no bullet lists, no preamble.

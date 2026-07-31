@@ -123,14 +123,21 @@ export function rankPanel({ agents = [], topic = '', lastSpeakerIds = [], addres
 // Urge above which an SME visibly "raises a hand" in the roster.
 export const SPEAK_THRESHOLD = 12;
 
+// In listen mode the panel stays quiet; only an urge this high is worth
+// breaking silence for (a forbidden-overreach risk, a conflict trigger landing
+// squarely in someone's lane). Deliberately far above SPEAK_THRESHOLD.
+export const INTERJECT_THRESHOLD = 55;
+
 /**
  * Choose the next speaker. Returns { agent, reason, defer, deferTo } or null when
  * nobody has enough to add (the panel falls silent and waits for the humans).
+ *
+ * `threshold` overrides the bar — pass INTERJECT_THRESHOLD for silent/listen mode.
  */
-export function pickNextSpeaker({ agents, topic, lastSpeakerIds = [], addressedId = null }) {
+export function pickNextSpeaker({ agents, topic, lastSpeakerIds = [], addressedId = null, threshold = SPEAK_THRESHOLD }) {
   const ranked = rankPanel({ agents, topic, lastSpeakerIds, addressedId });
   const top = ranked[0];
   if (!top) return null;
-  if (top.score < SPEAK_THRESHOLD && !addressedId) return null;
+  if (top.score < threshold && !addressedId) return null;
   return top;
 }

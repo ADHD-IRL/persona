@@ -1181,8 +1181,9 @@ export default function SessionWorkspace() {
     if (!searchParams.get('autoSynth') || autoSynthFiredRef.current) return;
     if (!session || generatingSynthesis) return;
     if (synthesis) return; // already done
+    // Panel sessions synthesize from the transcript, so they have no rounds to wait on.
     const allR2Done = sessionAgents.length > 0 && sessionAgents.every(sa => sa.round2_rebuttal);
-    if (!allR2Done) return;
+    if (session.mode !== 'panel' && !allR2Done) return;
     autoSynthFiredRef.current = true;
     setTab('SYNTHESIS');
     generateSynthesis();
@@ -1498,15 +1499,40 @@ const briefAllAgents = async () => {
       const agentMap = Object.fromEntries(freshAgentDefs.map(a => [a.id, a]));
       const scenarioDef = freshScenarios.find(s => s.id === sess?.scenario_id);
 
+      let synthAgents = freshAgents.map(sa => ({
+        ...sa,
+        agentName: agentMap[sa.agent_id]?.name,
+        discipline: agentMap[sa.agent_id]?.discipline,
+      }));
+      let synthContext = scenarioDef?.context_document || '';
+
+      // Panel/live-event sessions carry their content in the transcript rather
+      // than round assessments. Fold each SME's contributions into the
+      // assessment slot (in memory only) so the existing synthesis pipeline —
+      // and its chain/threat extraction — works unchanged.
+      if (sess?.mode === 'panel') {
+        const msgs = await db.SessionMessage.filter({ session_id: id }).catch(() => []);
+        const byAgent = {};
+        for (const m of msgs) {
+          if (m.role !== 'agent' || !m.agent_id || !m.content) continue;
+          (byAgent[m.agent_id] = byAgent[m.agent_id] || []).push(m.content);
+        }
+        synthAgents = synthAgents.map(sa => ({
+          ...sa,
+          round1_assessment: sa.round1_assessment || (byAgent[sa.agent_id] || []).join('\n\n') || null,
+        }));
+        const humanTurns = msgs
+          .filter(m => m.role === 'user' && m.content)
+          .map(m => `${m.author_name || 'Team'}: ${m.content}`)
+          .join('\n');
+        if (humanTurns) synthContext += `\n\nLIVE EVENT — TEAM DISCUSSION:\n${humanTurns}`;
+      }
+
       setSynthStatus('Streaming synthesis...');
       const res = await generateSynthesisLLM({
         session: sess,
-        sessionAgents: freshAgents.map(sa => ({
-          ...sa,
-          agentName: agentMap[sa.agent_id]?.name,
-          discipline: agentMap[sa.agent_id]?.discipline,
-        })),
-        scenarioContext: scenarioDef?.context_document || '',
+        sessionAgents: synthAgents,
+        scenarioContext: synthContext,
         onToken: (_tok, full) => setSynthStreamText(full),
       });
 

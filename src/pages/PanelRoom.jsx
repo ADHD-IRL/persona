@@ -3,11 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import {
   ArrowLeft, Send, Loader2, Play, Pause, StepForward, Users, Hand, Bot, UserPlus, X, Cpu,
+  Ear, MessageSquare, ClipboardPaste, FileText,
 } from 'lucide-react';
 import WrButton from '@/components/ui/WrButton';
 import { generatePanelTurn } from '@/lib/llm';
 import { buildDecisionFraming } from '@/lib/decisionContext';
-import { rankPanel, pickNextSpeaker, SPEAK_THRESHOLD } from '@/lib/floorControl';
+import { rankPanel, pickNextSpeaker, SPEAK_THRESHOLD, INTERJECT_THRESHOLD } from '@/lib/floorControl';
 import { saveTurnSources } from '@/lib/sources';
 
 const AGENT_COLORS = ['#F0A500', '#2E86AB', '#27AE60', '#C0392B', '#9B59B6', '#16A085', '#E67E22', '#8E44AD'];
@@ -118,6 +119,14 @@ export default function PanelRoom() {
   const [me, setMe] = useState({ name: '', role: '' });
   const [showAddPerson, setShowAddPerson] = useState(false);
 
+  // Ambient event controls
+  const [listenMode, setListenMode] = useState(false);   // panel tracks silently
+  const [allowInterject, setAllowInterject] = useState(false);
+  const [showCatchUp, setShowCatchUp] = useState(false);
+  const [catchUpText, setCatchUpText] = useState('');
+  const [ending, setEnding] = useState(false);
+  const silentSince = useRef(false); // panel has been listening without speaking
+
   const transcriptRef = useRef(null);
   const streamBuf = useRef({});
   const stopRef = useRef(false);
@@ -202,7 +211,7 @@ export default function PanelRoom() {
 
   // ── One panel turn ──────────────────────────────────────────────────────────
   const runTurn = useCallback(async (opts = {}) => {
-    const { forcedAgentId = null, topicOverride = null } = opts;
+    const { forcedAgentId = null, topicOverride = null, threshold = SPEAK_THRESHOLD, quiet = false } = opts;
     if (speaking) return false;
 
     const list = sessionAgents.map(sa => profiles[sa.agent_id]).filter(Boolean);
@@ -214,10 +223,13 @@ export default function PanelRoom() {
       topic,
       lastSpeakerIds: lastSpeakers.current,
       addressedId: forcedAgentId,
+      threshold,
     });
 
     if (!pick) {
-      push({ role: 'system', content: 'The panel has nothing further to add — put a question to them.' });
+      // `quiet` = a background check during listen mode; silence is the expected
+      // outcome there, so don't clutter the transcript with a notice.
+      if (!quiet) push({ role: 'system', content: 'The panel has nothing further to add — put a question to them.' });
       return false;
     }
 
@@ -253,6 +265,7 @@ export default function PanelRoom() {
         floorReason: pick.reason,
         shouldDefer: pick.defer,
         deferTo: pick.deferTo || [],
+        wasListening: silentSince.current,
         onToken: token => {
           setAgentStatus(s => ({ ...s, [agent.id]: 'speaking' }));
           streamBuf.current[tempId] = (streamBuf.current[tempId] || '') + token;
@@ -274,6 +287,7 @@ export default function PanelRoom() {
         },
       });
       lastSpeakers.current = [agent.id, ...lastSpeakers.current].slice(0, 4);
+      silentSince.current = false;
       return true;
     } catch (e) {
       setMessages(prev => prev.filter(m => m.id !== tempId));
@@ -305,25 +319,64 @@ export default function PanelRoom() {
   const startAuto = () => { stopRef.current = false; setTurnsLeft(AUTO_TURNS); setAutoRunning(true); };
   const pauseAuto = () => { stopRef.current = true; setAutoRunning(false); setTurnsLeft(0); };
 
-  // ── Human speaks ────────────────────────────────────────────────────────────
-  const send = async () => {
-    const text = input.trim();
-    if (!text || speaking) return;
-    setInput('');
+  // ── Capture what the room says ──────────────────────────────────────────────
+  // In listen mode this is note-taking: the panel absorbs it and stays quiet.
+  // Otherwise it's a turn in the conversation and the panel responds.
+  const capture = async (text, { forceReply = false } = {}) => {
+    const body = (text || '').trim();
+    if (!body) return;
     const authorName = me.name || 'You';
-    push({ role: 'user', content: text, authorName, authorRole: me.role });
+    push({ role: 'user', content: body, authorName, authorRole: me.role });
     try {
       await db.SessionMessage.create({
-        session_id: id, role: 'user', content: text,
+        session_id: id, role: 'user', content: body,
         author_type: 'human', author_name: authorName,
         metadata: { authorName, authorRole: me.role || null },
       });
-    } catch { /* keep going */ }
+    } catch { /* transcript still shown */ }
 
     const target = addressedId;
     setAddressedId(null);
-    // Let the panel respond to what was just said.
-    setTimeout(() => runTurn({ forcedAgentId: target, topicOverride: text }), 60);
+
+    if (listenMode && !forceReply && !target) {
+      silentSince.current = true;
+      // Only a very high urge is worth breaking silence for, and only if enabled.
+      if (allowInterject) {
+        setTimeout(() => runTurn({ topicOverride: body, threshold: INTERJECT_THRESHOLD, quiet: true }), 60);
+      }
+      return;
+    }
+    setTimeout(() => runTurn({ forcedAgentId: target, topicOverride: body }), 60);
+  };
+
+  const send = async () => {
+    if (!input.trim() || speaking) return;
+    const text = input;
+    setInput('');
+    await capture(text);
+  };
+
+  // "Thoughts?" — break the silence deliberately and let the most relevant
+  // expert speak to everything they have been tracking.
+  const askForThoughts = () => {
+    if (speaking) return;
+    silentSince.current = true;
+    runTurn();
+  };
+
+  const submitCatchUp = async () => {
+    const block = catchUpText.trim();
+    if (!block) return;
+    setCatchUpText('');
+    setShowCatchUp(false);
+    await capture(block, { forceReply: !listenMode });
+  };
+
+  // End the event and turn the transcript into the usual artifacts.
+  const endAndAnalyze = async () => {
+    setEnding(true);
+    try { await db.Session.update(id, { status: 'complete' }); } catch { /* non-fatal */ }
+    navigate(`/sessions/${id}?autoSynth=1`);
   };
 
   const addPerson = async (name, role) => {
@@ -357,7 +410,25 @@ export default function PanelRoom() {
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {autoRunning ? (
+          {/* Listen mode — the panel sits in and tracks without speaking */}
+          <button
+            onClick={() => { setListenMode(v => !v); if (!listenMode) { pauseAuto(); silentSince.current = true; } }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{
+              backgroundColor: listenMode ? 'rgba(155,89,182,0.15)' : 'transparent',
+              color: listenMode ? '#9B59B6' : 'var(--wr-text-secondary)',
+              border: `1px solid ${listenMode ? 'rgba(155,89,182,0.45)' : 'var(--wr-border)'}`,
+            }}
+            title="Panel listens and tracks the discussion without speaking until you ask"
+          >
+            <Ear className="w-3.5 h-3.5" /> {listenMode ? 'Listening' : 'Listen mode'}
+          </button>
+
+          {listenMode ? (
+            <WrButton size="sm" onClick={askForThoughts} disabled={speaking || !agentList.length}>
+              <MessageSquare className="w-3.5 h-3.5" /> Thoughts?
+            </WrButton>
+          ) : autoRunning ? (
             <WrButton size="sm" variant="secondary" onClick={pauseAuto} style={{ borderColor: '#C0392B', color: '#C0392B' }}>
               <Pause className="w-3.5 h-3.5" /> Pause ({turnsLeft})
             </WrButton>
@@ -366,8 +437,13 @@ export default function PanelRoom() {
               <Play className="w-3.5 h-3.5" /> Let them talk
             </WrButton>
           )}
+
           <WrButton size="sm" variant="secondary" onClick={() => runTurn()} disabled={speaking || autoRunning || !agentList.length}>
             <StepForward className="w-3.5 h-3.5" /> Next speaker
+          </WrButton>
+
+          <WrButton size="sm" variant="outline" onClick={endAndAnalyze} disabled={ending || !messages.length}>
+            {ending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />} End &amp; Analyze
           </WrButton>
         </div>
       </div>
@@ -403,19 +479,58 @@ export default function PanelRoom() {
                 </span>
               </div>
             )}
-            <div className="flex gap-2">
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
-                placeholder={addressedId ? `Ask ${profiles[addressedId]?.name}…` : 'Speak to the panel…'}
-                className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
-                style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}
-              />
-              <WrButton onClick={send} disabled={!input.trim() || speaking}>
-                {speaking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </WrButton>
-            </div>
+            {showCatchUp ? (
+              <div className="space-y-2">
+                <textarea
+                  value={catchUpText}
+                  onChange={e => setCatchUpText(e.target.value)}
+                  rows={5}
+                  autoFocus
+                  placeholder="Paste what's been discussed — meeting transcript, whiteboard notes, chat log. The panel reads the whole block and reacts to the thread that matters."
+                  className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
+                  style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}
+                />
+                <div className="flex gap-2">
+                  <WrButton size="sm" onClick={submitCatchUp} disabled={!catchUpText.trim()}>
+                    <ClipboardPaste className="w-3.5 h-3.5" /> Bring the panel up to speed
+                  </WrButton>
+                  <WrButton size="sm" variant="secondary" onClick={() => { setShowCatchUp(false); setCatchUpText(''); }}>Cancel</WrButton>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
+                  placeholder={
+                    addressedId ? `Ask ${profiles[addressedId]?.name}…`
+                    : listenMode ? 'Capture what the room is saying…'
+                    : 'Speak to the panel…'
+                  }
+                  className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
+                  style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}
+                />
+                <WrButton variant="secondary" onClick={() => setShowCatchUp(true)} title="Paste a block of discussion">
+                  <ClipboardPaste className="w-4 h-4" />
+                </WrButton>
+                <WrButton onClick={send} disabled={!input.trim() || speaking}>
+                  {speaking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </WrButton>
+              </div>
+            )}
+
+            {listenMode && (
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <span className="text-[10px] font-mono flex items-center gap-1" style={{ color: '#9B59B6' }}>
+                  <Ear className="w-2.5 h-2.5" /> PANEL IS LISTENING — notes are captured, nobody speaks until you ask
+                </span>
+                <label className="flex items-center gap-1.5 text-[10px] cursor-pointer" style={{ color: 'var(--wr-text-muted)' }}>
+                  <input type="checkbox" checked={allowInterject} onChange={e => setAllowInterject(e.target.checked)} className="accent-purple-500" />
+                  let an expert break in if it's urgent
+                </label>
+              </div>
+            )}
           </div>
         </div>
 

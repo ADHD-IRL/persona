@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { Swords, Plus, Trash2, Radio, CheckCircle2, Circle, RotateCcw, AlertTriangle, X, Pencil } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
+import ConvenePanelButton from '@/components/session/ConvenePanelButton';
 import EmptyState from '@/components/ui/EmptyState';
 import WrButton from '@/components/ui/WrButton';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -164,9 +165,12 @@ export default function Sessions() {
         title="SESSIONS"
         subtitle={`${sessions.length} session${sessions.length !== 1 ? 's' : ''}`}
         actions={
-          <Link to="/sessions/new">
-            <WrButton><Plus className="w-4 h-4" /> New Session</WrButton>
-          </Link>
+          <div className="flex gap-2">
+            <ConvenePanelButton size="md" />
+            <Link to="/sessions/new">
+              <WrButton><Plus className="w-4 h-4" /> New Session</WrButton>
+            </Link>
+          </div>
         }
       />
 

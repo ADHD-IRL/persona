@@ -9,6 +9,7 @@ import RiskRail    from '@/components/dashboard/RiskRail';
 import EventsList  from '@/components/dashboard/EventsList';
 import { aggregateSessionRisk, riskScore } from '@/lib/risk';
 import { buildGroups } from '@/components/threatmap/mapUtils';
+import ConvenePanelButton from '@/components/session/ConvenePanelButton';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -320,6 +321,9 @@ export default function Dashboard() {
               }}
             />
           </div>
+
+          {/* Convene a live panel — zero-ceremony entry for a real-world event */}
+          <ConvenePanelButton size="md" />
 
           {/* New event CTA */}
           <Link to="/sessions/new" style={{ textDecoration: 'none' }}>
