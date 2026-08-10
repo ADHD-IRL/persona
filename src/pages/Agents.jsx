@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
-import { Bot, Plus, Search, Sparkles, Trash2, Edit2, Copy, Upload, Trash, Wand2 } from 'lucide-react';
+import { Bot, Plus, Search, Sparkles, Trash2, Edit2, Copy, Upload, Trash, Wand2, Download } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import WrButton from '@/components/ui/WrButton';
@@ -11,6 +11,7 @@ import AgentFormModal from '@/components/agents/AgentFormModal';
 import AgentImportModal from '@/components/agents/AgentImportModal';
 import BulkDeleteModal from '@/components/agents/BulkDeleteModal';
 import DomainAssignModal from '@/components/agents/DomainAssignModal';
+import { downloadPersonaExport } from '@/lib/agentExport';
 
 export default function Agents() {
   const { db, workspace } = useWorkspace();
@@ -115,6 +116,14 @@ export default function Agents() {
 
   const domainById = id => domains.find(d => d.id === id);
 
+  // Export the personas currently in view (respects search/domain filters) as a
+  // portable JSON file — no ids or workspace refs, so it can be reimported
+  // anywhere.
+  const handleExport = () => {
+    const toExport = filtered.length ? filtered : agents;
+    downloadPersonaExport(toExport, domains);
+  };
+
   // Build the filter list from domain_ids that agents actually reference.
   // Resolves name/color from loaded workspace domains where possible;
   // falls back to discipline-based label for agents with unresolved domain_ids.
@@ -143,6 +152,12 @@ export default function Agents() {
           <div className="flex gap-2">
             <WrButton variant="outline" onClick={() => setShowAssign(true)}><Wand2 className="w-4 h-4" /> Assign Domains</WrButton>
             <WrButton variant="outline" onClick={() => setShowImport(true)}><Upload className="w-4 h-4" /> Import</WrButton>
+            <WrButton variant="outline" onClick={handleExport} disabled={!agents.length}
+              title={filtered.length < agents.length
+                ? `Export the ${filtered.length} filtered agents as JSON`
+                : 'Export all agent personas as JSON'}>
+              <Download className="w-4 h-4" /> Export
+            </WrButton>
             <WrButton variant="outline" onClick={() => setModal('ai')}><Sparkles className="w-4 h-4" /> AI Generate</WrButton>
             <WrButton onClick={() => setModal('new')}><Plus className="w-4 h-4" /> New Agent</WrButton>
           </div>
