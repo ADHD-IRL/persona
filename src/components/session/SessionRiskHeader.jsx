@@ -1,14 +1,24 @@
 import { aggregateSessionRisk, riskScore, riskBandFromScore } from '@/lib/risk';
+import MetricHint, { HintDot } from '@/components/ui/MetricHint';
+import { RISK_HINTS } from '@/lib/riskGlossary';
 
 // One-line executive summary of the whole session — the at-a-glance source of
 // truth shown above the synthesis. Everything is derived from session data.
-function Stat({ label, value, sub, color }) {
-  return (
-    <div className="flex flex-col px-4 first:pl-0">
-      <span className="text-[10px] font-mono tracking-wider" style={{ color: 'var(--wr-text-muted)' }}>{label}</span>
+function Stat({ label, value, sub, color, hint, align = 'left' }) {
+  const content = (
+    <>
+      <span className="text-[10px] font-mono tracking-wider flex items-center gap-0.5" style={{ color: 'var(--wr-text-muted)' }}>
+        {label}{hint && <HintDot />}
+      </span>
       <span className="text-lg font-bold font-mono leading-tight" style={{ color: color || 'var(--wr-text-primary)' }}>{value}</span>
       {sub && <span className="text-[10px]" style={{ color: 'var(--wr-text-muted)' }}>{sub}</span>}
-    </div>
+    </>
+  );
+  if (!hint) return <div className="flex flex-col px-4 first:pl-0">{content}</div>;
+  return (
+    <MetricHint title={hint.title} body={hint.body} align={align} className="flex flex-col px-4 first:pl-0">
+      {content}
+    </MetricHint>
   );
 }
 
@@ -30,15 +40,18 @@ export default function SessionRiskHeader({ sessionAgents = [], threats = [], ch
         value={peak != null ? <>{peak}<span className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>/25</span></> : '—'}
         sub={peakBand?.label || 'no L×I yet'}
         color={peakBand?.color}
+        hint={RISK_HINTS.PEAK}
       />
-      <Stat label="OPEN CRITICALS" value={openCriticals} sub="threats" color={openCriticals > 0 ? '#C0392B' : undefined} />
-      <Stat label="KILL CHAINS" value={chains.length} sub="identified" />
-      <Stat label="MITIGATIONS" value={mitigations.length} sub="registered" />
+      <Stat label="OPEN CRITICALS" value={openCriticals} sub="threats" color={openCriticals > 0 ? '#C0392B' : undefined} hint={RISK_HINTS.OPEN_CRITICALS} />
+      <Stat label="KILL CHAINS" value={chains.length} sub="identified" hint={RISK_HINTS.KILL_CHAINS} />
+      <Stat label="MITIGATIONS" value={mitigations.length} sub="registered" hint={RISK_HINTS.MITIGATIONS} align="right" />
       <Stat
         label="NET REDUCTION"
         value={netReduction > 0 ? `−${netReduction}` : '0'}
         sub="risk pts"
         color={netReduction > 0 ? '#27AE60' : undefined}
+        hint={RISK_HINTS.NET_REDUCTION}
+        align="right"
       />
     </div>
   );
