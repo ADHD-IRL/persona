@@ -6,14 +6,16 @@
 // urge = relevance (their depth in this topic) + triggers (something provoked
 // them) − suppression (it is outside their lane) − recency (they just spoke).
 
-const STOP = new Set(['the','and','for','with','that','this','from','have','has','was','were','are','you','your','our','their','they','them','what','when','where','which','would','could','should','about','into','over','under','than','then','there','here','been','being','will','can','not','but','all','any','how','why','who','its','it\'s','a','an','of','to','in','on','is','as','at','by','or','if','we','i']);
+const STOP = new Set(['the','and','for','with','that','this','from','have','has','was','were','are','you','your','our','their','they','them','what','when','where','which','would','could','should','about','into','over','under','than','then','there','here','been','being','will','can','not','but','all','any','how','why','who','its','it\'s','a','an','of','to','in','on','is','as','at','by','or','if','we','i','be','do','go','he','me','my','no','so','up','us','am','it','did','had','her','him','his','let','may','see','too','use','via','yet','per','off','out','own','get','got','put']);
 
 function tokens(text) {
   return (text || '')
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, ' ')
     .split(/\s+/)
-    .filter(w => w.length > 3 && !STOP.has(w));
+    // Keep 2+ char tokens so short domain terms and acronyms (AI, RF, SQL, DNS,
+    // war, law) survive; the STOP set carries the load of dropping short noise.
+    .filter(w => w.length > 1 && !STOP.has(w));
 }
 
 function asList(v) {
@@ -93,7 +95,9 @@ export function scoreUrge({ agent, topic, lastSpeakerIds = [], addressed = false
 
   // Small deterministic jitter by id so equal scores don't always tie-break the
   // same way (no Math.random — keeps behavior reproducible per agent).
-  score += ((agent.id || '').charCodeAt(0) % 5) * 0.1;
+  // Guard the empty-id case: ''.charCodeAt(0) is NaN, which would poison score.
+  const idCode = (agent.id || '').charCodeAt(0) || 0;
+  score += (idCode % 5) * 0.1;
 
   return {
     score: Math.round(score * 10) / 10,
