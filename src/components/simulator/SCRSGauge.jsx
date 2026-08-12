@@ -1,4 +1,6 @@
 import { getPosture } from '@/lib/scrsEngine';
+import MetricHint, { HintDot } from '@/components/ui/MetricHint';
+import { RISK_HINTS } from '@/lib/riskGlossary';
 
 /**
  * Circular SCRS gauge dial — 0 to 100.
@@ -45,7 +47,7 @@ export default function SCRSGauge({ scrs, size = 200, showLabel = true }) {
   ];
 
   return (
-    <div className="flex flex-col items-center" style={{ width: size }}>
+    <MetricHint title={RISK_HINTS.SCRS.title} body={RISK_HINTS.SCRS.body} align="left" className="flex flex-col items-center" style={{ width: size }}>
       <svg width={size} height={size * 0.75} viewBox={`0 0 ${size} ${size}`}
         style={{ overflow: 'visible' }}>
 
@@ -89,19 +91,19 @@ export default function SCRSGauge({ scrs, size = 200, showLabel = true }) {
 
       {showLabel && (
         <div className="mt-1 text-center">
-          <span className="text-xs font-bold font-mono px-2 py-0.5 rounded"
+          <span className="inline-flex items-center gap-1 text-xs font-bold font-mono px-2 py-0.5 rounded"
             style={{
               color: posture.color,
               backgroundColor: posture.bg,
               border: `1px solid ${posture.border}`,
             }}>
-            {posture.label}
+            {posture.label}<HintDot />
           </span>
           <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
             {posture.description}
           </p>
         </div>
       )}
-    </div>
+    </MetricHint>
   );
 }

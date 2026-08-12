@@ -1,14 +1,22 @@
 import { Link } from 'react-router-dom';
 import { AlertTriangle, GitBranch, Map, TrendingDown, ArrowRight, CheckCircle2, Flame } from 'lucide-react';
 import { riskBandFromScore } from '@/lib/risk';
+import MetricHint, { HintDot } from '@/components/ui/MetricHint';
+import { RISK_HINTS } from '@/lib/riskGlossary';
 
 // Compact KPI tile. Optional `to` makes the whole tile a link.
-function Tile({ icon: Icon, label, value, sub, color = 'var(--wr-amber)', to, subColor }) {
+function Tile({ icon: Icon, label, value, sub, color = 'var(--wr-amber)', to, subColor, hint }) {
   const inner = (
     <div className="rounded-xl p-4 h-full flex flex-col justify-between transition-colors hover:bg-white/[0.03]"
       style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', minHeight: 118 }}>
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>{label}</span>
+        {hint ? (
+          <MetricHint title={hint.title} body={hint.body} className="inline-flex">
+            <span className="text-xs font-bold tracking-widest font-mono flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}>{label}<HintDot /></span>
+          </MetricHint>
+        ) : (
+          <span className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>{label}</span>
+        )}
         <Icon className="w-4 h-4 flex-shrink-0" style={{ color }} />
       </div>
       <div>
@@ -36,6 +44,7 @@ export default function RiskRail({ metrics, attention = [] }) {
           color={peak.score ? peakBand.color : 'var(--wr-text-muted)'}
           subColor={peak.score ? peakBand.color : undefined}
           to={peak.session ? `/sessions/${peak.session.id}` : '/sessions'}
+          hint={RISK_HINTS.PEAK}
         />
         <Tile
           icon={AlertTriangle}
@@ -44,6 +53,7 @@ export default function RiskRail({ metrics, attention = [] }) {
           sub={openCriticals > 0 ? 'critical findings across sessions' : 'no critical findings'}
           color={openCriticals > 0 ? '#C0392B' : '#27AE60'}
           to="/sessions"
+          hint={RISK_HINTS.OPEN_CRITICALS}
         />
         <Tile
           icon={TrendingDown}
@@ -52,6 +62,7 @@ export default function RiskRail({ metrics, attention = [] }) {
           sub={netReduction.count ? `${netReduction.inherent} → ${netReduction.residual} · ${openMitigations} open` : `${openMitigations || 0} mitigations, none scored`}
           color={netReduction.count ? '#27AE60' : 'var(--wr-text-muted)'}
           to="/mitigations"
+          hint={RISK_HINTS.NET_REDUCTION}
         />
         <Tile
           icon={Map}
@@ -60,6 +71,7 @@ export default function RiskRail({ metrics, attention = [] }) {
           sub={gaps.length > 0 ? 'threat areas with no bench' : 'panel covers your threats'}
           color={gaps.length > 0 ? '#D68910' : '#27AE60'}
           to="/threatmap"
+          hint={RISK_HINTS.COVERAGE_GAPS}
         />
       </div>
 

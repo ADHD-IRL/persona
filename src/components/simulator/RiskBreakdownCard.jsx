@@ -1,21 +1,33 @@
 import { getPosture } from '@/lib/scrsEngine';
+import MetricHint, { HintDot } from '@/components/ui/MetricHint';
+import { RISK_HINTS } from '@/lib/riskGlossary';
 
 export default function RiskBreakdownCard({ breakdown, scrs, previousScrs }) {
   const posture = getPosture(scrs);
   const delta   = previousScrs !== undefined ? scrs - previousScrs : null;
 
-  const Row = ({ label, value, note, color }) => (
-    <div className="flex items-center justify-between py-2 border-b last:border-0"
-      style={{ borderColor: 'var(--wr-border)' }}>
-      <div>
-        <p className="text-xs font-medium" style={{ color: 'var(--wr-text-secondary)' }}>{label}</p>
-        {note && <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{note}</p>}
-      </div>
-      <span className="text-sm font-bold font-mono" style={{ color: color || 'var(--wr-text-primary)' }}>
-        {value}
-      </span>
-    </div>
-  );
+  const Row = ({ label, value, note, color, hint }) => {
+    const inner = (
+      <>
+        <div>
+          <p className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--wr-text-secondary)' }}>
+            {label}{hint && <HintDot />}
+          </p>
+          {note && <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{note}</p>}
+        </div>
+        <span className="text-sm font-bold font-mono" style={{ color: color || 'var(--wr-text-primary)' }}>
+          {value}
+        </span>
+      </>
+    );
+    const cls = 'flex items-center justify-between py-2 border-b last:border-0';
+    if (!hint) return <div className={cls} style={{ borderColor: 'var(--wr-border)' }}>{inner}</div>;
+    return (
+      <MetricHint title={hint.title} body={hint.body} className={cls} style={{ borderColor: 'var(--wr-border)' }}>
+        {inner}
+      </MetricHint>
+    );
+  };
 
   return (
     <div className="rounded-lg overflow-hidden"
@@ -40,27 +52,30 @@ export default function RiskBreakdownCard({ breakdown, scrs, previousScrs }) {
           note={`${breakdown?.agentCount || 0} agent findings, expertise-weighted`}
           value={`${breakdown?.baseScore ?? 0}`}
           color="var(--wr-text-primary)"
+          hint={RISK_HINTS.BASE_SCORE}
         />
         <Row
           label="Chain Resilience"
           note="Brittle chains reduce score"
           value={`${breakdown?.resilienceModifier ?? 0}`}
           color={breakdown?.resilienceModifier < 0 ? '#27AE60' : 'var(--wr-text-muted)'}
+          hint={RISK_HINTS.CHAIN_RESILIENCE}
         />
         <Row
           label="Countermeasure Coverage"
           note={`${breakdown?.coveredHighSteps ?? 0} / ${breakdown?.totalHighSteps ?? 0} HIGH-leverage steps covered`}
           value={`${breakdown?.countermeasureModifier ?? 0}`}
           color={breakdown?.countermeasureModifier < 0 ? '#27AE60' : 'var(--wr-text-muted)'}
+          hint={RISK_HINTS.COUNTERMEASURE_COVERAGE}
         />
-        <div className="flex items-center justify-between py-3">
-          <p className="text-sm font-bold" style={{ color: 'var(--wr-text-primary)' }}>
-            SCRS
+        <MetricHint title={RISK_HINTS.SCRS.title} body={RISK_HINTS.SCRS.body} className="flex items-center justify-between py-3">
+          <p className="text-sm font-bold flex items-center gap-1" style={{ color: 'var(--wr-text-primary)' }}>
+            SCRS<HintDot />
           </p>
           <span className="text-xl font-bold font-mono" style={{ color: posture.color }}>
             {scrs} / 100
           </span>
-        </div>
+        </MetricHint>
       </div>
     </div>
   );
