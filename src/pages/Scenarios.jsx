@@ -375,7 +375,7 @@ export default function Scenarios() {
                   <h2 className="text-xl font-bold break-words" style={{ color: 'var(--wr-text-primary)' }}>{selected.name}</h2>
                   <p className="text-sm mt-1 break-words" style={{ color: 'var(--wr-text-secondary)' }}>{selected.description}</p>
                 </div>
-                <div className="flex gap-2 flex-wrap flex-shrink-0">
+                <div className="flex gap-2 flex-wrap justify-end">
                   <WrButton variant="secondary" size="sm" onClick={() => setModal(selected)}>Edit</WrButton>
                   <WrButton variant="outline" size="sm" onClick={() => handleDelete(selected)}
                     style={{ color: '#C0392B', borderColor: 'rgba(192,57,43,0.4)' }}>
