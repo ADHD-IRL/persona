@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
-import { GitBranch, Plus, X, ChevronRight } from 'lucide-react';
+import { GitBranch, Plus, X, ChevronRight, Trash2 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import WrButton from '@/components/ui/WrButton';
@@ -85,6 +85,15 @@ export default function Decisions() {
     load();
   };
 
+  // DB cascades a decision's options and assumptions (migration 013) and nulls
+  // the link on any sessions, so deleting the decision row is sufficient.
+  const handleDelete = async (d) => {
+    if (!confirm(`Delete decision "${d.title}"? Its options and assumptions are removed too. This cannot be undone.`)) return;
+    await db.Decision.delete(d.id);
+    setDecisions(prev => prev.filter(x => x.id !== d.id));
+    setOptionCounts(prev => { const next = { ...prev }; delete next[d.id]; return next; });
+  };
+
   return (
     <div style={{ backgroundColor: 'var(--wr-bg-primary)', minHeight: '100vh' }}>
       <PageHeader icon={GitBranch} title="DECISIONS" subtitle="Frame a design decision, compare options by risk, record what was chosen"
@@ -99,18 +108,28 @@ export default function Decisions() {
       ) : (
         <div className="p-6 grid grid-cols-2 gap-4">
           {decisions.map(d => (
-            <Link key={d.id} to={`/decisions/${d.id}`} className="rounded-lg p-5 transition-colors hover:bg-white/5"
-              style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', textDecoration: 'none' }}>
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${STATUS_COLOR[d.status]}1f`, color: STATUS_COLOR[d.status] }}>
-                  {d.status.toUpperCase()}
-                </span>
-                <ChevronRight className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} />
-              </div>
-              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--wr-text-primary)' }}>{d.title}</p>
-              {d.description && <p className="text-xs line-clamp-2 mb-2" style={{ color: 'var(--wr-text-muted)' }}>{d.description}</p>}
-              <p className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>{optionCounts[d.id] || 0} options</p>
-            </Link>
+            <div key={d.id} className="relative group">
+              <Link to={`/decisions/${d.id}`} className="block rounded-lg p-5 transition-colors hover:bg-white/5"
+                style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', textDecoration: 'none' }}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${STATUS_COLOR[d.status]}1f`, color: STATUS_COLOR[d.status] }}>
+                    {d.status.toUpperCase()}
+                  </span>
+                  <ChevronRight className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} />
+                </div>
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--wr-text-primary)' }}>{d.title}</p>
+                {d.description && <p className="text-xs line-clamp-2 mb-2" style={{ color: 'var(--wr-text-muted)' }}>{d.description}</p>}
+                <p className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>{optionCounts[d.id] || 0} options</p>
+              </Link>
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(d); }}
+                title="Delete decision"
+                aria-label={`Delete decision ${d.title}`}
+                className="absolute bottom-4 right-4 p-1.5 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                style={{ color: '#C0392B', backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)' }}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       )}
