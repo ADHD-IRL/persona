@@ -359,7 +359,7 @@ export default function Scenarios() {
         </div>
 
         {/* Right detail */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-w-0 overflow-y-auto">
           {!selected ? (
             <EmptyState
               icon={Target}
@@ -370,12 +370,12 @@ export default function Scenarios() {
             />
           ) : (
             <div className="p-6">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold" style={{ color: 'var(--wr-text-primary)' }}>{selected.name}</h2>
-                  <p className="text-sm mt-1" style={{ color: 'var(--wr-text-secondary)' }}>{selected.description}</p>
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl font-bold break-words" style={{ color: 'var(--wr-text-primary)' }}>{selected.name}</h2>
+                  <p className="text-sm mt-1 break-words" style={{ color: 'var(--wr-text-secondary)' }}>{selected.description}</p>
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap flex-shrink-0">
                   <WrButton variant="secondary" size="sm" onClick={() => setModal(selected)}>Edit</WrButton>
                   <WrButton variant="outline" size="sm" onClick={() => handleDelete(selected)}
                     style={{ color: '#C0392B', borderColor: 'rgba(192,57,43,0.4)' }}>
