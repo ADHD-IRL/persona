@@ -328,21 +328,31 @@ export default function Scenarios() {
             {filtered.map(s => {
               const dom = domainById(s.domain_id);
               return (
-                <button key={s.id} onClick={() => setSelected(s)}
-                  className="w-full text-left p-3 border-b transition-colors hover:bg-white/3"
-                  style={{
-                    borderColor: 'var(--wr-border)',
-                    backgroundColor: selected?.id === s.id ? 'var(--wr-bg-card)' : 'transparent',
-                    borderLeft: selected?.id === s.id ? `2px solid var(--wr-amber)` : '2px solid transparent',
-                  }}>
-                  <p className="text-sm font-medium" style={{ color: 'var(--wr-text-primary)' }}>{s.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {dom && <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${dom.color}22`, color: dom.color }}>{dom.name}</span>}
-                    <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: `${STATUS_COLOR[s.status]}22`, color: STATUS_COLOR[s.status] }}>
-                      {s.status?.toUpperCase()}
-                    </span>
-                  </div>
-                </button>
+                <div key={s.id} className="relative group">
+                  <button onClick={() => setSelected(s)}
+                    className="w-full text-left p-3 pr-9 border-b transition-colors hover:bg-white/3"
+                    style={{
+                      borderColor: 'var(--wr-border)',
+                      backgroundColor: selected?.id === s.id ? 'var(--wr-bg-card)' : 'transparent',
+                      borderLeft: selected?.id === s.id ? `2px solid var(--wr-amber)` : '2px solid transparent',
+                    }}>
+                    <p className="text-sm font-medium" style={{ color: 'var(--wr-text-primary)' }}>{s.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {dom && <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${dom.color}22`, color: dom.color }}>{dom.name}</span>}
+                      <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: `${STATUS_COLOR[s.status]}22`, color: STATUS_COLOR[s.status] }}>
+                        {s.status?.toUpperCase()}
+                      </span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDelete(s); }}
+                    title="Delete scenario"
+                    aria-label={`Delete scenario ${s.name}`}
+                    className="absolute top-1/2 -translate-y-1/2 right-2 p-1.5 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                    style={{ color: '#C0392B', backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)' }}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               );
             })}
           </div>
