@@ -48,6 +48,8 @@ Go to **Agents → New Agent**. Each agent needs:
 
 **Import from Markdown** — bulk-load agents from a `.md` file where each `##` heading is one agent. See [README.md](README.md) for the full import format.
 
+The table above is the essentials. An agent can carry ~35 fields in total, including the advanced "optimal SME" dimensions — competence boundaries, analytic tradecraft, risk posture, and debate behavior — that make its reasoning more human-like. For the complete list of every field, what it means, and how each one influences the debate and the risk scores, see the [SME field reference](#appendix-sme-field-reference) appendix.
+
 ### 4. Define scenarios
 
 Go to **Scenarios → New Scenario**. A scenario has a **name** and a **context document** — a plain-text description of the system, situation, or threat environment being assessed. The context document is injected into every agent's prompt, so write it like a briefing: what the system does, who operates it, what's at stake, and any known constraints.
@@ -300,3 +302,105 @@ From the Synthesis tab, click **Print Report** to open a print-formatted version
 **Save agent-discovered threats immediately.** After a strong session, go to the Threats tab and extract before you close the window. The model's extraction quality is highest when the assessments are fresh context.
 
 **Tool use is best for specific questions.** Broad prompts ("assess everything") don't benefit much from research. Targeted questions ("what does current NIST guidance say about third-party contractor access controls?") get much better answers when tools are on.
+
+---
+
+## Appendix: SME field reference
+
+An SME (agent) is a persona built from ~35 fields across nine groups. The richer "optimal SME" fields exist specifically to make reasoning human-like: knowing your limits, calibrating confidence, and moving honestly in debate. Most fields are optional — a sparsely-filled agent still works, it just reasons with less structure.
+
+Bracketed values like **+18** are the points a field contributes to the Live Debate Room's floor-control score (who speaks next). "Persona header" means the field is injected into every debate prompt for that agent.
+
+### 1. Identity & core
+
+| Field | Type | Values / default | Meaning | How it's used |
+|---|---|---|---|---|
+| `name` | text · required | — | Display name of the expert | Everywhere; persona header opening line |
+| `discipline` | text · required | — | Primary field (e.g. "Cybersecurity") | Persona header; floor-control relevance (**+18**) |
+| `persona_description` | text | — | One-line character sketch | Persona header opening line |
+| `professional_background` | text | — | Career history / credentials | Persona header |
+| `role_type` | text | `sme` \| `red-team` \| `devil's-advocate` \| `facilitator` (def. `sme`) | Debate archetype | Floor control: contrarian/devil **+12**, challenger **+8** |
+| `is_ai_generated` | bool | `false` | Whether AI-authored | Provenance badge |
+| `domain_id` | uuid | — | Links the SME to a Domain | Filtering, Threat Map coverage |
+
+### 2. Expertise & competence
+
+| Field | Type | Values / default | Meaning | How it's used |
+|---|---|---|---|---|
+| `expertise_level` | enum | `Junior` \| `Mid-Level` \| `Senior` \| `Principal` \| `World-Class` (def. `Senior`) | Seniority tier | **SCRS base-score weight** (World-Class ×1.0 … Junior ×0.6); persona header |
+| `domain_expertise` | jsonb map | `{ "topic": 0–10 }` | Self-rated fluency per sub-topic | Floor-control fluency score (hit × 3); persona "reason with confidence only where fluency is high" |
+| `expertise_boundaries` | jsonb | `{ strong[], moderate[], weak[], defer_to[], forbidden_overreach }` | Declared lane — where strong, where to hedge, where to defer, what never to assert | Floor-control **relevance** (strong ×40) & **suppression** (weak −25, forbidden −45 + forces defer); persona "competence boundaries" |
+| `tags` | text[] | `{}` | Free-form keywords | Floor-control soft relevance (**+8**); filtering |
+
+### 3. Epistemics & analytic tradecraft
+
+| Field | Type | Values / default | Meaning | How it's used |
+|---|---|---|---|---|
+| `reasoning_style` | enum | `Analytical` \| `Intuitive` \| `Contrarian` \| `Systematic` \| `Probabilistic` (def. `Analytical`) | How they argue | Persona header — shapes tone/argumentation |
+| `epistemic_style` | text | — | How they treat evidence & certainty | Persona header |
+| `analytical_framework` | text | — | Named method they apply | Persona header — "apply this method explicitly" |
+| `source_preferences` | text | — | Evidence types they weight | Persona header — flags reliance on weaker sources |
+| `tradecraft` | jsonb | `{ common_indicators[], common_false_positives[], failure_modes[] }` | What they look for, what fools them, how their discipline errs | Persona header self-check "before rating severity" |
+
+### 4. Risk posture & adversary
+
+| Field | Type | Values / default | Meaning | How it's used |
+|---|---|---|---|---|
+| `severity_default` | enum | `CRITICAL` \| `HIGH` \| `MEDIUM` \| `LOW` (def. `HIGH`) | Their prior before evidence | Persona "move off it only when warranted"; fallback severity when markers are missing |
+| `risk_posture` | jsonb | `{ risk_sensitivity, false_negative_tolerance, false_positive_tolerance, escalation_bias }` | The false-positive / false-negative asymmetry that calibrates their ratings | Persona header — "calibrate your CONFIDENCE / LIKELIHOOD / IMPACT accordingly" |
+| `adversary_model` | text | — | The threat actor they assume | Persona header |
+| `decision_style` | text | — | How they commit to a call | Persona header |
+
+### 5. Institutional context
+
+| Field | Type | Meaning | How it's used |
+|---|---|---|---|
+| `institutional_background` | text | Org / sector they come from | Persona header |
+| `institutional_incentives` | text | Pressures that bias them | Persona header |
+| `conflict_triggers` | text | What they push back on hardest | Floor-control trigger (**+22**); persona header |
+
+### 6. Cognitive bias & debiasing
+
+| Field | Type | Meaning | How it's used |
+|---|---|---|---|
+| `cognitive_bias` | text | Their characteristic blind spot | Persona header (paired with debiasing) |
+| `debiasing_instruction` | text | The countermeasure to apply deliberately | Persona header — the bias / debias **pair** |
+| `red_team_focus` | text | The angle they attack from | Floor control (**+10**); persona header |
+
+### 7. Debate behavior & belief update (drives Round 2)
+
+| Field | Type | Shape | How it's used |
+|---|---|---|---|
+| `debate_behavior` | jsonb | `{ debate_role, rebuttal_style, what_changes_mind }` | Floor control (what_changes_mind **+10**, contrarian role **+12**); persona header (Round 2 only) |
+| `update_triggers` | jsonb | `{ fast_when, slow_when, resistant_when }` | Persona header Round 2 — "move if genuinely persuaded, hold if not" |
+
+### 8. Threat-vector emphasis
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `vector_human` | int 0–100 | 50 | Weight on human / social threats |
+| `vector_technical` | int 0–100 | 50 | Weight on technical threats |
+| `vector_physical` | int 0–100 | 30 | Weight on physical threats |
+| `vector_futures` | int 0–100 | 40 | Weight on emerging / future threats |
+
+Used by the Threat Map for bench-vs-landscape coverage.
+
+### 9. Calibration, track record & meta
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `weighting_adjustment` | numeric | 1.0 | Declared multiplier to scale the SME's influence from track record |
+| `historical_strengths` | jsonb[] | `[]` | Where this SME has been reliable |
+| `historical_weaknesses` | jsonb[] | `[]` | Where it has erred |
+| `quality_score` | numeric | — | Aggregate performance score (analytics) |
+| `usage_count` | int | 0 | Times deployed in sessions |
+| `source` | text | `workspace` | Origin of the persona |
+| `is_library_sme` | bool | `false` | Shared-library flag (largely deprecated) |
+| `cloned_from_id` | uuid | — | Lineage if duplicated |
+| `scenario_tags` | jsonb | `[]` | Scenarios this SME suits |
+| `id` / `workspace_id` / `created_by` / `created_at` / `updated_at` | — | — | System identity, tenancy, timestamps |
+
+**Two things worth knowing:**
+
+- **Only three fields directly touch the numbers.** `expertise_level` weights the SCRS base score; `risk_posture` and `severity_default` calibrate the likelihood / impact / confidence each SME emits. Everything else shapes *reasoning*, which then flows into those numbers.
+- **Graceful degradation.** Every persona line is conditional, so a partly-filled SME still works — it just reasons with less structure. The `jsonb` fields default to `{}` / `[]` and never break a session.
