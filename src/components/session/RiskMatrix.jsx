@@ -1,6 +1,7 @@
 import { useMemo, useState, Fragment } from 'react';
-import { ChevronDown, ChevronUp, Grid3x3, HelpCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Grid3x3, HelpCircle, Calculator } from 'lucide-react';
 import { matrixCellColor, riskScore, riskBandFromScore, likelihoodLabel, impactLabel, expectedExposure } from '@/lib/risk';
+import ExposureCalculationModal from '@/components/session/ExposureCalculationModal';
 
 const BANDS = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 const BAND_COLOR = { CRITICAL: '#C0392B', HIGH: '#D68910', MEDIUM: '#2E86AB', LOW: '#27AE60' };
@@ -53,6 +54,7 @@ function Stat({ label, value, sub, color }) {
 export default function RiskMatrix({ sessionAgents, agents, round }) {
   const [hover, setHover] = useState(null);
   const [showGrid, setShowGrid] = useState(false);
+  const [showCalc, setShowCalc] = useState(false);
 
   const agentMap = useMemo(() => Object.fromEntries((agents || []).map(a => [a.id, a])), [agents]);
 
@@ -189,15 +191,34 @@ export default function RiskMatrix({ sessionAgents, agents, round }) {
           </div>
         </WithPopover>
 
-        <button
-          onClick={() => setShowGrid(v => !v)}
-          className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded transition-colors self-start"
-          style={{ color: 'var(--wr-text-secondary)', backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}
-          title="Show the full likelihood × impact matrix"
-        >
-          <Grid3x3 className="w-3 h-3" /> Matrix {showGrid ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        </button>
+        <div className="flex items-center gap-1.5 self-start">
+          <button
+            onClick={() => setShowCalc(true)}
+            className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded transition-colors"
+            style={{ color: 'var(--wr-text-secondary)', backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}
+            title="Show how Exposure is calculated"
+          >
+            <Calculator className="w-3 h-3" /> Exposure math
+          </button>
+          <button
+            onClick={() => setShowGrid(v => !v)}
+            className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded transition-colors"
+            style={{ color: 'var(--wr-text-secondary)', backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}
+            title="Show the full likelihood × impact matrix"
+          >
+            <Grid3x3 className="w-3 h-3" /> Matrix {showGrid ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+        </div>
       </div>
+
+      {showCalc && (
+        <ExposureCalculationModal
+          points={points}
+          avgExposure={summary.avgExposure}
+          peak={summary.peak}
+          onClose={() => setShowCalc(false)}
+        />
+      )}
 
       {/* Full 5×5 matrix — collapsed by default */}
       {showGrid && (
