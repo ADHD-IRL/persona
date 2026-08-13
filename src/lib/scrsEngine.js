@@ -61,24 +61,45 @@ export function computeSCRS({ sessionAgents = [], chainAnalyses = [], appliedCMs
   // ── 1. Base Score ────────────────────────────────────────────────────────────
   let weightedSum = 0;
   let maxPossible = 0;
+  // Per-agent contributions, captured so the calculation can be shown in full.
+  const contributions = [];
 
   for (const sa of sessionAgents) {
     const sev = sa.round2_revised_severity || sa.round1_severity;
     if (!sev) continue;
     const expertiseLevel = sa.agent?.expertise_level || 'Senior';
     const mult = EXPERTISE_MULTIPLIER[expertiseLevel] ?? 0.8;
-    weightedSum += (SEV_WEIGHT[sev] || 0) * mult;
+    const sevWeight = SEV_WEIGHT[sev] || 0;
+    const weighted = sevWeight * mult;
+    weightedSum += weighted;
     maxPossible += SEV_WEIGHT.CRITICAL * 1.0;
+    contributions.push({
+      name: sa.agent?.name || sa.agentName || 'SME',
+      discipline: sa.agent?.discipline || '',
+      severity: sev,
+      sevWeight,
+      expertiseLevel,
+      multiplier: mult,
+      weighted: Math.round(weighted * 100) / 100,
+    });
   }
 
   const baseScore = maxPossible > 0 ? (weightedSum / maxPossible) * 100 : 0;
 
   // ── 2. Resilience Modifier ───────────────────────────────────────────────────
-  let resilienceModifier = 0;
+  let resilienceRaw = 0;
+  // Per-chain contributions, captured for the calculation view.
+  const chainContributions = [];
   for (const ca of chainAnalyses) {
-    resilienceModifier += RESILIENCE_MODIFIER[ca.chain_resilience] ?? 0;
+    const modifier = RESILIENCE_MODIFIER[ca.chain_resilience] ?? 0;
+    resilienceRaw += modifier;
+    chainContributions.push({
+      name: ca.name || ca._key || 'Chain',
+      resilience: ca.chain_resilience || '—',
+      modifier,
+    });
   }
-  resilienceModifier = Math.max(resilienceModifier, -25); // cap at -25
+  const resilienceModifier = Math.max(resilienceRaw, -25); // cap at -25
 
   // ── 3. Countermeasure Coverage Modifier ─────────────────────────────────────
   const allHighSteps = chainAnalyses.flatMap(ca =>
@@ -105,6 +126,15 @@ export function computeSCRS({ sessionAgents = [], chainAnalyses = [], appliedCMs
       totalHighSteps,
       coveredHighSteps,
       agentCount:             sessionAgents.length,
+      // Detailed derivation — consumed by the "Show calculation" view.
+      contributions,
+      weightedSum:            Math.round(weightedSum * 100) / 100,
+      maxPossible:            Math.round(maxPossible * 100) / 100,
+      chainContributions,
+      resilienceRaw:          Math.round(resilienceRaw),
+      resilienceCapped:       resilienceModifier > resilienceRaw, // cap actually bit
+      ccmMax:                 MAX_CCM_REDUCTION,
+      rawScrs:                Math.round(raw * 10) / 10,
     },
   };
 }

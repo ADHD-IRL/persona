@@ -1,10 +1,14 @@
+import { useState } from 'react';
+import { Calculator } from 'lucide-react';
 import { getPosture } from '@/lib/scrsEngine';
 import MetricHint, { HintDot } from '@/components/ui/MetricHint';
 import { RISK_HINTS } from '@/lib/riskGlossary';
+import ScrsCalculationModal from './ScrsCalculationModal';
 
 export default function RiskBreakdownCard({ breakdown, scrs, previousScrs }) {
   const posture = getPosture(scrs);
   const delta   = previousScrs !== undefined ? scrs - previousScrs : null;
+  const [showCalc, setShowCalc] = useState(false);
 
   const Row = ({ label, value, note, color, hint }) => {
     const inner = (
@@ -30,21 +34,30 @@ export default function RiskBreakdownCard({ breakdown, scrs, previousScrs }) {
   };
 
   return (
+    <>
     <div className="rounded-lg overflow-hidden"
       style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
-      <div className="px-4 py-3 border-b flex items-center justify-between"
+      <div className="px-4 py-3 border-b flex items-center justify-between gap-2"
         style={{ borderColor: 'var(--wr-border)' }}>
         <p className="text-xs font-bold tracking-widest font-mono"
           style={{ color: 'var(--wr-text-muted)' }}>RISK BREAKDOWN</p>
-        {delta !== null && delta !== 0 && (
-          <span className="text-xs font-bold font-mono px-2 py-0.5 rounded"
-            style={{
-              color: delta < 0 ? '#27AE60' : '#C0392B',
-              backgroundColor: delta < 0 ? 'rgba(39,174,96,0.1)' : 'rgba(192,57,43,0.1)',
-            }}>
-            {delta > 0 ? '+' : ''}{delta} pts
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {delta !== null && delta !== 0 && (
+            <span className="text-xs font-bold font-mono px-2 py-0.5 rounded"
+              style={{
+                color: delta < 0 ? '#27AE60' : '#C0392B',
+                backgroundColor: delta < 0 ? 'rgba(39,174,96,0.1)' : 'rgba(192,57,43,0.1)',
+              }}>
+              {delta > 0 ? '+' : ''}{delta} pts
+            </span>
+          )}
+          <button onClick={() => setShowCalc(true)}
+            className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded transition-colors hover:bg-white/5"
+            style={{ color: 'var(--wr-text-secondary)', backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}
+            title="Show how this score is calculated">
+            <Calculator className="w-3 h-3" /> Show calculation
+          </button>
+        </div>
       </div>
       <div className="px-4 divide-y" style={{ divideColor: 'var(--wr-border)' }}>
         <Row
@@ -78,5 +91,7 @@ export default function RiskBreakdownCard({ breakdown, scrs, previousScrs }) {
         </MetricHint>
       </div>
     </div>
+    {showCalc && <ScrsCalculationModal breakdown={breakdown} scrs={scrs} onClose={() => setShowCalc(false)} />}
+    </>
   );
 }
