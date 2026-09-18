@@ -11,7 +11,7 @@ Multi-user, workspace-aware deployment backed by Supabase. All AI calls go direc
 - **Multidisciplinary panels** — build expert agents (or generate them with AI), each a distinct discipline, cognitive bias, and risk posture. The debate is engineered to surface **cross-domain interaction risks** that no single-discipline review would find.
 - **Two-round analysis** — independent Round 1 assessments, then cross-examination in Round 2, then an AI synthesis with consensus, contested findings, blind spots, and priority mitigations.
 - **Quantified risk** — every assessment carries a **likelihood × impact** band (1–5 each) and a calibrated **confidence** score, plotted on a per-round risk matrix.
-- **Decisions** — frame a design choice, compare 2–4 options by risk side by side, track key assumptions, and record an auditable decision.
+- **Decisions** — frame a design choice with 2–4 options, run the panel against every option in one click, and get a reasoned recommendation that cites the evidence, flags assumptions at risk, and states the risk you accept. Then record an auditable decision.
 - **Threat Map** — coverage analysis of your threat landscape against your agent bench, with drill-down and Generate-SME gap closing.
 - **Chain Breaker & Mitigation Register** — dissect kill chains into a prioritized mitigation roadmap, then track each mitigation through its lifecycle and re-score residual risk.
 - **Evidence ledger** — every source an agent cites is captured per-SME with a credibility tier, so findings are traceable.

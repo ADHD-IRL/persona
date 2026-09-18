@@ -219,18 +219,18 @@ The synthesis is saved as a SessionSynthesis record, the session status moves to
 
 **How it works:**
 - Create a Decision and list the options (e.g. "Option A: managed identity provider" vs "Option B: build in-house").
-- For each option, click **"Run panel for this option"** — it launches a Session pre-scoped to that option. Run your normal two-round analysis.
-- The Decision detail page then shows the options **side by side**, each with its **peak risk (out of 25)**, **average exposure**, and severity mix — aggregated from that option's sessions. The lowest-risk option is auto-flagged.
-- Track **key assumptions** with a criticality and a status (holds / monitoring / **invalidated**). An invalidated assumption is your trigger to re-assess.
-- When you decide, click **Record Decision**: choose the option, capture who decided and the rationale — including what risk is being *knowingly accepted*. That's a durable, auditable decision record.
+- Open the decision, pick the **scenario** to stress-test against and the **expert bench**, and click **Run decision panel**. The same bench runs Round 1 → Round 2 → Synthesis against *every* option, each in its own session, with the decision framing and assumptions injected into every prompt.
+- When the sessions finish, the panel writes a **reasoned recommendation**: which option, how confident, and why — each reason citing SMEs, severities, confidences or synthesis findings. Every option card gets a verdict (recommended / viable / not recommended), its key risks, whether it meets the acceptance criteria, which assumptions it puts at risk, and the risk you'd knowingly accept by choosing it. Trade-offs and "revisit if" conditions round it out.
+- Track **key assumptions** with a criticality and a status (holds / monitoring / **invalidated**). An invalidated assumption is your trigger to re-run.
+- Click **Record Decision**: the rationale is pre-filled from the assessment; edit it, pick the option, and capture who decided. That's a durable, auditable decision record.
 
-This is what turns the platform from "threat brainstorming" into defensible decision support: you can show *why* an option was chosen and what was known at the time.`,
+Options that already have a complete session are reused on the next run, so adding an option or fixing one that failed doesn't redo the others. **Regenerate** re-writes the assessment from the existing sessions; **Re-run everything** starts fresh.`,
         usage: `
 1. Sidebar → Decisions → New Decision. Name the choice and list 2–4 options.
 2. Add the assumptions the decision depends on.
-3. On each option card, click "Run panel for this option" and complete a session.
-4. Compare the options' peak risk and exposure side by side.
-5. Click Record Decision, pick the option, and capture the rationale.
+3. Open the decision, choose a scenario and bench, and click Run decision panel. Wait for the recommendation.
+4. Read the recommendation and each option's verdict, key risks and accepted risk.
+5. Click Record Decision, adjust the pre-filled rationale, and pick the option.
 `
       },
       {

@@ -103,7 +103,7 @@ export default function Decisions() {
         <div className="p-6"><div className="h-40 rounded animate-pulse" style={{ backgroundColor: 'var(--wr-bg-card)' }} /></div>
       ) : decisions.length === 0 ? (
         <EmptyState icon={GitBranch} title="No decisions yet"
-          description="A Decision frames a design choice: the options on the table, the assumptions they rest on, and a per-option risk comparison. Run the panel against each option, then record what you chose."
+          description="A Decision frames a design choice: the options on the table and the assumptions they rest on. One click runs the expert panel against every option and returns a reasoned recommendation; then record what you chose."
           action={() => setModal(true)} actionLabel="Frame First Decision" />
       ) : (
         <div className="p-6 grid grid-cols-2 gap-4">
