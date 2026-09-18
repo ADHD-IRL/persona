@@ -1,16 +1,15 @@
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Scissors, ShieldCheck, Map, FileText, GitBranch, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Scissors, ShieldCheck, FlaskConical, FileText, GitBranch, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 // Guided post-synthesis actions. Each step shows live status from the session's
-// data and deep-links scoped to this session, so a completed analysis flows
-// forward into threats → chains → mitigations → coverage → report → decision.
+// data and stays inside this session, so a completed analysis flows forward
+// into threats → chains → mitigations → simulation → report → decision.
 export default function NextSteps({
   sessionId,
   decisionId,
   threatsCount = 0,
   chainsCount = 0,
   mitigationsCount = 0,
-  coverageGaps = null,       // number, or null if not computed
   onCatalogThreats,
   onBreakChains,             // in-session tab switch (falls back to navigation)
   onTrackMitigations,
@@ -40,17 +39,15 @@ export default function NextSteps({
       done: mitigationsCount > 0,
       status: mitigationsCount > 0 ? `${mitigationsCount} registered` : 'Auto-generated when you break the chains',
       cta: 'Open register',
-      onClick: onTrackMitigations || (() => navigate(`/mitigations?session=${sessionId}`)),
+      onClick: onTrackMitigations || (() => navigate(`/sessions/${sessionId}`)),
     },
     {
-      icon: Map, color: '#2E86AB',
-      title: 'Check panel coverage',
-      done: coverageGaps === 0,
-      status: coverageGaps == null ? 'See where your bench is thin'
-        : coverageGaps === 0 ? 'No coverage gaps'
-        : `${coverageGaps} coverage gap${coverageGaps !== 1 ? 's' : ''}`,
-      cta: 'Open map',
-      onClick: () => navigate(`/threatmap?session=${sessionId}`),
+      icon: FlaskConical, color: '#2E86AB',
+      title: 'Simulate countermeasures',
+      done: false,
+      status: mitigationsCount > 0 || chainsCount > 0 ? 'Toggle controls and watch the risk score move' : 'Break the chains first',
+      cta: mitigationsCount > 0 || chainsCount > 0 ? 'Simulate' : null,
+      onClick: mitigationsCount > 0 || chainsCount > 0 ? (() => navigate(`/simulator/${sessionId}`)) : null,
     },
     {
       icon: FileText, color: '#546E7A',
@@ -75,7 +72,7 @@ export default function NextSteps({
       <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--wr-border)' }}>
         <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>NEXT STEPS</p>
         <p className="text-xs mt-0.5" style={{ color: 'var(--wr-text-muted)' }}>
-          Turn this analysis into a connected set of outputs — threats, chains, mitigations, coverage, and a decision.
+          Turn this analysis into a connected set of outputs — threats, chains, mitigations, a simulation, a report, and a decision.
         </p>
       </div>
       <div>

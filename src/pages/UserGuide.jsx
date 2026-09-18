@@ -27,19 +27,17 @@ The core insight: **no single expert sees everything**. A cybersecurity speciali
     color: '#27AE60',
     title: 'The Workflow at a Glance',
     content: `
-The sidebar is organized as the workflow, top to bottom. Follow it in order and each step feeds the next:
+The **session is the hub**. Everything analytical happens inside one session, and the sidebar only has two ideas:
 
-**1 · Build** — Set up your reusable assets: **Domains** (broad categories), **Agents** (your expert panel), and the **Knowledge Base** (your own documents that ground the analysis). These persist across every session.
+**Work** — **Sessions** (where you'll spend most of your time), **Decisions** (the design choice and options you're comparing), and **Scenarios** (the situation to stress-test).
 
-**2 · Plan** — Define the specific engagement: a **Decision** (the design choice and options you're comparing), a **Scenario** (the situation to stress-test), and, optionally, a **Threats** catalog (known risks). Tag them with domains.
+**Library** — the reusable assets a session draws on: **Agents** (your expert panel), **Domains** (broad categories), **Threats** (known risks), **Chains** (kill chains), and the **Knowledge Base** (your own documents that ground the analysis).
 
-**3 · Run** — Bring a scenario and agents together in a **Session** (structured two-round analysis) or the **What-If Simulator**. This is where the red-teaming happens.
+Inside a session, a stepper walks the analysis lifecycle in order, and a **Next Step** bar always shows the one thing to do now:
 
-**4 · Act on Findings** — Work the output: the **Threat Map** (coverage gaps), **Chains** (kill chains), **Chain Breaker** (mitigation roadmaps), **Mitigations** (the register that tracks them to done), and **Reports** (executive PDFs).
+**Setup → Round 1 → Round 2 → Synthesis → Findings → Act.** Findings holds the kill chains and threats the panel surfaced. Act holds this session's mitigations plus the tools that work them: **Chain Breaker** (mitigation roadmaps), the **What-If Simulator** (toggle countermeasures against the risk score), and the **Decision Brief** (executive report). Sources and Settings sit to the right of the stepper.
 
-**Insights** — **Agent Analytics** and **Compare** for cross-session trends. **System** holds Settings and this guide.
-
-**New here?** The **Dashboard** shows a getting-started checklist that tracks these steps and always points to your next action. It disappears once you've run your first session.
+**More** in the sidebar holds the cross-session views (**Threat Map**, **Agent Analytics**, **Compare**) and the **Prompt Library**. Settings and this guide live in the footer.
     `,
   },
   {

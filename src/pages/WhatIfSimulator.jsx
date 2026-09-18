@@ -31,6 +31,8 @@ export default function WhatIfSimulator() {
   const [appliedCMs, setAppliedCMs] = useState({}); // key: `${chainId}_${stepNum}_${cmIdx}` → bool
   const [expanded,   setExpanded]   = useState({});
   const [saved,      setSaved]      = useState(false);
+  // Arriving from a session scopes the page to it; the picker is a disclosure.
+  const [pickSession, setPickSession] = useState(!preloadSessionId);
 
   const loadData = useCallback(async () => {
     if (!db) return;
@@ -237,23 +239,46 @@ export default function WhatIfSimulator() {
         }
       />
 
+      {preloadSessionId && (
+        <div className="px-6 pt-4">
+          <Link to={`/sessions/${preloadSessionId}`} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
+            style={{ color: 'var(--wr-amber)', backgroundColor: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.25)', textDecoration: 'none' }}>
+            ← Back to session
+          </Link>
+        </div>
+      )}
+
       <div className="p-6">
-        {/* Session selector */}
+        {/* Session selector — collapsed to a label when scoped to a session */}
         <div className="mb-5 rounded-lg p-4"
           style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
-          <label className="text-xs font-bold font-mono block mb-2"
-            style={{ color: 'var(--wr-text-muted)' }}>SELECT SESSION</label>
-          <select
-            value={sessionId}
-            onChange={e => { setSessionId(e.target.value); setAppliedCMs({}); }}
-            className="w-full rounded px-3 py-2 text-sm"
-            style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)',
-              color: 'var(--wr-text-primary)' }}>
-            <option value="">Choose a completed session…</option>
-            {sessions.filter(s => s.status === 'complete').map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          {!pickSession && session ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold font-mono" style={{ color: 'var(--wr-text-muted)' }}>SESSION</p>
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--wr-text-primary)' }}>{session.name}</p>
+              </div>
+              <button onClick={() => setPickSession(true)} className="text-xs underline flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }}>
+                Change session
+              </button>
+            </div>
+          ) : (
+            <>
+              <label className="text-xs font-bold font-mono block mb-2"
+                style={{ color: 'var(--wr-text-muted)' }}>SELECT SESSION</label>
+              <select
+                value={sessionId}
+                onChange={e => { setSessionId(e.target.value); setAppliedCMs({}); }}
+                className="w-full rounded px-3 py-2 text-sm"
+                style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)',
+                  color: 'var(--wr-text-primary)' }}>
+                <option value="">Choose a completed session…</option>
+                {sessions.filter(s => s.status === 'complete').map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </>
+          )}
           {session && chainAnalyses.length === 0 && (
             <p className="text-xs mt-2" style={{ color: '#D68910' }}>
               ⚠ No chain analyses found for this session. Run Chain Breaker on its synthesised chains, or on a library chain with this session's scenario selected, and save the analysis.

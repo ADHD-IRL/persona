@@ -11,7 +11,6 @@ import AppLayout from '@/components/layout/AppLayout';
 import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
 import SplashPage from '@/pages/SplashPage';
-import Dashboard from '@/pages/Dashboard';
 import Domains from '@/pages/Domains';
 import Scenarios from '@/pages/Scenarios';
 import Threats from '@/pages/Threats';
@@ -76,7 +75,7 @@ const AppRoutes = () => {
           </WorkspaceProvider>
         </RequireAuth>
       }>
-        <Route path="/dashboard"            element={<Dashboard />} />
+        <Route path="/dashboard"            element={<Navigate to="/sessions" replace />} />
         <Route path="/domains"              element={<Domains />} />
         <Route path="/decisions"            element={<Decisions />} />
         <Route path="/decisions/:id"        element={<DecisionDetail />} />

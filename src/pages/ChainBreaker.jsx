@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import WrButton from '@/components/ui/WrButton';
+import MetricHint, { HintDot } from '@/components/ui/MetricHint';
 import ProcessingBar from '@/components/ui/ProcessingBar';
 import { useElapsed } from '@/hooks/useElapsed';
 import ChainFlowGraph from '@/components/chainbreaker/ChainFlowGraph';
@@ -61,6 +62,10 @@ export default function ChainBreaker() {
   const [selectedSynthId,    setSelectedSynthId]    = useState('');
   const [compoundIdx,        setCompoundIdx]        = useState(0);
   const [selectedScenarioId, setSelectedScenarioId] = useState('');
+  // When opened from a session the page is scoped to it: the chain source and
+  // scenario are preset, and these disclosures let a power user change them.
+  const [showSourcePicker,   setShowSourcePicker]   = useState(false);
+  const [changeScenario,     setChangeScenario]     = useState(false);
 
   // Analysis result state
   const [analyzing, setAnalyzing] = useState(false);
@@ -126,6 +131,20 @@ export default function ChainBreaker() {
     () => Object.fromEntries(sessions.map(s => [s.id, s])),
     [sessions]
   );
+
+  const sessionScoped    = !!sessionParam;
+  const scopedSession    = sessionScoped ? sessionById[sessionParam] : null;
+  const scopedScenarioId = scopedSession?.scenario_id || '';
+  const scopedScenario   = scenarios.find(s => s.id === scopedScenarioId) || null;
+  const scenarioLocked   = sessionScoped && !!scopedScenario && !changeScenario && selectedScenarioId === scopedScenarioId;
+
+  // In session scope, offer only the library chains that belong to this
+  // session or its scenario. Fall back to the whole library if there are none.
+  const visibleChains = useMemo(() => {
+    if (!sessionScoped || showSourcePicker) return chains;
+    const linked = chains.filter(c => c.session_id === sessionParam || (scopedScenarioId && c.scenario_id === scopedScenarioId));
+    return linked.length > 0 ? linked : chains;
+  }, [chains, sessionScoped, showSourcePicker, sessionParam, scopedScenarioId]);
 
   const activeChain = useMemo(() => {
     if (source === 'library') {
@@ -420,7 +439,10 @@ export default function ChainBreaker() {
         inherent_impact: inherent[1],
       });
       setAddedRoadmap(a => ({ ...a, [idx]: true }));
-      toast({ title: 'Added to mitigation register', description: m.action });
+      toast({
+        title: activeSessionId ? 'Added to this session’s mitigations' : 'Added to mitigation register',
+        description: activeSessionId ? `${m.action} — track it under the session’s Act stage.` : m.action,
+      });
     } catch (e) {
       toast({ title: 'Could not add', description: e.message, variant: 'destructive' });
     }
@@ -433,7 +455,7 @@ export default function ChainBreaker() {
       <PageHeader
         icon={Scissors}
         title="CHAIN BREAKER"
-        subtitle="Map adversary dependencies across compound attack chains and identify the highest-leverage points to break them"
+        subtitle="Find the highest-leverage points to break a compound attack chain"
       />
 
       {activeSessionId && (
@@ -457,24 +479,35 @@ export default function ChainBreaker() {
 
             {/* LEFT: chain selection */}
             <div className="space-y-4">
-              {/* Source toggle */}
-              <div>
-                <label className="block text-xs font-bold tracking-widest font-mono mb-2" style={{ color: 'var(--wr-text-muted)' }}>
-                  CHAIN SOURCE
-                </label>
-                <div className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)', width: 'fit-content' }}>
-                  {[['library', 'Chain Library'], ['session', 'Session Synthesis']].map(([val, lbl]) => (
-                    <button key={val} onClick={() => handleSourceChange(val)}
-                      className="px-4 py-2 text-xs font-medium transition-colors"
-                      style={{
-                        backgroundColor: source === val ? 'var(--wr-amber)' : 'transparent',
-                        color: source === val ? '#0D1B2A' : 'var(--wr-text-secondary)',
-                      }}>
-                      {lbl}
-                    </button>
-                  ))}
+              {/* Source toggle — hidden in session scope until the user asks for it */}
+              {sessionScoped && !showSourcePicker ? (
+                <p className="text-xs flex items-center gap-2" style={{ color: 'var(--wr-text-muted)' }}>
+                  <span>
+                    {source === 'session'
+                      ? `Analysing ${scopedSession?.name || 'this session'}’s synthesised chains`
+                      : `Library chains for ${scopedSession?.name || 'this session'}${scopedScenario ? ` · ${scopedScenario.name}` : ''}`}
+                  </span>
+                  <button onClick={() => setShowSourcePicker(true)} className="underline" style={{ color: 'var(--wr-amber)' }}>Change source</button>
+                </p>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold tracking-widest font-mono mb-2" style={{ color: 'var(--wr-text-muted)' }}>
+                    CHAIN SOURCE
+                  </label>
+                  <div className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)', width: 'fit-content' }}>
+                    {[['library', 'Chain Library'], ['session', 'Session Synthesis']].map(([val, lbl]) => (
+                      <button key={val} onClick={() => handleSourceChange(val)}
+                        className="px-4 py-2 text-xs font-medium transition-colors"
+                        style={{
+                          backgroundColor: source === val ? 'var(--wr-amber)' : 'transparent',
+                          color: source === val ? '#0D1B2A' : 'var(--wr-text-secondary)',
+                        }}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Library chain dropdown */}
               {source === 'library' && (
@@ -484,7 +517,7 @@ export default function ChainBreaker() {
                   </label>
                   {loading ? (
                     <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>Loading chains…</p>
-                  ) : chains.length === 0 ? (
+                  ) : visibleChains.length === 0 ? (
                     <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>No chains in library — build one in the Chains page first.</p>
                   ) : (
                     <select value={selectedChainId}
@@ -492,7 +525,7 @@ export default function ChainBreaker() {
                       className="w-full px-3 py-2 text-sm rounded outline-none"
                       style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}>
                       <option value="">Select a chain…</option>
-                      {chains.map(c => (
+                      {visibleChains.map(c => (
                         <option key={c.id} value={c.id}>
                           {c.name} ({c.steps?.length || 0} steps){libMap[c.id] ? ' ✓ saved' : ''}
                         </option>
@@ -574,42 +607,57 @@ export default function ChainBreaker() {
               )}
             </div>
 
-            {/* RIGHT: scenario + explainer + run */}
+            {/* RIGHT: scenario + run */}
             <div className="flex flex-col gap-4">
               <div>
                 <label className="block text-xs font-bold tracking-widest font-mono mb-1.5" style={{ color: 'var(--wr-text-muted)' }}>
                   SCENARIO CONTEXT
-                  <span className="ml-2 font-normal" style={{ color: 'var(--wr-text-muted)', opacity: 0.7 }}>(optional — improves specificity)</span>
+                  {!scenarioLocked && (
+                    <span className="ml-2 font-normal" style={{ color: 'var(--wr-text-muted)', opacity: 0.7 }}>(optional — improves specificity and links the saved analysis to the scenario)</span>
+                  )}
                 </label>
-                <select value={selectedScenarioId}
-                  onChange={e => setSelectedScenarioId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded outline-none"
-                  style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}>
-                  <option value="">No scenario context</option>
-                  {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                {scenarioLocked ? (
+                  <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm rounded"
+                    style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}>
+                    <span className="truncate">{scopedScenario.name}</span>
+                    <button onClick={() => setChangeScenario(true)} className="text-xs underline flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }}>change</button>
+                  </div>
+                ) : (
+                  <select value={selectedScenarioId}
+                    onChange={e => setSelectedScenarioId(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded outline-none"
+                    style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}>
+                    <option value="">No scenario context</option>
+                    {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                )}
               </div>
 
-              <div className="flex-1 rounded p-4" style={{ backgroundColor: 'rgba(240,165,0,0.05)', border: '1px solid rgba(240,165,0,0.15)' }}>
-                <p className="text-xs font-bold font-mono mb-3" style={{ color: 'var(--wr-amber)' }}>WHAT THIS ANALYSIS PRODUCES</p>
-                <div className="space-y-2">
-                  {[
-                    ['Adversary objective',  'What the threat actor gains at each step'],
-                    ['Step dependencies',    'What conditions must hold for each step to execute'],
-                    ['Leverage rating',      'HIGH / MEDIUM / LOW — impact of breaking this step'],
-                    ['Countermeasures',      'Specific, actionable controls to disrupt each step'],
-                    ['Break difficulty',     'EASY / MODERATE / HARD — implementation cost'],
-                    ['Residual risk',        'What capability survives if only this step is broken'],
-                  ].map(([label, desc]) => (
-                    <div key={label} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: 'var(--wr-amber)' }} />
-                      <p className="text-xs leading-snug" style={{ color: 'var(--wr-text-muted)' }}>
-                        <strong style={{ color: 'var(--wr-text-secondary)' }}>{label}</strong> — {desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <div className="flex-1" />
+
+              <MetricHint
+                className="self-end"
+                align="right"
+                width="w-80"
+                title="WHAT THIS ANALYSIS PRODUCES"
+                body={
+                  <ul className="space-y-1">
+                    {[
+                      ['Adversary objective',  'what the threat actor gains at each step'],
+                      ['Step dependencies',    'what must hold for each step to execute'],
+                      ['Leverage rating',      'HIGH / MEDIUM / LOW impact of breaking the step'],
+                      ['Countermeasures',      'specific controls to disrupt each step'],
+                      ['Break difficulty',     'EASY / MODERATE / HARD implementation cost'],
+                      ['Residual risk',        'what survives if only this step is broken'],
+                    ].map(([label, desc]) => (
+                      <li key={label}><strong style={{ color: 'var(--wr-text-primary)' }}>{label}</strong> — {desc}</li>
+                    ))}
+                  </ul>
+                }>
+                <span className="text-xs font-mono inline-flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}>
+                  What this produces <HintDot />
+                </span>
+              </MetricHint>
 
               <WrButton onClick={runAnalysis} disabled={!hasSteps || analyzing} className="w-full justify-center" size="lg">
                 {analyzing

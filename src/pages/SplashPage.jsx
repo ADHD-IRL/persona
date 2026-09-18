@@ -40,7 +40,7 @@ function AuthenticatedPanel({ user, signOut }) {
 
       {/* Continue button */}
       <button
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate('/sessions')}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           width: '100%', padding: '13px 16px', borderRadius: 6, border: 'none', marginBottom: 12,
@@ -56,7 +56,7 @@ function AuthenticatedPanel({ user, signOut }) {
       </button>
 
       <button
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate('/sessions')}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           width: '100%', padding: '10px 16px', borderRadius: 6, border: 'none', marginBottom: 28,
@@ -100,7 +100,7 @@ function LoginPanel() {
     setLoading(true);
     try {
       await signIn({ email, password });
-      navigate('/dashboard');
+      navigate('/sessions');
     } catch (err) {
       setError(err.message || 'Sign in failed. Check your credentials.');
     } finally {
