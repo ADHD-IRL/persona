@@ -28,7 +28,6 @@ import SessionComparison from '@/pages/SessionComparison';
 import SessionResults from '@/pages/SessionResults';
 import Settings from '@/pages/Settings';
 import ChainBreaker from '@/pages/ChainBreaker';
-import Mitigations from '@/pages/Mitigations';
 import Decisions from '@/pages/Decisions';
 import DecisionDetail from '@/pages/DecisionDetail';
 import KnowledgeBase from '@/pages/KnowledgeBase';
@@ -94,7 +93,7 @@ const AppRoutes = () => {
         <Route path="/agent-analytics"      element={<AgentAnalytics />} />
         <Route path="/compare"              element={<SessionComparison />} />
         <Route path="/chain-breaker"        element={<ChainBreaker />} />
-        <Route path="/mitigations"          element={<Mitigations />} />
+        <Route path="/mitigations"          element={<Navigate to="/sessions" replace />} />
         <Route path="/simulator"            element={<WhatIfSimulator />} />
         <Route path="/simulator/:id"        element={<WhatIfSimulator />} />
         <Route path="/knowledge"            element={<KnowledgeBase />} />

@@ -1,9 +1,13 @@
-import { ShieldCheck, Scissors } from 'lucide-react';
-import { riskScore, riskBandFromScore } from '@/lib/risk';
+import { useState } from 'react';
+import { ShieldCheck, Scissors, Trash2 } from 'lucide-react';
+import { riskScore, riskBandFromScore, likelihoodLabel, impactLabel } from '@/lib/risk';
 
 const STATUSES = ['proposed', 'accepted', 'in_progress', 'implemented', 'verified', 'rejected'];
 const CTRL_COLOR = { PREVENTIVE: '#2E86AB', DETECTIVE: '#9B59B6', RESPONSIVE: '#D68910' };
 const EFFORT_COLOR = { LOW: '#27AE60', MEDIUM: '#D68910', HIGH: '#C0392B' };
+const BANDS = [1, 2, 3, 4, 5];
+
+const fieldStyle = { backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' };
 
 function Pill({ label, color }) {
   if (!label) return null;
@@ -25,10 +29,53 @@ function RiskChip({ l, i, muted }) {
   );
 }
 
-// In-session mitigation register — auto-populated by Chain Breaker, editable here.
+// Likelihood × impact picker for a mitigation's residual risk. Two small
+// selects and the resulting score, so re-scoring happens in the row itself.
+function ResidualPicker({ m, onChange }) {
+  return (
+    <div className="flex items-center gap-1 justify-center">
+      <select value={m.residual_likelihood || ''} onChange={e => onChange('residual_likelihood', e.target.value ? Number(e.target.value) : null)}
+        title="Residual likelihood" className="text-[10px] px-1 py-0.5 rounded outline-none" style={fieldStyle}>
+        <option value="">L</option>
+        {BANDS.map(v => <option key={v} value={v}>L{v} · {likelihoodLabel(v)}</option>)}
+      </select>
+      <span className="text-[10px]" style={{ color: 'var(--wr-text-muted)' }}>×</span>
+      <select value={m.residual_impact || ''} onChange={e => onChange('residual_impact', e.target.value ? Number(e.target.value) : null)}
+        title="Residual impact" className="text-[10px] px-1 py-0.5 rounded outline-none" style={fieldStyle}>
+        <option value="">I</option>
+        {BANDS.map(v => <option key={v} value={v}>I{v} · {impactLabel(v)}</option>)}
+      </select>
+      <RiskChip l={m.residual_likelihood} i={m.residual_impact} muted />
+    </div>
+  );
+}
+
+// Owner is free text; save on blur or Enter so every keystroke isn't a write.
+function OwnerField({ m, onSave }) {
+  const [val, setVal] = useState(m.owner || '');
+  const commit = () => { if ((val || '') !== (m.owner || '')) onSave(val.trim() || null); };
+  return (
+    <input
+      value={val}
+      onChange={e => setVal(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+      placeholder="owner"
+      className="text-xs px-2 py-1 rounded outline-none w-24"
+      style={fieldStyle}
+    />
+  );
+}
+
+// The session's mitigation register. Chain Breaker populates it; this is the
+// one place to work it: status, owner, residual re-scoring, removal.
 export default function SessionMitigations({ db, mitigations = [], onChange }) {
-  const setStatus = async (m, status) => {
-    try { await db.Mitigation.update(m.id, { status }); onChange?.(); } catch { /* ignore */ }
+  const update = async (m, patch) => {
+    try { await db.Mitigation.update(m.id, patch); onChange?.(); } catch { /* ignore */ }
+  };
+  const remove = async (m) => {
+    if (!window.confirm(`Remove "${m.title}" from this session's mitigations?`)) return;
+    try { await db.Mitigation.delete(m.id); onChange?.(); } catch { /* ignore */ }
   };
 
   // Net risk reduction across mitigations that carry both inherent and residual.
@@ -36,13 +83,14 @@ export default function SessionMitigations({ db, mitigations = [], onChange }) {
   const inherentTot = scored.reduce((a, m) => a + riskScore(m.inherent_likelihood, m.inherent_impact), 0);
   const residualTot = scored.reduce((a, m) => a + (riskScore(m.residual_likelihood, m.residual_impact) ?? riskScore(m.inherent_likelihood, m.inherent_impact)), 0);
   const netReduction = inherentTot - residualTot;
+  const rescored = scored.filter(m => m.residual_likelihood && m.residual_impact).length;
 
   if (!mitigations.length) {
     return (
       <div className="rounded-2xl py-14 text-center" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-card)' }}>
         <ShieldCheck className="w-7 h-7 mx-auto mb-3" style={{ color: 'var(--wr-text-muted)', opacity: 0.4 }} />
         <p className="text-sm" style={{ color: 'var(--wr-text-muted)' }}>No mitigations yet.</p>
-        <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>Go to the Kill Chains tab and run “Analyze all chains” — mitigations are generated automatically.</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>Break the kill chains under Findings, or add roadmap items from Chain Breaker — mitigations land here.</p>
       </div>
     );
   }
@@ -64,18 +112,20 @@ export default function SessionMitigations({ db, mitigations = [], onChange }) {
           </p>
         </div>
         <p className="text-xs flex-1 min-w-[180px]" style={{ color: 'var(--wr-text-muted)' }}>
-          Auto-generated from the kill-chain break analysis. Set each mitigation's residual risk in the register to grow net reduction.
+          {rescored < scored.length
+            ? `Set residual likelihood × impact on ${scored.length - rescored} mitigation${scored.length - rescored !== 1 ? 's' : ''} once its control is in place to grow net reduction.`
+            : 'Every mitigation has been re-scored. Net reduction is inherent minus residual across the register.'}
         </p>
       </div>
 
       {/* Rows */}
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2 text-[10px] font-mono font-bold tracking-wider" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)' }}>
-          <span>MITIGATION</span><span>STATUS</span><span className="text-center">INHERENT</span><span className="text-center">RESIDUAL</span>
+        <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-2 text-[10px] font-mono font-bold tracking-wider" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)' }}>
+          <span>MITIGATION</span><span>STATUS</span><span>OWNER</span><span className="text-center">INHERENT</span><span className="text-center">RESIDUAL</span><span />
         </div>
         <div style={{ backgroundColor: 'var(--wr-bg-card)' }}>
           {mitigations.map(m => (
-            <div key={m.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-3 items-center border-t" style={{ borderColor: 'var(--wr-border)' }}>
+            <div key={m.id} className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-3 items-center border-t" style={{ borderColor: 'var(--wr-border)' }}>
               <div className="min-w-0">
                 <p className="text-sm font-medium" style={{ color: 'var(--wr-text-primary)' }}>{m.title}</p>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -93,14 +143,18 @@ export default function SessionMitigations({ db, mitigations = [], onChange }) {
               </div>
               <select
                 value={m.status || 'proposed'}
-                onChange={e => setStatus(m, e.target.value)}
+                onChange={e => update(m, { status: e.target.value })}
                 className="text-xs px-2 py-1 rounded outline-none"
-                style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}
+                style={fieldStyle}
               >
                 {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
               </select>
+              <OwnerField key={`${m.id}-${m.owner || ''}`} m={m} onSave={owner => update(m, { owner })} />
               <div className="text-center"><RiskChip l={m.inherent_likelihood} i={m.inherent_impact} /></div>
-              <div className="text-center"><RiskChip l={m.residual_likelihood} i={m.residual_impact} muted /></div>
+              <ResidualPicker m={m} onChange={(k, v) => update(m, { [k]: v })} />
+              <button onClick={() => remove(m)} title="Remove mitigation" className="p-1 rounded opacity-50 hover:opacity-100" style={{ color: '#C0392B' }}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           ))}
         </div>

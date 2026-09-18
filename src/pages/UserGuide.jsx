@@ -213,7 +213,7 @@ The synthesis is saved as a SessionSynthesis record, the session status moves to
         icon: GitBranch,
         color: '#27AE60',
         title: 'Framing a Decision & Comparing Options',
-        body: `Analysis is most useful when it's tied to a **decision**, not just a scenario. The **Decisions** page (sidebar → 2 · Plan) frames a design choice: the question, the **options** you're comparing (2–4), the **acceptance criteria**, and the **assumptions** it rests on.
+        body: `Analysis is most useful when it's tied to a **decision**, not just a scenario. The **Decisions** page (sidebar → Work) frames a design choice: the question, the **options** you're comparing (2–4), the **acceptance criteria**, and the **assumptions** it rests on.
 
 **How it works:**
 - Create a Decision and list the options (e.g. "Option A: managed identity provider" vs "Option B: build in-house").
@@ -252,7 +252,7 @@ Each assessment card shows an **L×I=score** chip. At the top of each round, a *
         icon: BookMarked,
         color: '#2E86AB',
         title: 'Knowledge Base — Grounding Analysis in Your Documents',
-        body: `By default, agents reason from their persona and general knowledge — which is why some cite little in the evidence ledger. The **Knowledge Base** (sidebar → 1 · Build) fixes that: add your own **design docs, incident postmortems, standards, and prior assessments**, and the analysis is grounded in *your* material.
+        body: `By default, agents reason from their persona and general knowledge — which is why some cite little in the evidence ledger. The **Knowledge Base** (sidebar → Library) fixes that: add your own **design docs, incident postmortems, standards, and prior assessments**, and the analysis is grounded in *your* material.
 
 **How it works:**
 - Paste or upload (.txt/.md) a document. It's **chunked** and indexed on ingest.
@@ -279,7 +279,7 @@ The more you put in, the more grounded — and defensible — the assessments be
         icon: Scissors,
         color: '#C0392B',
         title: 'Turning a Kill Chain into a Defense Plan',
-        body: `The **Chain Breaker** (sidebar → Act on Findings → Chain Breaker) takes any compound chain and works out where a defender should intervene, in what order, and what each intervention costs.
+        body: `The **Chain Breaker** (open a session → Act stage → Chain Breaker) takes any compound chain and works out where a defender should intervene, in what order, and what each intervention costs.
 
 The governing principle: **an attacker must complete every step, but a defender only has to break one.** So the tool hunts for the cheapest, most reliable place to cut — and it distinguishes steps the adversary can route around from true chokepoints they can't.
 
@@ -315,17 +315,17 @@ The result is a defender's to-do list you can hand to a team, rather than a flat
         icon: ShieldCheck,
         color: '#27AE60',
         title: 'The Mitigation Register — Closing the Loop',
-        body: `A roadmap is a plan; the **Mitigation Register** (sidebar → 4 · Act on Findings → Mitigations) tracks it to completion and shows your **net** risk.
+        body: `A roadmap is a plan; the session's **Mitigation Register** (open the session → Act stage) tracks it to completion and shows your **net** risk.
 
-- On any Chain Breaker roadmap item, click **"+ Register"** to add it as a tracked mitigation. Its inherent risk is seeded from the leverage of the steps it breaks.
-- On the Mitigations page, set an **owner** and move each item through its lifecycle: proposed → accepted → in progress → implemented → verified (or rejected).
-- Re-score **residual risk** (likelihood × impact) once a control is in place. The page then shows **Net Risk Reduction** — summed inherent → residual across all tracked mitigations.
+- Breaking the kill chains under Findings generates mitigations automatically. On any Chain Breaker roadmap item, click **"+ Register"** to add it too. Inherent risk is seeded from the leverage of the steps it breaks.
+- In the register, set an **owner** and move each item through its lifecycle: proposed → accepted → in progress → implemented → verified (or rejected).
+- Re-score **residual risk** (likelihood × impact) in the row once a control is in place. The register then shows **Net Risk Reduction** — summed inherent → residual across this session's mitigations.
 
 This closes the loop: instead of "here are risks," you can show "here's the risk, here's what we're doing about it, here's who owns it, and here's the residual after mitigation" — which is exactly what governance and audit ask for.`,
         usage: `
-1. Run Chain Breaker on a chain, then click "+ Register" on the roadmap items you'll act on.
-2. Go to Mitigations, assign owners, and update status as work progresses.
-3. Set residual likelihood/impact once a control is implemented.
+1. Under Findings, break the kill chains — or run Chain Breaker and click "+ Register" on the roadmap items you'll act on.
+2. Open the Act stage, assign owners, and update status as work progresses.
+3. Set residual likelihood × impact in the row once a control is implemented.
 4. Report the Net Risk Reduction figure to stakeholders.
 `
       },
@@ -621,7 +621,7 @@ Click any row to open the drill-down panel for that domain.`,
       },
       {
         title: 'Close the loop in the Mitigation Register',
-        body: 'Don\'t let Chain Breaker roadmaps evaporate. "+ Register" the ones you\'ll act on, assign owners, and re-score residual risk as controls land. The Net Risk Reduction figure — inherent → residual — is the number leadership actually wants.'
+        body: 'Don\'t let Chain Breaker roadmaps evaporate. "+ Register" the ones you\'ll act on, then work them in the session\'s Act stage: assign owners and re-score residual risk as controls land. The Net Risk Reduction figure — inherent → residual — is the number leadership actually wants.'
       },
       {
         title: 'Work the coverage gaps, not just the hot cells',
