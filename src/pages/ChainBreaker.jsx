@@ -101,7 +101,11 @@ export default function ChainBreaker() {
       setSelectedSynthId(synth.id);
       setCompoundIdx(0);
     }
-  }, [sessionParam, loading, syntheses]);
+    // Carry the session's scenario into the analysis so a library-chain
+    // analysis saved from here is linked to it (and reaches What-If).
+    const sess = sessions.find(s => s.id === sessionParam);
+    if (sess?.scenario_id) setSelectedScenarioId(prev => prev || sess.scenario_id);
+  }, [sessionParam, loading, syntheses, sessions]);
 
   // ── Derived data ─────────────────────────────────────────────────────────────
 
@@ -207,6 +211,13 @@ export default function ChainBreaker() {
       setAnalysis(null);
       setSavedAt(null);
     }
+    // Default the scenario to the one this chain was analysed against, or the
+    // one it was built for, so the saved analysis stays linked to that scenario.
+    if (!selectedScenarioId) {
+      const chain = chains.find(c => c.id === id);
+      const scenarioId = saved?.scenario_id || chain?.scenario_id || '';
+      if (scenarioId && scenarios.some(s => s.id === scenarioId)) setSelectedScenarioId(scenarioId);
+    }
   };
 
   const handleSynthSelect = (id) => {
@@ -283,10 +294,20 @@ export default function ChainBreaker() {
     try {
       const now = new Date().toISOString();
       if (source === 'library' && selectedChainId) {
-        const configId = await saveLibraryAnalysis(db, selectedChainId, analysis, now);
-        setLibMap(prev => ({ ...prev, [selectedChainId]: { analysis, analyzed_at: now, configId } }));
+        // Link the analysis to a scenario so What-If can use it for sessions on
+        // that scenario. Fall back to the chain's own scenario if none is chosen.
+        const chain      = chains.find(c => c.id === selectedChainId);
+        const scenarioId = selectedScenarioId || chain?.scenario_id || null;
+        const configId   = await saveLibraryAnalysis(db, selectedChainId, analysis, now, scenarioId);
+        setLibMap(prev => ({ ...prev, [selectedChainId]: { analysis, analyzed_at: now, scenario_id: scenarioId, configId } }));
         setSavedAt(now);
-        toast({ title: 'Analysis saved', description: 'Saved to chain library. Visible in dashboard.' });
+        const scenarioName = scenarios.find(s => s.id === scenarioId)?.name;
+        toast({
+          title: 'Analysis saved',
+          description: scenarioName
+            ? `Saved to chain library and linked to "${scenarioName}". Sessions on that scenario can use it in the What-If Simulator.`
+            : 'Saved to chain library. Pick a scenario before saving to make it available in the What-If Simulator.',
+        });
       } else if (source === 'session' && selectedSynthId) {
         const key      = `${selectedSynthId}_${compoundIdx}`;
         const configId = await saveSessionAnalysis(db, selectedSynthId, compoundIdx, analysis, now);
