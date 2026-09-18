@@ -108,39 +108,46 @@ The app is available at `http://localhost:5173`.
 2. Click **Request access** to create an account, or sign in with Google
 3. A workspace is automatically created and you are added as admin
 4. Go to **Settings** and add your **Anthropic API key** — required for all AI analysis (stored in your workspace record, shared with members)
-5. The **Dashboard** shows a getting-started checklist that tracks your setup and points to the next step
+5. You land on **Sessions**. Create one, and its **Next Step** bar walks you through the rest
 
 ---
 
 ## Workflow
 
-The sidebar is organized as the workflow, top to bottom.
+The session is the hub: every analytical step happens inside one session. The sidebar has two groups.
 
-### 1 · Build
+### Work
 
-- **Domains** — broad categories that link threats to the agents who can analyze them
-- **Agents** — your expert panel; build manually, **AI Generate**, or **Import** from Markdown
-- **Knowledge Base** — add your own documents so analysis is grounded in your material
-
-### 2 · Plan
-
+- **Sessions** — where the analysis happens (see below)
 - **Decisions** — frame the design choice and the options you're comparing
 - **Scenarios** — describe the system or threat environment to stress-test
+
+### Library
+
+Reusable assets a session draws on:
+
+- **Agents** — your expert panel; build manually, **AI Generate**, or **Import** from Markdown
+- **Domains** — broad categories that link threats to the agents who can analyze them
 - **Threats** — optionally catalog known risks (with likelihood/impact)
+- **Chains** — kill chains, hand-built or extracted from a synthesis
+- **Knowledge Base** — add your own documents so analysis is grounded in your material
 
-### 3 · Run
+### Inside a session
 
-- **Sessions → New Session → Classic Analysis** — pick agents and a scenario, then run **Round 1 → Round 2 → Synthesize**. Each assessment carries severity, likelihood × impact, and confidence; a risk matrix plots the panel's ratings.
-- **Live Debate Room** — a real-time streaming alternative where agents respond turn by turn and you facilitate: interject with notes, direct a question at a specific agent, and steer the debate.
-- **What-If Simulator** — explore how changes shift the risk picture.
+A stepper walks the lifecycle in order, and a **Next Step** bar always shows the one thing to do now:
 
-### 4 · Act on Findings
+1. **Setup** — agents and scenario (also the session's Settings)
+2. **Round 1** — independent assessments, each with severity, likelihood × impact, and confidence
+3. **Round 2** — cross-examination
+4. **Synthesis** — consensus, contested findings, blind spots, priority mitigations
+5. **Findings** — the kill chains and threats the panel surfaced; break the chains in place
+6. **Act** — this session's mitigation register plus the tools that work it: **Chain Breaker** (prioritized roadmap), **What-If Simulator** (toggle countermeasures against the risk score), and the **Decision Brief** (executive PDF)
 
-- **Threat Map** — where threats concentrate vs. where your agent bench actually covers them; drill into any slice, close gaps with Generate-SME
-- **Chains** — kill chains auto-extracted from synthesis
-- **Chain Breaker** — turn a chain into a prioritized **Mitigation Roadmap** (where to cut first, control type, effort, residual risk)
-- **Mitigations** — the register: track each mitigation through its lifecycle and re-score net residual risk
-- **Reports** — print-ready executive PDF
+**Live Debate Room** and **Panel Room** sessions produce their rounds in a real-time room instead, then rejoin the same flow at Synthesis.
+
+### More
+
+Cross-session views live under **More**: **Threat Map** (coverage of your threat landscape by your agent bench), **Agent Analytics**, **Compare Sessions**, and the **Prompt Library**.
 
 ---
 

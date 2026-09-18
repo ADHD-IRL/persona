@@ -6,7 +6,7 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { generateRound1, generateRound2, generateRound0, generateReaction, generateSynthesis as generateSynthesisLLM, extractSessionThreats } from '@/lib/llm';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, RefreshCw, ChevronDown, ChevronUp, Sparkles, AlertCircle, Save, BarChart2, ShieldAlert, Check, X, BookOpen, MessageSquare, BellRing, StopCircle, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, RefreshCw, ChevronDown, ChevronUp, Sparkles, AlertCircle, Save, BarChart2, ShieldAlert, Check, X, BookOpen, MessageSquare, BellRing, StopCircle, Trash2, Users, Settings2, FlaskConical, FileText, Scissors, GitBranch, Link2 } from 'lucide-react';
 import SeverityBadge from '@/components/ui/SeverityBadge';
 import EvidenceLedger from '@/components/session/EvidenceLedger';
 import { riskScore, riskBandFromScore, likelihoodLabel, impactLabel } from '@/lib/risk';
@@ -20,16 +20,22 @@ import SessionKillChains from '@/components/session/SessionKillChains';
 import SessionMitigations from '@/components/session/SessionMitigations';
 import SessionRiskHeader from '@/components/session/SessionRiskHeader';
 import AnalysisStages from '@/components/session/AnalysisStages';
-import { buildGroups } from '@/components/threatmap/mapUtils';
 import WrButton from '@/components/ui/WrButton';
 import { WrInput } from '@/components/ui/WrInput';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import DebateTranscript from '@/components/session/DebateTranscript';
 import RiskRegistry from '@/components/session/RiskRegistry';
-import SessionProgressBar from '@/components/session/SessionProgressBar';
 import SynthesisSummary from '@/components/session/SynthesisSummary';
 
-const TABS = ['ROUND 1','ROUND 2','SYNTHESIS','KILL CHAINS','THREATS','MITIGATIONS','SOURCES','SETTINGS'];
+// The workspace is organised as a stepper of analysis stages. Content panels
+// are still keyed by the finer-grained `tab` (Findings holds two, Sources and
+// Settings are secondary panels reachable from the header), so each stage maps
+// to the tab it opens on.
+const STAGE_TAB = { setup: 'SETTINGS', round1: 'ROUND 1', round2: 'ROUND 2', synthesis: 'SYNTHESIS', findings: 'KILL CHAINS', act: 'MITIGATIONS' };
+const stageOfTab = (t) =>
+  t === 'ROUND 1' ? 'round1' : t === 'ROUND 2' ? 'round2' : t === 'SYNTHESIS' ? 'synthesis'
+  : (t === 'KILL CHAINS' || t === 'THREATS') ? 'findings' : t === 'MITIGATIONS' ? 'act'
+  : t === 'SETTINGS' ? 'setup' : null;
 
 class SynthesisErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -1068,7 +1074,6 @@ function SessionSettingsPanel({ session, sessionAgents, getAgent, onSaved }) {
 export default function SessionWorkspace() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { db, workspace } = useWorkspace();
   const [session, setSession] = useState(null);
   const [sessionAgents, setSessionAgents] = useState([]);
@@ -1096,7 +1101,6 @@ export default function SessionWorkspace() {
   const [decisionMeta, setDecisionMeta] = useState(null);      // { decision, option } for the banner
   const [sessionChains, setSessionChains] = useState([]);      // chains extracted from this session
   const [sessionMitigations, setSessionMitigations] = useState([]);
-  const [allDomains, setAllDomains] = useState([]);            // for coverage-gap count
   const [facilitatorNote, setFacilitatorNote] = useState('');
   const [briefingAll, setBriefingAll] = useState(false);
   const [reactions, setReactions] = useState([]);
@@ -1133,17 +1137,15 @@ export default function SessionWorkspace() {
       setThreats(t);
     }
 
-    // Load pinned chains + this session's extracted chains/mitigations + domains
+    // Load pinned chains + this session's extracted chains/mitigations
     const pinnedIds = sessionData?.pinned_chain_ids || [];
-    const [allChains, sessMits, doms] = await Promise.all([
+    const [allChains, sessMits] = await Promise.all([
       db.Chain.list(),
       db.Mitigation ? db.Mitigation.filter({ session_id: id }).catch(() => []) : [],
-      db.Domain.list().catch(() => []),
     ]);
     setPinnedChains(pinnedIds.length ? allChains.filter(c => pinnedIds.includes(c.id)) : []);
     setSessionChains(allChains.filter(c => c.session_id === id));
     setSessionMitigations(sessMits || []);
-    setAllDomains(doms || []);
 
     // Decision-Focus session: build the framing block injected into every prompt
     if (sessionData?.decision_id && sessionData?.decision_option_id && db.Decision) {
@@ -1686,29 +1688,6 @@ const briefAllAgents = async () => {
             )}
           </div>
           {session.phase_focus && <p className="text-xs mt-0.5" style={{ color: 'var(--wr-text-muted)' }}>{session.phase_focus}</p>}
-          {(() => {
-            const done = new Set(['setup']);
-            const sas = sessionAgents;
-            if (sas.length && sas.every(sa => sa.round1_assessment)) done.add('round1');
-            if (sas.length && sas.every(sa => sa.round2_rebuttal)) done.add('round2');
-            if (synthesis?.raw_text) done.add('synthesis');
-            if (sessionChains.length || threats.length) done.add('findings');
-            if (sessionMitigations.length) done.add('act');
-            if (decisionMeta?.decision?.status === 'decided') done.add('decide');
-            const current = tab === 'ROUND 1' ? 'round1' : tab === 'ROUND 2' ? 'round2'
-              : tab === 'SYNTHESIS' ? 'synthesis'
-              : (tab === 'KILL CHAINS' || tab === 'THREATS') ? 'findings'
-              : tab === 'MITIGATIONS' ? 'act' : 'setup';
-            const go = (stage) => {
-              if (stage === 'round1') setTab('ROUND 1');
-              else if (stage === 'round2') setTab('ROUND 2');
-              else if (stage === 'synthesis') setTab('SYNTHESIS');
-              else if (stage === 'findings') setTab('KILL CHAINS');
-              else if (stage === 'act') setTab('MITIGATIONS');
-              else if (stage === 'decide' && session?.decision_id) navigate(`/decisions/${session.decision_id}`);
-            };
-            return <div className="mt-2"><AnalysisStages current={current} done={done} onNavigate={go} /></div>;
-          })()}
         </div>
         <div className="flex items-center gap-2">
           {session.mode === 'live' && (
@@ -1726,9 +1705,6 @@ const briefAllAgents = async () => {
               </WrButton>
             </Link>
           )}
-          <Link to={`/sessions/${id}/results`}>
-            <WrButton variant="outline" size="sm"><BarChart2 className="w-3.5 h-3.5" /> Results</WrButton>
-          </Link>
           {(tab === 'ROUND 1' || tab === 'ROUND 2') && (
             <>
               <Tooltip>
@@ -1810,91 +1786,130 @@ const briefAllAgents = async () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b" style={{ borderColor: 'var(--wr-border)' }}>
-        {TABS.map(t => {
-          let badge = null;
-          if (t === 'ROUND 1') {
-            const done = sessionAgents.filter(sa => sa.round1_assessment).length;
-            const total = sessionAgents.length;
-            if (total > 0) badge = done === total ? '✓' : `${done}/${total}`;
-          } else if (t === 'ROUND 2') {
-            const done = sessionAgents.filter(sa => sa.round2_rebuttal).length;
-            const total = sessionAgents.length;
-            if (total > 0) badge = done === total ? '✓' : `${done}/${total}`;
-          } else if (t === 'SYNTHESIS') {
-            badge = synthesis?.raw_text ? '✓' : null;
-          } else if (t === 'THREATS') {
-            badge = threats.length > 0 ? String(threats.length) : null;
-          } else if (t === 'SOURCES') {
-            badge = sessionSources.length > 0 ? String(sessionSources.length) : null;
-          }
-          return (
-            <button key={t} onClick={() => setTab(t)}
-              className="px-5 py-3 text-xs font-bold tracking-widest font-mono transition-colors flex items-center gap-1.5"
-              style={{
-                color: tab === t ? 'var(--wr-amber)' : 'var(--wr-text-muted)',
-                borderBottom: tab === t ? '2px solid var(--wr-amber)' : '2px solid transparent',
-              }}>
-              {t}
-              {badge && (
-                <span
-                  className="text-xs font-mono font-bold px-1 py-0 rounded-sm"
-                  style={{
-                    backgroundColor: badge === '✓' ? 'rgba(39,174,96,0.15)' : 'rgba(240,165,0,0.12)',
-                    color: badge === '✓' ? '#27AE60' : 'var(--wr-amber)',
-                    fontSize: '9px',
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {/* Stage navigation + secondary panels + next step */}
+      {(() => {
+        const total  = sessionAgents.length;
+        const r1Done = sessionAgents.filter(sa => sa.round1_assessment).length;
+        const r2Done = sessionAgents.filter(sa => sa.round2_rebuttal).length;
+        const r1All  = total > 0 && r1Done === total;
+        const r2All  = total > 0 && r2Done === total;
+        const synthDone = !!synthesis?.raw_text;
+        const findingsCount = sessionChains.length + threats.length;
 
-      {/* Session progress strip */}
-      <SessionProgressBar
-        sessionAgents={sessionAgents}
-        agents={agents}
-        synthesis={synthesis}
-        threats={threats}
-        sessionSources={sessionSources}
-        generatingAll={generatingAll}
-        generatingSynthesis={generatingSynthesis}
-        onTabChange={setTab}
-      />
+        const done = new Set(['setup']);
+        if (r1All) done.add('round1');
+        if (r2All) done.add('round2');
+        if (synthDone) done.add('synthesis');
+        if (findingsCount > 0) done.add('findings');
+        if (sessionMitigations.length) done.add('act');
+
+        const badges = {};
+        if (total > 0) {
+          badges.round1 = r1All ? '✓' : `${r1Done}/${total}`;
+          badges.round2 = r2All ? '✓' : `${r2Done}/${total}`;
+        }
+        if (synthDone) badges.synthesis = '✓';
+        if (findingsCount > 0) badges.findings = String(findingsCount);
+        if (sessionMitigations.length) badges.act = String(sessionMitigations.length);
+
+        const current = stageOfTab(tab);
+
+        // One obvious next action per stage of the lifecycle. Live and panel
+        // sessions produce their rounds in their own rooms, so they point there.
+        const next = (() => {
+          if (session.mode === 'live' && !synthDone && !r2All)
+            return { label: 'Enter the debate room', hint: 'Live sessions run in the debate room. Synthesis follows.', to: `/sessions/${id}/live` };
+          if (session.mode === 'panel' && !synthDone)
+            return { label: 'Enter the panel room', hint: 'Panel sessions are synthesised from the room transcript.', to: `/sessions/${id}/panel` };
+          if (total === 0)
+            return { label: 'Add agents to the panel', hint: 'This session has no agents yet.', onClick: () => setTab('SETTINGS') };
+          if (!r1All)
+            return { label: r1Done ? `Generate Round 1 for ${total - r1Done} remaining` : 'Generate Round 1', hint: 'Independent assessments from every agent.', onClick: () => { setTab('ROUND 1'); generateRound(1); }, busy: generatingAll };
+          if (!r2All)
+            return { label: r2Done ? `Generate Round 2 for ${total - r2Done} remaining` : 'Generate Round 2', hint: 'Agents cross-examine each other’s Round 1 findings.', onClick: () => { setTab('ROUND 2'); generateRound(2); }, busy: generatingAll };
+          if (!synthDone)
+            return { label: 'Generate Synthesis', hint: 'Consensus, contested findings, blind spots and priority mitigations.', onClick: () => { setTab('SYNTHESIS'); generateSynthesis(); }, busy: generatingSynthesis };
+          if (threats.length === 0)
+            return { label: 'Extract threats', hint: 'Catalog what the panel surfaced.', onClick: () => setTab('THREATS') };
+          if (sessionChains.length > 0 && sessionMitigations.length === 0)
+            return { label: 'Break the kill chains', hint: 'Find the highest-leverage steps and generate mitigations.', onClick: () => setTab('KILL CHAINS') };
+          return { label: 'Simulate countermeasures', hint: 'Toggle mitigations and watch the risk score move.', to: `/simulator/${id}`, alt: { label: 'Generate report', to: `/reports?session=${id}` } };
+        })();
+
+        const NextButton = ({ action, primary = true }) => {
+          const cls = 'inline-flex items-center gap-1.5';
+          const content = <>{action.busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}{action.label}<ArrowRight className="w-3.5 h-3.5" /></>;
+          if (action.to) return <Link to={action.to}><WrButton size="sm" variant={primary ? undefined : 'secondary'} className={cls}>{content}</WrButton></Link>;
+          return <WrButton size="sm" variant={primary ? undefined : 'secondary'} className={cls} onClick={action.onClick} disabled={action.busy}>{content}</WrButton>;
+        };
+
+        const SecondaryBtn = ({ icon: Icon, label, active, onClick, to, badge }) => {
+          const inner = (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-mono transition-colors"
+              style={{
+                color: active ? 'var(--wr-amber)' : 'var(--wr-text-muted)',
+                backgroundColor: active ? 'rgba(240,165,0,0.12)' : 'transparent',
+                border: active ? '1px solid rgba(240,165,0,0.3)' : '1px solid transparent',
+              }}>
+              <Icon className="w-3.5 h-3.5" />{label}
+              {badge ? <span className="font-bold" style={{ color: 'var(--wr-amber)' }}>{badge}</span> : null}
+            </span>
+          );
+          return to
+            ? <Link to={to} style={{ textDecoration: 'none' }}>{inner}</Link>
+            : <button onClick={onClick}>{inner}</button>;
+        };
+
+        return (
+          <>
+            <div className="flex items-center justify-between gap-4 px-6 py-3 border-b" style={{ borderColor: 'var(--wr-border)' }}>
+              <AnalysisStages size="lg" current={current} done={done} badges={badges}
+                onNavigate={stage => setTab(STAGE_TAB[stage])} />
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <SecondaryBtn icon={BookOpen} label="Sources" active={tab === 'SOURCES'} onClick={() => setTab('SOURCES')}
+                  badge={sessionSources.length > 0 ? String(sessionSources.length) : null} />
+                <SecondaryBtn icon={BarChart2} label="Results" to={`/sessions/${id}/results`} />
+                <SecondaryBtn icon={Settings2} label="Settings" active={tab === 'SETTINGS'} onClick={() => setTab('SETTINGS')} />
+              </div>
+            </div>
+
+            {/* Sub-toggle for stages that hold more than one panel */}
+            {current === 'findings' && (
+              <div className="flex items-center gap-1 px-6 pt-4">
+                {[['KILL CHAINS', 'Kill chains', sessionChains.length, Link2], ['THREATS', 'Threats', threats.length, ShieldAlert]].map(([t, label, n, Icon]) => (
+                  <button key={t} onClick={() => setTab(t)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-bold tracking-wider transition-colors"
+                    style={{
+                      color: tab === t ? '#0D1B2A' : 'var(--wr-text-muted)',
+                      backgroundColor: tab === t ? 'var(--wr-amber)' : 'var(--wr-bg-card)',
+                      border: `1px solid ${tab === t ? 'var(--wr-amber)' : 'var(--wr-border)'}`,
+                    }}>
+                    <Icon className="w-3.5 h-3.5" />{label.toUpperCase()}{n > 0 && <span style={{ opacity: 0.75 }}>· {n}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Next step — the one thing to do now, for every stage of the lifecycle */}
+            <div className="mx-6 mt-4 flex items-center justify-between gap-4 rounded-lg px-4 py-3"
+              style={{ backgroundColor: 'rgba(240,165,0,0.06)', border: '1px solid rgba(240,165,0,0.3)' }}>
+              <div className="min-w-0">
+                <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>
+                  {session.status === 'pending' ? 'SESSION NOT STARTED' : 'NEXT STEP'}
+                </p>
+                {next.hint && <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--wr-text-secondary)' }}>{next.hint}</p>}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {next.alt && <NextButton action={next.alt} primary={false} />}
+                <NextButton action={next} />
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Content */}
       <div className="p-6">
-        {/* Unrun banner */}
-        {session.status === 'pending' && (
-          <div className="mb-5 rounded p-4 flex items-center gap-4"
-            style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px dashed var(--wr-border)' }}>
-            <div className="flex-1">
-              <p className="text-xs font-bold tracking-widest font-mono mb-1" style={{ color: 'var(--wr-text-muted)' }}>
-                SESSION NOT STARTED
-              </p>
-              <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>
-                {session.mode === 'live'
-                  ? 'This session is ready. Enter the debate room to begin live AI moderation.'
-                  : 'This session is ready. Generate Round 1 assessments from the tabs below to begin.'}
-              </p>
-            </div>
-            {session.mode === 'live' ? (
-              <Link to={`/sessions/${id}/live`}>
-                <WrButton>Enter Debate Room</WrButton>
-              </Link>
-            ) : (
-              <WrButton onClick={() => { setTab('ROUND 1'); }}>
-                Start Round 1
-              </WrButton>
-            )}
-          </div>
-        )}
-
         {(tab === 'ROUND 1' || tab === 'ROUND 2') && (
           <>
             {/* Facilitator note — shown in Round 2 tab */}
@@ -1968,28 +1983,6 @@ const briefAllAgents = async () => {
                 <RiskMatrix sessionAgents={sessionAgents} agents={agents} round={round} />
               </div>
             )}
-
-            {/* Batch action bar — generate every pending assessment at once */}
-            {(() => {
-              const pending = sessionAgents.filter(sa => round === 1 ? !sa.round1_assessment : !sa.round2_rebuttal);
-              if (generatingAll || pending.length === 0) return null;
-              const done = sessionAgents.length - pending.length;
-              return (
-                <div className="mb-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3"
-                  style={{ backgroundColor: 'rgba(240,165,0,0.06)', border: '1px solid rgba(240,165,0,0.3)' }}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Sparkles className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--wr-amber)' }} />
-                    <span className="text-sm" style={{ color: 'var(--wr-text-secondary)' }}>
-                      <strong style={{ color: 'var(--wr-text-primary)' }}>{pending.length}</strong> agent{pending.length !== 1 ? 's' : ''} awaiting {tab === 'ROUND 1' ? 'Round 1' : 'Round 2'}
-                      {done > 0 && <span style={{ color: 'var(--wr-text-muted)' }}> · {done} done</span>}
-                    </span>
-                  </div>
-                  <WrButton size="sm" onClick={() => generateRound(round)}>
-                    <Sparkles className="w-3.5 h-3.5" /> Generate all {pending.length}
-                  </WrButton>
-                </div>
-              );
-            })()}
 
             <DebateTranscript
               sessionAgents={sessionAgents}
@@ -2089,30 +2082,20 @@ const briefAllAgents = async () => {
               session={session}
               scenario={scenarios.find(s => s.id === session?.scenario_id) || null}
             />
-            {synthesis?.raw_text && (() => {
-              // Coverage gaps for the participating panel against this scenario's threats
-              let gaps = null;
-              try {
-                const participants = agents.filter(a => sessionAgents.some(sa => sa.agent_id === a.id));
-                const { groups } = buildGroups({ axis: 'domain', agents: participants, domains: allDomains, threats });
-                gaps = groups.filter(g => !g.isUnassigned && g.score > 0 && g.agents.length <= 1).length;
-              } catch { gaps = null; }
-              return (
-                <div className="mt-6">
-                  <NextSteps
-                    sessionId={id}
-                    decisionId={session?.decision_id || null}
-                    threatsCount={threats.length}
-                    chainsCount={sessionChains.length}
-                    mitigationsCount={sessionMitigations.length}
-                    coverageGaps={gaps}
-                    onCatalogThreats={() => setTab('THREATS')}
-                    onBreakChains={() => setTab('KILL CHAINS')}
-                    onTrackMitigations={() => setTab('MITIGATIONS')}
-                  />
-                </div>
-              );
-            })()}
+            {synthesis?.raw_text && (
+              <div className="mt-6">
+                <NextSteps
+                  sessionId={id}
+                  decisionId={session?.decision_id || null}
+                  threatsCount={threats.length}
+                  chainsCount={sessionChains.length}
+                  mitigationsCount={sessionMitigations.length}
+                  onCatalogThreats={() => setTab('THREATS')}
+                  onBreakChains={() => setTab('KILL CHAINS')}
+                  onTrackMitigations={() => setTab('MITIGATIONS')}
+                />
+              </div>
+            )}
           </SynthesisErrorBoundary>
         )}
 
@@ -2130,7 +2113,32 @@ const briefAllAgents = async () => {
         )}
 
         {tab === 'MITIGATIONS' && (
-          <div className="max-w-4xl">
+          <div className="max-w-4xl space-y-5">
+            {/* Act on the findings: everything downstream of the analysis, scoped to this session */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { icon: Scissors,     color: '#D68910', title: 'Chain Breaker',   desc: 'Dissect a compound chain step by step and add its roadmap to this register.', to: `/chain-breaker?session=${id}` },
+                { icon: FlaskConical, color: '#2E86AB', title: 'What-If Simulator', desc: 'Toggle countermeasures and watch the systemic risk score respond.', to: `/simulator/${id}` },
+                { icon: FileText,     color: '#546E7A', title: 'Decision Brief',  desc: 'Executive report for this session, pre-scoped and ready to export.', to: `/reports?session=${id}` },
+                ...(session?.decision_id ? [{ icon: GitBranch, color: '#9B59B6', title: 'Record the decision', desc: 'Compare options and make the call.', to: `/decisions/${session.decision_id}` }] : []),
+              ].map(a => {
+                const Icon = a.icon;
+                return (
+                  <Link key={a.title} to={a.to} className="flex items-start gap-3 rounded-lg p-4 transition-all hover:brightness-110"
+                    style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', textDecoration: 'none' }}>
+                    <div className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${a.color}18`, border: `1px solid ${a.color}44` }}>
+                      <Icon className="w-4 h-4" style={{ color: a.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>{a.title}</p>
+                      <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--wr-text-muted)' }}>{a.desc}</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 flex-shrink-0 mt-1" style={{ color: 'var(--wr-text-muted)' }} />
+                  </Link>
+                );
+              })}
+            </div>
             <SessionMitigations db={db} mitigations={sessionMitigations} onChange={load} />
           </div>
         )}
