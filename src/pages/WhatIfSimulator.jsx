@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { parseAnalysisConfigs } from '@/lib/chainBreakStorage';
+import { countermeasureText } from '@/lib/llm';
 import { computeSCRS, estimateCMDelta, projectSCRS, getPosture } from '@/lib/scrsEngine';
 import SCRSGauge from '@/components/simulator/SCRSGauge';
 import RiskBreakdownCard from '@/components/simulator/RiskBreakdownCard';
@@ -24,6 +25,7 @@ export default function WhatIfSimulator() {
   const [sessionId,  setSessionId]  = useState(preloadSessionId || '');
   const [sessionAgents, setSessionAgents] = useState([]);
   const [syntheses,  setSyntheses]  = useState([]);
+  const [chains,     setChains]     = useState([]);
   const [libMap,     setLibMap]     = useState({});
   const [sesMap,     setSesMap]     = useState({});
   const [appliedCMs, setAppliedCMs] = useState({}); // key: `${chainId}_${stepNum}_${cmIdx}` → bool
@@ -34,11 +36,12 @@ export default function WhatIfSimulator() {
     if (!db) return;
     setLoading(true);
     try {
-      const [s, a, sa, sy, configs] = await Promise.all([
+      const [s, a, sa, sy, c, configs] = await Promise.all([
         db.Session.list(),
         db.Agent.list(),
         db.SessionAgent.list(),
         db.SessionSynthesis.list(),
+        db.Chain.list(),
         db.AppConfig.list(),
       ]);
       const { libMap: lm, sesMap: sm } = parseAnalysisConfigs(configs);
@@ -46,6 +49,7 @@ export default function WhatIfSimulator() {
       setAgents(a);
       setSessionAgents(sa);
       setSyntheses(sy);
+      setChains(c);
       setLibMap(lm);
       setSesMap(sm);
     } finally {
@@ -74,14 +78,34 @@ export default function WhatIfSimulator() {
     [syntheses, sessionId]
   );
 
+  // Two sources feed the simulator:
+  //   1. Chain Breaker analyses of this session's synthesised compound chains.
+  //   2. Chain Breaker analyses of library chains that belong to this session —
+  //      linked to it directly, or to the scenario the session runs on (either
+  //      via the scenario chosen when the analysis was saved, or the chain's own
+  //      scenario). Without (2), a library-chain analysis never reaches What-If.
   const chainAnalyses = useMemo(() => {
-    if (!synthesis?.compound_chains) return [];
-    return synthesis.compound_chains.map((chain, idx) => {
-      const key    = `${synthesis.id}_${idx}`;
-      const stored = sesMap[key];
-      return stored ? { ...chain, ...stored.analysis, _key: key, _idx: idx } : null;
-    }).filter(Boolean);
-  }, [synthesis, sesMap]);
+    const out = [];
+    if (synthesis?.compound_chains) {
+      synthesis.compound_chains.forEach((chain, idx) => {
+        const key    = `${synthesis.id}_${idx}`;
+        const stored = sesMap[key];
+        if (stored) out.push({ ...chain, ...stored.analysis, _key: key, _idx: idx, _source: 'session' });
+      });
+    }
+    if (session) {
+      for (const chain of chains) {
+        const stored = libMap[chain.id];
+        if (!stored) continue;
+        const linkedToSession  = chain.session_id && chain.session_id === session.id;
+        const linkedToScenario = session.scenario_id &&
+          (stored.scenario_id === session.scenario_id || chain.scenario_id === session.scenario_id);
+        if (!linkedToSession && !linkedToScenario) continue;
+        out.push({ ...chain, ...stored.analysis, _key: `lib_${chain.id}`, _idx: chain.id, _source: 'library' });
+      }
+    }
+    return out;
+  }, [synthesis, sesMap, session, chains, libMap]);
 
   // ── SCRS computation ─────────────────────────────────────────────────────
 
@@ -93,7 +117,7 @@ export default function WhatIfSimulator() {
       const chain = chainAnalyses.find(c => c._key === chainKey);
       const step  = chain?.steps?.find(s => String(s.step_number) === stepNum);
       if (step?.countermeasures?.[cmIdx]) {
-        out.push({ text: step.countermeasures[cmIdx], leverage: step.leverage, difficulty: step.difficulty });
+        out.push({ text: countermeasureText(step.countermeasures[cmIdx]), leverage: step.leverage, difficulty: step.difficulty });
       }
     }
     return out;
@@ -123,7 +147,7 @@ export default function WhatIfSimulator() {
         for (let i = 0; i < (step.countermeasures || []).length; i++) {
           const key = `${chain._key}::${step.step_number}::${i}`;
           if (!appliedCMs[key]) {
-            actions.push({ text: step.countermeasures[i], difficulty: step.difficulty,
+            actions.push({ text: countermeasureText(step.countermeasures[i]), difficulty: step.difficulty,
               delta: estimateCMDelta({ leverage: 'HIGH' }, totalHighSteps), key });
           }
         }
@@ -232,7 +256,7 @@ export default function WhatIfSimulator() {
           </select>
           {session && chainAnalyses.length === 0 && (
             <p className="text-xs mt-2" style={{ color: '#D68910' }}>
-              ⚠ No chain analyses found for this session. Run Chain Breaker on the synthesised chains first.
+              ⚠ No chain analyses found for this session. Run Chain Breaker on its synthesised chains, or on a library chain with this session's scenario selected, and save the analysis.
             </p>
           )}
         </div>
@@ -307,6 +331,10 @@ export default function WhatIfSimulator() {
                           style={{ color: resColor, backgroundColor: `${resColor}15`, border: `1px solid ${resColor}30` }}>
                           {chain.chain_resilience} RESILIENCE
                         </span>
+                        <span className="text-xs font-mono px-2 py-0.5 rounded"
+                          style={{ color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
+                          {chain._source === 'library' ? 'LIBRARY CHAIN' : 'SESSION CHAIN'}
+                        </span>
                       </div>
                       {isOpen
                         ? <ChevronUp className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} />
@@ -342,7 +370,7 @@ export default function WhatIfSimulator() {
                                   return (
                                     <CountermeasureToggle
                                       key={key}
-                                      cm={{ text: cm, leverage: step.leverage, difficulty: step.difficulty }}
+                                      cm={{ text: countermeasureText(cm), leverage: step.leverage, difficulty: step.difficulty }}
                                       applied={!!appliedCMs[key]}
                                       onToggle={() => toggleCM(key)}
                                       totalHighSteps={totalHighSteps}
@@ -374,7 +402,8 @@ export default function WhatIfSimulator() {
                     No chain analyses available
                   </p>
                   <p className="text-xs mb-4" style={{ color: 'var(--wr-text-muted)' }}>
-                    Run Chain Breaker on this session's synthesised chains to enable simulation.
+                    Run Chain Breaker on this session's synthesised chains, or on a library chain with
+                    {session?.scenario_id ? ' this session’s scenario' : ' a scenario'} selected, then save the analysis.
                   </p>
                   <Link to="/chain-breaker"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold"
