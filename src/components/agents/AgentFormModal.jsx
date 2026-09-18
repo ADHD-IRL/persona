@@ -57,7 +57,6 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
     red_team_focus: '', professional_background: '', expertise_level: 'Senior',
     reasoning_style: 'Analytical', severity_default: 'HIGH', vector_human: 50,
     vector_technical: 50, vector_physical: 30, vector_futures: 40, is_ai_generated: false, tags: [],
-    voice_id: '',
     epistemic_style: '', institutional_background: '', conflict_triggers: '',
     decision_style: '', adversary_model: '', institutional_incentives: '',
     ...agent,
