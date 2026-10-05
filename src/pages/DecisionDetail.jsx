@@ -14,6 +14,8 @@ import {
   runOptionSession, generateDecisionAssessment,
   readKV, writeKV, assessmentKey, setupKey,
 } from '@/lib/decisionRunner';
+import { useRunRecord } from '@/hooks/useRunRecord';
+import { describeRun } from '@/lib/runState';
 
 const CRIT_COLOR = { LOW: '#27AE60', MEDIUM: '#D68910', HIGH: '#C0392B' };
 const ASSUMPTION_STATUS = { holds: '#27AE60', monitoring: '#D68910', invalidated: '#C0392B' };
@@ -56,11 +58,12 @@ export default function DecisionDetail() {
   const setupSeeded = useRef(false);
   const defaultedFor = useRef(null);   // scenario id the bench was last defaulted for
 
-  // Run state
+  // Run state (this tab's loop) + the durable record any tab can see (R-N10)
   const [running, setRunning] = useState(null);   // { optionIndex, optionName, stage, agentIndex, agentTotal, agentName, reused }
   const [runError, setRunError] = useState(null);
   const cancelRef = useRef(false);
   const elapsed = useElapsed(!!running);
+  const run = useRunRecord(db, 'decision', id);
 
   // Assumptions + record
   const [newAssumption, setNewAssumption] = useState('');
@@ -115,7 +118,7 @@ export default function DecisionDetail() {
     setDecidedBy('');
     setLoading(true);
     load();
-  }, [db, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [db, id]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
@@ -131,7 +134,7 @@ export default function DecisionDetail() {
     if (agentIds.size > 0) return;   // seeded from a saved setup
     const inDomain = agents.filter(a => scenario.domain_id && a.domain_id === scenario.domain_id);
     setAgentIds(new Set((inDomain.length ? inDomain : agents).map(a => a.id)));
-  }, [scenario, agents]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scenario, agents]);
 
   // The bench is the saved/selected ids that still correspond to real agents.
   const bench = useMemo(() => agents.filter(a => agentIds.has(a.id)), [agents, agentIds]);
@@ -176,18 +179,25 @@ export default function DecisionDetail() {
       return scored.sort((a, b) => a.agg.peak - b.agg.peak || a.agg.avgExposure - b.agg.avgExposure)[0].o.id;
     })();
 
-  const canRun = !!scenario && bench.length > 0 && options.length >= 2 && !running;
+  const foreignRun = run.status === 'alive';     // another tab is driving this decision's panel
+  const interrupted = run.status === 'stale';    // a run stopped without finishing (reload, tab closed, remount)
+  const canRun = !!scenario && bench.length > 0 && options.length >= 2 && !running && !foreignRun;
 
   // ── Run the panel ──────────────────────────────────────────────────────────
+  // Resumable by construction: options with a complete session are reused,
+  // options with a partial session are continued where they stopped, and only
+  // missing options get a new session.
 
   const runPanel = async ({ rerunAll = false } = {}) => {
     if (!canRun) return;
     cancelRef.current = false;
     setRunError(null);
+    const stageText = (p) => `${STAGE_LABEL[p.stage] || p.stage}${p.agentTotal ? ` · agent ${p.agentIndex}/${p.agentTotal}` : ''}`;
     try {
       await writeKV(db, setupKey(id), { scenario_id: scenario.id, agent_ids: bench.map(a => a.id) });
       if (decision.status === 'framing') await db.Decision.update(id, { status: 'analyzing', updated_at: new Date().toISOString() });
       const threats = await db.Threat.filter({ scenario_id: scenario.id }).catch(() => []);
+      await run.start({ stage: 'option', optionIndex: 0, total: options.length, label: options[0]?.name || '' });
 
       const perOption = [];
       for (let k = 0; k < options.length; k++) {
@@ -200,9 +210,16 @@ export default function DecisionDetail() {
           perOption.push({ option: opt, sessionAgents: existing.sessionAgents, synthesis: existing.synthesis, sessionId: existing.session.id });
           continue;
         }
+        const partial = !rerunAll && !existing?.session && existing?.anySession
+          ? { session: existing.anySession, sessionAgents: sessionAgents.filter(sa => sa.session_id === existing.anySession.id) }
+          : null;
+        if (partial) setRunning({ optionIndex: k, optionName: opt.name, stage: 'resume' });
         const r = await runOptionSession({
-          db, decision, option: opt, assumptions, scenario, agents: bench, threats,
-          onProgress: p => setRunning({ optionIndex: k, optionName: opt.name, ...p }),
+          db, decision, option: opt, assumptions, scenario, agents: bench, threats, resume: partial,
+          onProgress: p => {
+            setRunning({ optionIndex: k, optionName: opt.name, ...p });
+            run.beat({ stage: 'option', optionIndex: k, total: options.length, label: `${opt.name} — ${stageText(p)}` });
+          },
           shouldCancel: () => cancelRef.current,
         });
         perOption.push({
@@ -214,18 +231,24 @@ export default function DecisionDetail() {
       }
 
       setRunning({ stage: 'assessment' });
+      await run.beat({ stage: 'assessment', optionIndex: null, label: '' });
       const result = await generateDecisionAssessment({ decision, options, assumptions, perOption });
       const rec = { generated_at: new Date().toISOString(), assessment: result, session_ids: perOption.map(p => p.sessionId) };
       await writeKV(db, assessmentKey(id), rec);
       setAssessmentRec(rec);
     } catch (e) {
-      if (e.message === 'Cancelled') setRunError('Stopped. Finished options keep their sessions; the option that was in progress is re-run from scratch on the next run.');
-      else setRunError(e.message || 'The panel run failed.');
+      if (e.message === 'Cancelled') setRunError('Stopped. Options already analysed keep their sessions; run again to continue where it left off.');
+      else setRunError(`${e.message || 'The panel run failed.'} Run again to continue from the last finished agent.`);
     } finally {
+      await run.finish();
       setRunning(null);
       load();
     }
   };
+
+  // Clear an interrupted run's record without resuming. Partial sessions stay
+  // and will be continued by the next run.
+  const dismissInterrupted = async () => { await run.finish(); load(); };
 
   // Re-write the assessment from the sessions that already exist.
   const regenerateAssessment = async () => {
@@ -329,6 +352,45 @@ export default function DecisionDetail() {
 
       <div className="p-6 space-y-6">
 
+        {/* ── Durable run state (R-N10): alive elsewhere, or interrupted ── */}
+        {!running && foreignRun && run.record && (
+          <div className="rounded-lg p-4 flex items-start gap-3" style={{ ...card, border: '1px solid rgba(46,134,171,0.4)' }}>
+            <RefreshCw className="w-4 h-4 flex-shrink-0 mt-0.5 animate-spin" style={{ color: '#2E86AB' }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#2E86AB' }}>RUNNING IN ANOTHER TAB</p>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--wr-text-secondary)' }}>{describeRun(run.record)}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
+                Started {new Date(run.record.startedAt).toLocaleTimeString()} · last progress {new Date(run.record.heartbeatAt).toLocaleTimeString()}. This page refreshes as it advances; controls are disabled until it finishes.
+              </p>
+            </div>
+          </div>
+        )}
+        {!running && interrupted && run.record && (
+          <div className="rounded-lg p-4 flex items-start gap-3" style={{ ...card, border: '1px solid rgba(214,137,16,0.45)' }}>
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#D68910' }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#D68910' }}>INTERRUPTED RUN</p>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--wr-text-secondary)' }}>
+                The panel stopped at <strong>{describeRun(run.record)}</strong> — last progress {new Date(run.record.heartbeatAt).toLocaleString()}. The page was reloaded, closed, or remounted while it was running.
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
+                Resume continues from the last finished agent; completed options are not re-run.
+                {!canRun && !running && (options.length < 2 ? ' Add at least two options first.' : !scenario ? ' Pick a scenario in Panel setup first.' : bench.length === 0 ? ' Pick at least one agent in Panel setup first.' : '')}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <WrButton size="sm" variant="secondary" onClick={dismissInterrupted}>Dismiss</WrButton>
+              <WrButton size="sm" onClick={() => runPanel()} disabled={!canRun}><Play className="w-3.5 h-3.5" /> Resume</WrButton>
+            </div>
+          </div>
+        )}
+        {run.warning && (
+          <div className="rounded p-3 flex items-start gap-2 text-xs" style={{ backgroundColor: 'rgba(214,137,16,0.08)', border: '1px solid rgba(214,137,16,0.3)', color: '#D68910' }}>
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /><span className="flex-1">{run.warning}</span>
+            <button onClick={run.clearWarning}><X className="w-3.5 h-3.5" /></button>
+          </div>
+        )}
+
         {/* ── Run / progress / error ────────────────────────────────────── */}
         {running && (
           <div className="rounded-lg p-5" style={{ ...card, border: '1px solid rgba(240,165,0,0.35)' }}>
@@ -337,6 +399,8 @@ export default function DecisionDetail() {
                 ? 'Comparing the options and writing the reasoned assessment…'
                 : running.stage === 'reuse'
                   ? `Option ${letter(running.optionIndex)} · ${running.optionName} — already analysed, reusing its session`
+                  : running.stage === 'resume'
+                  ? `Option ${letter(running.optionIndex)} · ${running.optionName} — continuing its interrupted session`
                   : `Option ${letter(running.optionIndex)} of ${options.length} · ${running.optionName} — ${STAGE_LABEL[running.stage] || running.stage}${running.agentTotal ? ` · agent ${running.agentIndex}/${running.agentTotal}${running.agentName ? `: ${running.agentName}` : ''}` : ''}`}
               elapsedMs={elapsed}
               color="var(--wr-amber)"
@@ -363,7 +427,7 @@ export default function DecisionDetail() {
         )}
 
         {/* ── Panel setup ─────────────────────────────────────────────── */}
-        {showSetup && !running && (
+        {showSetup && !running && !interrupted && (
           <div className="rounded-lg p-5" style={card}>
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
@@ -539,7 +603,7 @@ export default function DecisionDetail() {
                     </div>
                   ) : (
                     <p className="text-xs mb-3 italic" style={{ color: 'var(--wr-text-muted)' }}>
-                      {anySession ? `Session in progress (${anySession.status}).` : 'Not analysed yet.'}
+                      {anySession ? `Session unfinished (${anySession.status}) — the next run continues it.` : 'Not analysed yet.'}
                     </p>
                   )}
 

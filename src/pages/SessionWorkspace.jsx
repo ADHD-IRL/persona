@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback, Component } from 'react';
+import { useState, useEffect, useRef, Component } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { scoreSourceCredibility, parseCitations, saveTurnSources, TIER_COLORS, TIER_LABELS, SOURCE_TYPE_LABELS } from '@/lib/sources';
+import { scoreSourceCredibility, saveTurnSources, TIER_COLORS, TIER_LABELS, SOURCE_TYPE_LABELS } from '@/lib/sources';
 import { analyzeSourceValidity } from '@/lib/llm';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { generateRound1, generateRound2, generateRound0, generateReaction, generateSynthesis as generateSynthesisLLM, extractSessionThreats } from '@/lib/llm';
@@ -26,6 +26,9 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import DebateTranscript from '@/components/session/DebateTranscript';
 import RiskRegistry from '@/components/session/RiskRegistry';
 import SynthesisSummary from '@/components/session/SynthesisSummary';
+import { useRunRecord } from '@/hooks/useRunRecord';
+import { nextSessionStage, sessionResumePlan, hasStuckAgents, describeRun } from '@/lib/runState';
+import { sessionGet, sessionSet, sessionRemove } from '@/lib/browserStorage';
 
 // The workspace is organised as a stepper of analysis stages. Content panels
 // are still keyed by the finer-grained `tab` (Findings holds two, Sources and
@@ -1080,7 +1083,13 @@ export default function SessionWorkspace() {
   const [agents, setAgents] = useState([]);
   const [synthesis, setSynthesis] = useState(null);
   const [synthStreamText, setSynthStreamText] = useState('');
-  const [tab, setTab] = useState('ROUND 1');
+  // The active tab survives a reload of this tab (R-N10, per-tab convenience).
+  // Read once at mount: the save effect below writes on first commit, so a
+  // live re-read would always be truthy and defeat the "complete → Synthesis"
+  // default further down.
+  const [storedTab] = useState(() => sessionGet(`agd_session_tab_${id}`));
+  const [tab, setTab] = useState(storedTab || 'ROUND 1');
+  useEffect(() => { sessionSet(`agd_session_tab_${id}`, tab); }, [id, tab]);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [generatingSynthesis, setGeneratingSynthesis] = useState(false);
   const [synthStatus, setSynthStatus] = useState('');
@@ -1110,6 +1119,10 @@ export default function SessionWorkspace() {
   const toastTimer = useRef(null);
   const cancelRef = useRef(false);
 
+  // R-N10: durable record of any Round / Synthesis loop in flight for this
+  // session, so a reload or another tab can tell "running" from "interrupted".
+  const run = useRunRecord(db, 'session', id);
+
   const load = async () => {
     if (!db) return;
     try {
@@ -1129,7 +1142,14 @@ export default function SessionWorkspace() {
     setSessionSources(srcs || []);
 
     const sessionData = sess[0];
-    if (sessionData?.facilitator_note) setFacilitatorNote(sessionData.facilitator_note);
+    // An unsent facilitator note typed before a reload is preferred over the
+    // saved one, but only while the saved note is still the one it was typed
+    // against; a note saved elsewhere since wins and the draft is dropped.
+    const savedNote = sessionData?.facilitator_note || '';
+    let draft = null;
+    try { draft = JSON.parse(sessionGet(`agd_fnote_${id}`) || 'null'); } catch (e) { draft = null; }  // unreadable draft: ignore it
+    if (draft && typeof draft.text === 'string' && (draft.base || '') === savedNote) setFacilitatorNote(draft.text);
+    else { sessionRemove(`agd_fnote_${id}`); setFacilitatorNote(savedNote); }
 
     const scenarioId = sessionData?.scenario_id;
     if (scenarioId) {
@@ -1174,7 +1194,7 @@ export default function SessionWorkspace() {
   useEffect(() => {
     if (initialTabRef.current || !session) return;
     initialTabRef.current = true;
-    if (session.status === 'complete' && !searchParams.get('autoSynth')) setTab('SYNTHESIS');
+    if (session.status === 'complete' && !searchParams.get('autoSynth') && !storedTab) setTab('SYNTHESIS');
   }, [session, searchParams]);
 
   // Auto-trigger synthesis when navigated from LiveDebateRoom with ?autoSynth=1
@@ -1243,6 +1263,10 @@ const briefAllAgents = async () => {
   };
 
   const generateRound = async (round) => {
+    if (run.status === 'alive') {
+      setGenError('This session is already being generated in another tab. Wait for it to finish, or close that tab and resume here.');
+      return;
+    }
     cancelRef.current = false;
     setGeneratingAll(true);
     setGenStartedAt(Date.now());
@@ -1250,16 +1274,18 @@ const briefAllAgents = async () => {
     const doneField = round === 1 ? 'round1_assessment' : 'round2_rebuttal';
     const agentsToRun = sessionAgents.filter(sa => !sa[doneField]);
     setProgress({ current: 0, total: agentsToRun.length });
+    await run.start({ stage: round === 1 ? 'round1' : 'round2', step: 0, total: agentsToRun.length });
     const others = round === 2 ? sessionAgents.filter(sa => sa.round1_assessment) : [];
     const chainContext = buildChainContext();
     // Retrieve org knowledge for the scenario once per round run
     const kChunks = await retrieveKnowledge(db, `${scenario?.context_document || ''} ${session?.phase_focus || ''}`, 5);
     const knowledgeContext = formatKnowledgeContext(kChunks);
 
-    // Save facilitator note to session if changed
+    // Save facilitator note to session if changed; the draft is then no longer unsent
     if (facilitatorNote !== (session?.facilitator_note || '')) {
       await db.Session.update(id, { facilitator_note: facilitatorNote });
     }
+    sessionRemove(`agd_fnote_${id}`);
 
     let completedCount = 0;
     let stuckSaId = null;
@@ -1275,6 +1301,7 @@ const briefAllAgents = async () => {
         if (!agent) continue;
 
         setProgress({ current: i + 1, total: agentsToRun.length });
+        run.beat({ step: i + 1, total: agentsToRun.length, label: agent.name });
 
         const statusKey = round === 1 ? 'generating_r1' : 'generating_r2';
         stuckSaId = sa.id;
@@ -1335,6 +1362,7 @@ const briefAllAgents = async () => {
         setSessionAgents(prev => prev.map(s => s.id === stuckSaId ? { ...s, status: resetStatus } : s));
       }
       setGenError(e.message || 'Generation failed');
+      await run.finish();
       setGeneratingAll(false);
       setProgress({ current: 0, total: 0 });
       return;
@@ -1343,6 +1371,9 @@ const briefAllAgents = async () => {
     const allDone = completedCount === agentsToRun.length;
     const newStatus = round === 1 ? 'round1' : 'round2';
     await db.Session.update(id, { status: newStatus });
+    // Release the record BEFORE flipping generatingAll: the Run Full Session
+    // effect reacts to that flag by starting Round 2, which claims a new record.
+    await run.finish();
     setGeneratingAll(false);
     setProgress({ current: 0, total: 0 });
 
@@ -1483,10 +1514,15 @@ const briefAllAgents = async () => {
   };
 
   const generateSynthesis = async () => {
+    if (run.status === 'alive') {
+      setSynthError('Synthesis is already running in another tab. Wait for it to finish, or close that tab and resume here.');
+      return;
+    }
     setGeneratingSynthesis(true);
     setSynthError(null);
     setSynthStreamText('');
     setSynthStatus('Collecting agent assessments...');
+    await run.start({ stage: 'synthesis' });
 
     try {
       // Fetch fresh data from DB — state may be stale if called right after round generation
@@ -1584,10 +1620,71 @@ const briefAllAgents = async () => {
       setSynthStreamText('');
       load();
     } finally {
+      await run.finish();
       setGeneratingSynthesis(false);
       setSynthStatus('');
     }
   };
+
+  // ── R-N10: resume or dismiss an interrupted run ─────────────────────────────
+  // "Interrupted" means a run record went stale (its tab stopped heartbeating)
+  // or agents are stuck in a generating_* status with no record at all (runs
+  // that predate the record). Resume heals the stuck statuses and continues
+  // from the next unfinished agent, chaining through to synthesis.
+  const interruptedStage = nextSessionStage(sessionAgents, !!synthesis?.raw_text);
+  const showInterrupted = !generatingAll && !generatingSynthesis &&
+    (run.status === 'stale' || (run.status === 'none' && hasStuckAgents(sessionAgents)));
+
+  // Resume decisions are made from the database, not from whatever this tab
+  // loaded earlier: an observer tab may be many agents behind the run that died.
+  const fetchFresh = async () => {
+    const [sa, synth] = await Promise.all([
+      db.SessionAgent.filter({ session_id: id }),
+      db.SessionSynthesis.filter({ session_id: id }),
+    ]);
+    return { sa: sa || [], hasSynth: !!synth?.[0]?.raw_text };
+  };
+
+  const healStuck = async (sa) => {
+    const { resets } = sessionResumePlan(nextSessionStage(sa, false) || 'synthesis', sa);
+    for (const r of resets) await db.SessionAgent.update(r.id, { status: r.status });
+    return sa.map(s => { const r = resets.find(x => x.id === s.id); return r ? { ...s, status: r.status } : s; });
+  };
+
+  // The loop functions close over `sessionAgents`, so the resume is armed as
+  // state and fired by an effect after the fresh rows have rendered.
+  const [pendingResume, setPendingResume] = useState(null);
+  useEffect(() => {
+    if (!pendingResume || generatingAll || generatingSynthesis) return;
+    const stage = pendingResume;
+    setPendingResume(null);
+    setRunningFull(true);               // carry on through Round 2 and Synthesis
+    if (stage === 'synthesis') { setTab('SYNTHESIS'); generateSynthesis(); }
+    else { setTab(stage === 'round1' ? 'ROUND 1' : 'ROUND 2'); generateRound(stage === 'round1' ? 1 : 2); }
+  }, [pendingResume, sessionAgents, generatingAll, generatingSynthesis]);
+
+  const resumeRun = async () => {
+    const { sa, hasSynth } = await fetchFresh();
+    const healed = await healStuck(sa);
+    await run.finish();                 // clear the stale record; the new loop claims it
+    const stage = nextSessionStage(healed, hasSynth);
+    setSessionAgents(healed);
+    if (!stage) { load(); return; }
+    setPendingResume(stage);
+  };
+
+  const dismissRun = async () => {
+    const { sa } = await fetchFresh();
+    await healStuck(sa);
+    await run.finish();
+    load();
+  };
+
+  // While another tab drives the run, refresh this tab's data on each heartbeat
+  // so finished agents appear here as they land.
+  useEffect(() => {
+    if (run.status === 'alive') load();
+  }, [run.status, run.record?.heartbeatAt]);
 
   const handleExtractThreats = async () => {
     setExtracting(true);
@@ -1910,6 +2007,49 @@ const briefAllAgents = async () => {
 
       {/* Content */}
       <div className="p-6">
+        {/* R-N10: durable run state — running elsewhere, or interrupted */}
+        {run.status === 'alive' && run.record && !generatingAll && !generatingSynthesis && (
+          <div className="mb-5 rounded p-4 flex items-start gap-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(46,134,171,0.4)' }}>
+            <RefreshCw className="w-4 h-4 flex-shrink-0 mt-0.5 animate-spin" style={{ color: '#2E86AB' }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#2E86AB' }}>RUNNING IN ANOTHER TAB</p>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--wr-text-secondary)' }}>{describeRun(run.record)}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
+                Last progress {new Date(run.record.heartbeatAt).toLocaleTimeString()}. This page re-reads the session on each heartbeat; generation controls are disabled here until it completes.
+              </p>
+            </div>
+          </div>
+        )}
+        {showInterrupted && (
+          <div className="mb-5 rounded p-4 flex items-start gap-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(214,137,16,0.45)' }}>
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#D68910' }} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#D68910' }}>INTERRUPTED RUN</p>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--wr-text-secondary)' }}>
+                {run.record
+                  ? <>Generation stopped at <strong>{describeRun(run.record)}</strong>, last progress {new Date(run.record.heartbeatAt).toLocaleString()}.</>
+                  : <>Some agents were left mid-generation by an earlier run.</>}
+                {' '}The page was reloaded, closed, or remounted while it was working.
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
+                {interruptedStage
+                  ? `Resume continues from the next unfinished agent in ${interruptedStage === 'round1' ? 'Round 1' : interruptedStage === 'round2' ? 'Round 2' : 'Synthesis'} and carries on to the end. Finished assessments are kept.`
+                  : 'Everything has actually finished; dismiss to clear the stale state.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <WrButton size="sm" variant="secondary" onClick={dismissRun}>Dismiss</WrButton>
+              {interruptedStage && <WrButton size="sm" onClick={resumeRun}><Sparkles className="w-3.5 h-3.5" /> Resume</WrButton>}
+            </div>
+          </div>
+        )}
+        {run.warning && (
+          <div className="mb-5 rounded p-3 flex items-start gap-2 text-xs" style={{ backgroundColor: 'rgba(214,137,16,0.08)', border: '1px solid rgba(214,137,16,0.3)', color: '#D68910' }}>
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /><span className="flex-1">{run.warning}</span>
+            <button onClick={run.clearWarning}><X className="w-3.5 h-3.5" /></button>
+          </div>
+        )}
+
         {(tab === 'ROUND 1' || tab === 'ROUND 2') && (
           <>
             {/* Facilitator note — shown in Round 2 tab */}
@@ -1918,7 +2058,7 @@ const briefAllAgents = async () => {
                 <p className="text-xs font-bold tracking-widest font-mono mb-2" style={{ color: 'var(--wr-text-muted)' }}>FACILITATOR NOTE</p>
                 <textarea
                   value={facilitatorNote}
-                  onChange={e => setFacilitatorNote(e.target.value)}
+                  onChange={e => { setFacilitatorNote(e.target.value); sessionSet(`agd_fnote_${id}`, JSON.stringify({ text: e.target.value, base: session?.facilitator_note || '' })); }}
                   placeholder="Add a note to guide agents in Round 2 — e.g. focus on supply chain dependencies..."
                   rows={2}
                   className="w-full text-xs px-3 py-2 rounded outline-none resize-none"
