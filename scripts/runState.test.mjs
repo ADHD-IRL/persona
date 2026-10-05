@@ -36,6 +36,12 @@ test('R-N10: a record whose owner stopped heartbeating becomes stale (resumable)
   assert.equal(classifyRun(rec, 'tab-A', T0 + STALE_AFTER_MS * 10), 'own');
 });
 
+test('R-N10: an unreadable heartbeat is treated as stale, never as a permanent lock', () => {
+  const bad = { kind: 'session', id: 's1', stage: 'round1', tabId: 'tab-A', startedAt: 'garbage', heartbeatAt: 'garbage' };
+  assert.equal(classifyRun(bad, 'tab-B', T0), 'stale');
+  assert.equal(classifyRun(bad, 'tab-A', T0), 'own', 'the owner still recognises its own record');
+});
+
 test('R-N10: touching a record advances progress and refreshes the heartbeat only', () => {
   const rec = makeRunRecord({ kind: 'session', id: 's1', stage: 'round1', tabId: 'tab-A', total: 3 }, T0);
   const later = touchRun(rec, { step: 2, label: 'Dr. Vale' }, T0 + 7000);

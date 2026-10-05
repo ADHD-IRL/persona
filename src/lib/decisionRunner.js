@@ -58,7 +58,14 @@ export async function runOptionSession({
   let sessionAgents = [];
   if (resume?.session) {
     session = resume.session;
-    sessionAgents = (resume.sessionAgents || []).map(({ agent: _a, ...sa }) => sa);
+    // Always resume from the database rows, not from whatever the page had
+    // cached; a truncated or stale list would otherwise "complete" the session
+    // with no agents in it.
+    const fresh = await db.SessionAgent.filter({ session_id: session.id });
+    sessionAgents = (fresh || []).map(({ agent: _a, ...sa }) => sa);
+    if (!sessionAgents.length) {
+      throw new Error(`The unfinished session for "${option.name}" has no agents on record, so it cannot be resumed. Re-run everything to start it fresh.`);
+    }
     const { resets } = sessionResumePlan('round1', sessionAgents);
     for (const r of resets) {
       await db.SessionAgent.update(r.id, { status: r.status });

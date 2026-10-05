@@ -24,8 +24,17 @@ Per-requirement status for work done under `AGENTS.md`. Newest first.
 - `src/pages/SessionWorkspace.jsx` — Round and Synthesis loops start / beat / finish the record; refuses to start while another tab is alive; Interrupted and Running-elsewhere banners; Resume heals stuck statuses and chains to the end; active tab and unsent facilitator note persist per tab in sessionStorage.
 - `src/lib/decisionRunner.js` + `src/pages/DecisionDetail.jsx` — same record for the decision panel; `runOptionSession` can resume a partial session (skips finished agents and an existing synthesis).
 
+**Review fixes (2026-10-05, second commit)**
+- Completed sessions landed on Round 1 instead of Synthesis: the stored tab was re-read every render and the save effect wrote "ROUND 1" on mount. Now read once with lazy state.
+- Round 1's `finish()` raced Round 2's `start()` under Run Full Session: finish now completes before the generating flag flips, `start()` awaits any in-flight finish, and a generation counter stops a late heartbeat or finish from clobbering the newer run.
+- Resume used the observer tab's cached agents and could regenerate finished rounds: `resumeRun`/`dismissRun` now fetch the agent rows and synthesis from the database, heal from those, and arm the loop via state so it runs against the fresh rows. Observer tabs re-read the session on each heartbeat.
+- Unreadable heartbeat classified as "alive" forever; now "stale" (test added, 13/13 pass).
+- Facilitator-note draft stores the note it was typed against and is dropped if a newer note was saved elsewhere.
+- Decision resume re-reads the partial session's agents from the database and refuses to resume an empty one; the Resume button is disabled with a reason when the panel cannot run.
+
 **What's left**
 - Add R-N10 to the requirements workbook with the acceptance criterion above.
+- Clock skew between devices can still mark a live run stale; staleness by observed heartbeat change is a possible follow-up.
 - Manual acceptance pass in the browser (reload mid-Round 1 → Interrupted → Resume → completes). Not automatable without a Playwright harness, which this repo does not have yet.
 - Merge-order note: this branch is based on `feat/decision-auto-panel`; `feat/session-hub-ux` also edits `SessionWorkspace.jsx` and will conflict on the banner region.
 

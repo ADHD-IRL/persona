@@ -69,7 +69,9 @@ export function classifyRun(rec, tabId, now = Date.now()) {
   if (!rec || !rec.heartbeatAt) return 'none';
   if (rec.tabId && rec.tabId === tabId) return 'own';
   const age = now - Date.parse(rec.heartbeatAt);
-  return age > STALE_AFTER_MS ? 'stale' : 'alive';
+  // An unreadable heartbeat must fall on the resumable side: "alive" would
+  // lock every other tab out with no way to clear it.
+  return Number.isFinite(age) && age <= STALE_AFTER_MS ? 'alive' : 'stale';
 }
 
 /**

@@ -41,6 +41,8 @@ export function useRunRecord(db, kind, id) {
   const [warning, setWarning] = useState(null);
   const ownRef = useRef(null);        // the record this tab is driving, if any
   const beatTimer = useRef(null);
+  const genRef = useRef(0);           // bumps on every start(); lets finish()/beats detect they are outdated
+  const finishing = useRef(null);     // in-flight finish() promise, awaited by the next start()
 
   const refresh = useCallback(async () => {
     if (!db || !key) return;
@@ -60,52 +62,66 @@ export function useRunRecord(db, kind, id) {
     return () => clearInterval(t);
   }, [refresh]);
 
-  const persist = useCallback(async (rec) => {
+  // Write a record only if it still belongs to the current run. A heartbeat
+  // that was in flight when finish() ran must not resurrect a deleted record.
+  const persist = useCallback(async (rec, gen) => {
+    if (gen !== genRef.current || ownRef.current !== rec) return;
     try {
       await writeKV(db, key, rec);
-      setWarning(null);
+      if (gen === genRef.current) setWarning(null);
     } catch (e) {
-      setWarning(`Progress could not be recorded (${e.message}). The run continues, but another tab may see it as interrupted.`);
+      if (gen === genRef.current) setWarning(`Progress could not be recorded (${e.message}). The run continues, but another tab may see it as interrupted.`);
     }
   }, [db, key]);
 
   /** Claim the run for this tab and start heartbeating. */
   const start = useCallback(async (fields) => {
     if (!db || !key) return;
+    // A previous run's finish() may still be deleting the row; wait so the
+    // delete cannot land on top of this run's first write.
+    if (finishing.current) { try { await finishing.current; } catch { /* finish reports its own warning */ } }
+    const gen = ++genRef.current;
     const rec = makeRunRecord({ kind, id, tabId, ...fields });
     ownRef.current = rec;
     setRecord(rec);
     setStatus('own');
-    await persist(rec);
+    await persist(rec, gen);
     clearInterval(beatTimer.current);
     beatTimer.current = setInterval(() => {
-      if (!ownRef.current) return;
+      if (!ownRef.current || gen !== genRef.current) return;
       ownRef.current = touchRun(ownRef.current);
-      persist(ownRef.current);
+      persist(ownRef.current, gen);
     }, HEARTBEAT_MS);
   }, [db, key, kind, id, tabId, persist]);
 
   /** Record progress (step, total, label, stage, optionIndex…). */
   const beat = useCallback(async (patch) => {
     if (!ownRef.current) return;
+    const gen = genRef.current;
     ownRef.current = touchRun(ownRef.current, patch);
     setRecord(ownRef.current);
-    await persist(ownRef.current);
+    await persist(ownRef.current, gen);
   }, [persist]);
 
   /** Release the run: stop heartbeating and delete the record. */
   const finish = useCallback(async () => {
+    const gen = genRef.current;
     clearInterval(beatTimer.current);
     beatTimer.current = null;
     ownRef.current = null;
     if (!db || !key) return;
-    try {
-      await deleteKV(db, key);
-      setRecord(null);
-      setStatus('none');
-    } catch (e) {
-      setWarning(`Run finished but its record could not be cleared (${e.message}). Dismiss the banner to clear it.`);
-    }
+    const p = (async () => {
+      try {
+        await deleteKV(db, key);
+        // Only reset visible state if no newer run has started meanwhile.
+        if (gen === genRef.current) { setRecord(null); setStatus('none'); }
+      } catch (e) {
+        if (gen === genRef.current) setWarning(`Run finished but its record could not be cleared (${e.message}). Dismiss the banner to clear it.`);
+      }
+    })();
+    finishing.current = p;
+    await p;
+    if (finishing.current === p) finishing.current = null;
   }, [db, key]);
 
   // Leaving the page while this tab owns a run: stop the heartbeat so the record

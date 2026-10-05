@@ -118,7 +118,7 @@ export default function DecisionDetail() {
     setDecidedBy('');
     setLoading(true);
     load();
-  }, [db, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [db, id]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
@@ -134,7 +134,7 @@ export default function DecisionDetail() {
     if (agentIds.size > 0) return;   // seeded from a saved setup
     const inDomain = agents.filter(a => scenario.domain_id && a.domain_id === scenario.domain_id);
     setAgentIds(new Set((inDomain.length ? inDomain : agents).map(a => a.id)));
-  }, [scenario, agents]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scenario, agents]);
 
   // The bench is the saved/selected ids that still correspond to real agents.
   const bench = useMemo(() => agents.filter(a => agentIds.has(a.id)), [agents, agentIds]);
@@ -373,11 +373,14 @@ export default function DecisionDetail() {
               <p className="text-sm mt-0.5" style={{ color: 'var(--wr-text-secondary)' }}>
                 The panel stopped at <strong>{describeRun(run.record)}</strong> — last progress {new Date(run.record.heartbeatAt).toLocaleString()}. The page was reloaded, closed, or remounted while it was running.
               </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>Resume continues from the last finished agent; completed options are not re-run.</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
+                Resume continues from the last finished agent; completed options are not re-run.
+                {!canRun && !running && (options.length < 2 ? ' Add at least two options first.' : !scenario ? ' Pick a scenario in Panel setup first.' : bench.length === 0 ? ' Pick at least one agent in Panel setup first.' : '')}
+              </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <WrButton size="sm" variant="secondary" onClick={dismissInterrupted}>Dismiss</WrButton>
-              <WrButton size="sm" onClick={() => runPanel()} disabled={!scenario || agentIds.size === 0}><Play className="w-3.5 h-3.5" /> Resume</WrButton>
+              <WrButton size="sm" onClick={() => runPanel()} disabled={!canRun}><Play className="w-3.5 h-3.5" /> Resume</WrButton>
             </div>
           </div>
         )}
