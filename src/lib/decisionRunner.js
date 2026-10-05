@@ -15,25 +15,13 @@ import { buildDecisionFraming } from '@/lib/decisionContext';
 import { retrieveKnowledge, formatKnowledgeContext } from '@/lib/knowledge';
 import { saveTurnSources } from '@/lib/sources';
 import { aggregateSessionRisk } from '@/lib/risk';
+import { sessionResumePlan } from '@/lib/runState';
 
 export const assessmentKey = (decisionId) => `dec_assess_${decisionId}`;
 export const setupKey      = (decisionId) => `dec_setup_${decisionId}`;
 
-// ── KV helpers ────────────────────────────────────────────────────────────────
-
-export async function readKV(db, key) {
-  const rows = await db.AppConfig.filter({ key }).catch(() => []);
-  if (!rows?.length) return null;
-  try { return JSON.parse(rows[0].value); } catch { return null; }
-}
-
-export async function writeKV(db, key, value) {
-  const rows = await db.AppConfig.filter({ key }).catch(() => []);
-  const payload = JSON.stringify(value);
-  if (rows?.length) { await db.AppConfig.update(rows[0].id, { value: payload }); return rows[0].id; }
-  const created = await db.AppConfig.create({ key, value: payload });
-  return created.id;
-}
+// KV helpers live in lib/appConfigKV; re-exported so existing imports keep working.
+export { readKV, writeKV, deleteKV } from '@/lib/appConfigKV';
 
 // ── One option = one full session ─────────────────────────────────────────────
 
@@ -50,36 +38,53 @@ function othersTextFor(sa, sessionAgents, agentById) {
 }
 
 /**
- * Create and fully run one Decision-Focus session for `option`.
+ * Create (or resume) and fully run one Decision-Focus session for `option`.
  * onProgress({ stage, agentIndex, agentTotal }) fires as work advances;
  * shouldCancel() is polled between agents and throws 'Cancelled' when true.
- * Returns { session, sessionAgents, synthesis }.
+ * `resume` = { session, sessionAgents } continues an interrupted session
+ * (R-N10): stuck statuses are healed, finished agents and an existing
+ * synthesis are skipped. Returns { session, sessionAgents, synthesis }.
  */
 export async function runOptionSession({
   db, decision, option, assumptions = [], scenario, agents = [], threats = [],
-  onProgress = () => {}, shouldCancel = () => false,
+  onProgress = () => {}, shouldCancel = () => false, resume = null,
 }) {
   const framing = buildDecisionFraming(decision, option, assumptions);
   const scenarioContext = framing + (scenario?.context_document || '');
   const phaseFocus = 'Decision option evaluation';
   const agentById = Object.fromEntries(agents.map(a => [a.id, a]));
 
-  const session = await db.Session.create({
-    name: `${decision.title} — ${option.name}`,
-    scenario_id: scenario.id,
-    domain_id: scenario.domain_id || null,
-    phase_focus: phaseFocus,
-    mode: 'classic',
-    status: 'pending',
-    agent_ids: agents.map(a => a.id),
-    decision_id: decision.id,
-    decision_option_id: option.id,
-  });
-
+  let session;
   let sessionAgents = [];
-  for (const a of agents) {
-    const sa = await db.SessionAgent.create({ session_id: session.id, agent_id: a.id, status: 'pending' });
-    sessionAgents.push(sa);
+  if (resume?.session) {
+    session = resume.session;
+    sessionAgents = (resume.sessionAgents || []).map(({ agent: _a, ...sa }) => sa);
+    const { resets } = sessionResumePlan('round1', sessionAgents);
+    for (const r of resets) {
+      await db.SessionAgent.update(r.id, { status: r.status });
+      sessionAgents = sessionAgents.map(s => s.id === r.id ? { ...s, status: r.status } : s);
+    }
+    // The resumed session's bench is whatever it was created with.
+    for (const sa of sessionAgents) if (!agentById[sa.agent_id]) {
+      const a = (await db.Agent.filter({ id: sa.agent_id }))[0];
+      if (a) agentById[sa.agent_id] = a;
+    }
+  } else {
+    session = await db.Session.create({
+      name: `${decision.title} — ${option.name}`,
+      scenario_id: scenario.id,
+      domain_id: scenario.domain_id || null,
+      phase_focus: phaseFocus,
+      mode: 'classic',
+      status: 'pending',
+      agent_ids: agents.map(a => a.id),
+      decision_id: decision.id,
+      decision_option_id: option.id,
+    });
+    for (const a of agents) {
+      const sa = await db.SessionAgent.create({ session_id: session.id, agent_id: a.id, status: 'pending' });
+      sessionAgents.push(sa);
+    }
   }
 
   const kChunks = await retrieveKnowledge(db, `${scenario?.context_document || ''} ${phaseFocus}`, 5).catch(() => []);
@@ -87,13 +92,15 @@ export async function runOptionSession({
 
   const checkCancel = () => { if (shouldCancel()) throw new Error('Cancelled'); };
 
-  // Round 1 then Round 2, each agent in turn.
+  // Round 1 then Round 2, each agent in turn. Agents that already carry the
+  // round's result (a resumed session) are skipped.
   for (const round of [1, 2]) {
+    const doneField = round === 1 ? 'round1_assessment' : 'round2_rebuttal';
     for (let i = 0; i < sessionAgents.length; i++) {
       checkCancel();
       const sa = sessionAgents[i];
       const agent = agentById[sa.agent_id];
-      if (!agent) continue;
+      if (!agent || sa[doneField]) continue;
       onProgress({ stage: round === 1 ? 'round1' : 'round2', agentIndex: i + 1, agentTotal: sessionAgents.length, agentName: agent.name });
 
       const statusKey = round === 1 ? 'generating_r1' : 'generating_r2';
@@ -140,39 +147,47 @@ export async function runOptionSession({
     await db.Session.update(session.id, { status: round === 1 ? 'round1' : 'round2' });
   }
 
-  // Synthesis, persisted the same way the workspace does it.
+  // Synthesis, persisted the same way the workspace does it. A resumed session
+  // that already has one keeps it.
   checkCancel();
-  onProgress({ stage: 'synthesis', agentIndex: 0, agentTotal: 0 });
-  const synthAgents = sessionAgents.map(sa => ({
-    ...sa,
-    agentName: agentById[sa.agent_id]?.name,
-    discipline: agentById[sa.agent_id]?.discipline,
-  }));
-  const synth = await generateSynthesis({
-    session,
-    sessionAgents: synthAgents,
-    scenarioContext: scenario?.context_document || '',
-  });
-  await db.SessionSynthesis.create({
-    raw_text: synth.synthesis,
-    session_id: session.id,
-    compound_chains: synth.compound_chains || [],
-  });
-  await saveTurnSources(db, session.id, null, null, synth.synthesis).catch(() => {});
-  for (const c of (synth.compound_chains || [])) {
-    await db.Chain.create({
+  const existingSynth = resume ? (await db.SessionSynthesis.filter({ session_id: session.id }))[0] : null;
+  let synthesisText;
+  if (existingSynth?.raw_text) {
+    synthesisText = existingSynth.raw_text;
+  } else {
+    onProgress({ stage: 'synthesis', agentIndex: 0, agentTotal: 0 });
+    const synthAgents = sessionAgents.map(sa => ({
+      ...sa,
+      agentName: agentById[sa.agent_id]?.name,
+      discipline: agentById[sa.agent_id]?.discipline,
+    }));
+    const synth = await generateSynthesis({
+      session,
+      sessionAgents: synthAgents,
+      scenarioContext: scenario?.context_document || '',
+    });
+    await db.SessionSynthesis.create({
+      raw_text: synth.synthesis,
       session_id: session.id,
-      scenario_id: scenario.id,
-      name: c.name,
-      description: c.description || '',
-      steps: c.steps || [],
-      is_ai_generated: true,
-      tags: [],
-    }).catch(() => {});
+      compound_chains: synth.compound_chains || [],
+    });
+    await saveTurnSources(db, session.id, null, null, synth.synthesis).catch(() => {});
+    for (const c of (synth.compound_chains || [])) {
+      await db.Chain.create({
+        session_id: session.id,
+        scenario_id: scenario.id,
+        name: c.name,
+        description: c.description || '',
+        steps: c.steps || [],
+        is_ai_generated: true,
+        tags: [],
+      }).catch(() => {});
+    }
+    synthesisText = synth.synthesis;
   }
   await db.Session.update(session.id, { status: 'complete' });
 
-  return { session: { ...session, status: 'complete' }, sessionAgents, synthesis: synth.synthesis };
+  return { session: { ...session, status: 'complete' }, sessionAgents, synthesis: synthesisText };
 }
 
 // ── Cross-option reasoned assessment ─────────────────────────────────────────
