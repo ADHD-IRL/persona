@@ -28,6 +28,9 @@ const CONF_COLOR = { HIGH: '#27AE60', MEDIUM: '#D68910', LOW: '#C0392B' };
 const STAGE_LABEL = { round1: 'Round 1', round2: 'Round 2', synthesis: 'Synthesis', assessment: 'Writing the assessment' };
 
 const letter = (i) => String.fromCharCode(65 + i);
+// Stored assessments are normalised on write, but rows written before that
+// normalisation existed may still hold strings where lists are expected.
+const list = (x) => (Array.isArray(x) ? x : []);
 const card = { backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' };
 const field = { backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' };
 
@@ -51,6 +54,7 @@ export default function DecisionDetail() {
   const [agentIds, setAgentIds] = useState(new Set());
   const [setupOpen, setSetupOpen] = useState(false);
   const setupSeeded = useRef(false);
+  const defaultedFor = useRef(null);   // scenario id the bench was last defaulted for
 
   // Run state
   const [running, setRunning] = useState(null);   // { optionIndex, optionName, stage, agentIndex, agentTotal, agentName, reused }
@@ -90,24 +94,47 @@ export default function DecisionDetail() {
     setRationale(prev => prev || d?.decision_rationale || '');
     if (!setupSeeded.current) {
       setupSeeded.current = true;
-      if (setup?.scenario_id) setScenarioId(setup.scenario_id);
-      if (setup?.agent_ids?.length) setAgentIds(new Set(setup.agent_ids));
+      if (setup?.scenario_id && (sc || []).some(s => s.id === setup.scenario_id)) setScenarioId(setup.scenario_id);
+      // Only agents that still exist; a deleted agent must not count toward the bench.
+      const live = new Set((ag || []).map(a => a.id));
+      const kept = (setup?.agent_ids || []).filter(x => live.has(x));
+      if (kept.length) setAgentIds(new Set(kept));
     }
     setLoading(false);
   };
-  useEffect(() => { load(); }, [db, id]);
+  // Per-decision state must not leak when the route param changes in place.
+  useEffect(() => {
+    setupSeeded.current = false;
+    defaultedFor.current = null;
+    setScenarioId('');
+    setAgentIds(new Set());
+    setSetupOpen(false);
+    setAssessmentRec(null);
+    setRunError(null);
+    setRationale('');
+    setDecidedBy('');
+    setLoading(true);
+    load();
+  }, [db, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const agentById = useMemo(() => Object.fromEntries(agents.map(a => [a.id, a])), [agents]);
   const scenario = useMemo(() => scenarios.find(s => s.id === scenarioId) || null, [scenarios, scenarioId]);
 
-  // Default bench: the scenario's domain, falling back to everyone.
+  // Default bench once per scenario: the scenario's domain, falling back to
+  // everyone. Runs only when the scenario changes, so clearing the bench by
+  // hand is not undone by the next reload of agents.
   useEffect(() => {
-    if (!scenario || agentIds.size > 0) return;
+    if (!scenario || !agents.length || defaultedFor.current === scenario.id) return;
+    defaultedFor.current = scenario.id;
+    if (agentIds.size > 0) return;   // seeded from a saved setup
     const inDomain = agents.filter(a => scenario.domain_id && a.domain_id === scenario.domain_id);
     setAgentIds(new Set((inDomain.length ? inDomain : agents).map(a => a.id)));
   }, [scenario, agents]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The bench is the saved/selected ids that still correspond to real agents.
+  const bench = useMemo(() => agents.filter(a => agentIds.has(a.id)), [agents, agentIds]);
 
   // Latest complete session per option, with its agents and synthesis.
   const optionData = useMemo(() => {
@@ -131,10 +158,15 @@ export default function DecisionDetail() {
 
   const allAnalyzed = options.length >= 2 && options.every(o => optionData[o.id]?.session);
   const assessment = assessmentRec?.assessment || null;
+  // Stale when the sessions it was built from are no longer the ones that
+  // count: a newer session for an option, an option added or removed since,
+  // or a recommendation pointing at an option that no longer exists.
   const assessmentStale = useMemo(() => {
     if (!assessment) return false;
     const ids = new Set(assessmentRec.session_ids || []);
-    return options.some(o => optionData[o.id]?.session && !ids.has(optionData[o.id].session.id));
+    if (ids.size !== options.length) return true;
+    if (!options.some(o => o.id === assessment.recommended_option_id)) return true;
+    return options.some(o => !optionData[o.id]?.session || !ids.has(optionData[o.id].session.id));
   }, [assessment, assessmentRec, options, optionData]);
 
   const recommendedId = assessment?.recommended_option_id
@@ -144,7 +176,7 @@ export default function DecisionDetail() {
       return scored.sort((a, b) => a.agg.peak - b.agg.peak || a.agg.avgExposure - b.agg.avgExposure)[0].o.id;
     })();
 
-  const canRun = !!scenario && agentIds.size > 0 && options.length >= 2 && !running;
+  const canRun = !!scenario && bench.length > 0 && options.length >= 2 && !running;
 
   // ── Run the panel ──────────────────────────────────────────────────────────
 
@@ -152,7 +184,6 @@ export default function DecisionDetail() {
     if (!canRun) return;
     cancelRef.current = false;
     setRunError(null);
-    const bench = agents.filter(a => agentIds.has(a.id));
     try {
       await writeKV(db, setupKey(id), { scenario_id: scenario.id, agent_ids: bench.map(a => a.id) });
       if (decision.status === 'framing') await db.Decision.update(id, { status: 'analyzing', updated_at: new Date().toISOString() });
@@ -162,7 +193,9 @@ export default function DecisionDetail() {
       for (let k = 0; k < options.length; k++) {
         const opt = options[k];
         const existing = optionData[opt.id];
-        if (!rerunAll && existing?.session) {
+        // Reuse only a session analysed against the scenario chosen now; mixing
+        // scenarios across options would make the comparison meaningless.
+        if (!rerunAll && existing?.session && existing.session.scenario_id === scenario.id) {
           setRunning({ optionIndex: k, optionName: opt.name, stage: 'reuse' });
           perOption.push({ option: opt, sessionAgents: existing.sessionAgents, synthesis: existing.synthesis, sessionId: existing.session.id });
           continue;
@@ -186,7 +219,7 @@ export default function DecisionDetail() {
       await writeKV(db, assessmentKey(id), rec);
       setAssessmentRec(rec);
     } catch (e) {
-      if (e.message === 'Cancelled') setRunError('Stopped. Options already analysed keep their sessions; run again to finish the rest.');
+      if (e.message === 'Cancelled') setRunError('Stopped. Finished options keep their sessions; the option that was in progress is re-run from scratch on the next run.');
       else setRunError(e.message || 'The panel run failed.');
     } finally {
       setRunning(null);
@@ -241,7 +274,7 @@ export default function DecisionDetail() {
       const rec = assessment.options?.find(o => o.option_id === assessment.recommended_option_id);
       setRationale([
         assessment.headline,
-        ...(assessment.rationale || []).map(r => `- ${r}`),
+        ...list(assessment.rationale).map(r => `- ${r}`),
         rec?.accepted_risk_if_chosen ? `Accepted risk: ${rec.accepted_risk_if_chosen}` : '',
       ].filter(Boolean).join('\n'));
     }
@@ -281,7 +314,7 @@ export default function DecisionDetail() {
             )}
           </div>
           {decision.status !== 'decided' && (
-            <WrButton onClick={openRecord} disabled={!recommendedId || !!running}><Trophy className="w-4 h-4" /> Record Decision</WrButton>
+            <WrButton onClick={openRecord} disabled={!recommendedOpt || !!running}><Trophy className="w-4 h-4" /> Record Decision</WrButton>
           )}
         </div>
         {decision.status === 'decided' && (
@@ -309,7 +342,7 @@ export default function DecisionDetail() {
               color="var(--wr-amber)"
               sublabel={running.stage === 'assessment'
                 ? 'Weighing peak risk, SME confidence, acceptance criteria and assumptions across every option.'
-                : `Each option runs Round 1 → Round 2 → Synthesis with the same ${agentIds.size}-agent bench. Usually a few minutes per option.`}
+                : `Each option runs Round 1 → Round 2 → Synthesis with the same ${bench.length}-agent bench. Usually a few minutes per option.`}
             />
             {running.stage !== 'assessment' && (
               <div className="mt-3 flex justify-end">
@@ -356,7 +389,7 @@ export default function DecisionDetail() {
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>EXPERT BENCH · {agentIds.size}</label>
+                  <label className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>EXPERT BENCH · {bench.length}</label>
                   <div className="flex gap-2 text-xs">
                     <button onClick={() => setAgentIds(new Set(agents.map(a => a.id)))} className="underline" style={{ color: 'var(--wr-text-muted)' }}>all</button>
                     <button onClick={() => setAgentIds(new Set())} className="underline" style={{ color: 'var(--wr-text-muted)' }}>none</button>
@@ -384,7 +417,7 @@ export default function DecisionDetail() {
 
             <div className="mt-4 flex items-center justify-between gap-3">
               <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>
-                {options.length} option{options.length !== 1 ? 's' : ''} × {agentIds.size} agent{agentIds.size !== 1 ? 's' : ''} × 2 rounds, plus a synthesis per option and one assessment.
+                {options.length} option{options.length !== 1 ? 's' : ''} × {bench.length} agent{bench.length !== 1 ? 's' : ''} × 2 rounds, plus a synthesis per option and one assessment.
               </p>
               <div className="flex items-center gap-2">
                 {allAnalyzed && (
@@ -413,7 +446,7 @@ export default function DecisionDetail() {
                       {assessment.confidence || '—'} CONFIDENCE
                     </span>
                     {assessmentStale && (
-                      <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(214,137,16,0.15)', color: '#D68910' }}>newer sessions exist — regenerate</span>
+                      <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(214,137,16,0.15)', color: '#D68910' }}>options or sessions changed since — run again</span>
                     )}
                   </div>
                   <p className="text-base font-semibold" style={{ color: 'var(--wr-text-primary)' }}>
@@ -436,7 +469,7 @@ export default function DecisionDetail() {
               <div className="col-span-2">
                 <p className="text-xs font-bold tracking-widest font-mono mb-2" style={{ color: 'var(--wr-text-muted)' }}>WHY</p>
                 <ul className="space-y-1.5">
-                  {(assessment.rationale || []).map((r, i) => (
+                  {list(assessment.rationale).map((r, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--wr-text-secondary)' }}>
                       <span className="text-xs font-mono font-bold mt-0.5 flex-shrink-0" style={{ color: '#27AE60' }}>{i + 1}.</span>{r}
                     </li>
@@ -444,19 +477,19 @@ export default function DecisionDetail() {
                 </ul>
               </div>
               <div className="space-y-4">
-                {assessment.tradeoffs?.length > 0 && (
+                {list(assessment.tradeoffs).length > 0 && (
                   <div>
                     <p className="text-xs font-bold tracking-widest font-mono mb-2" style={{ color: 'var(--wr-text-muted)' }}>TRADE-OFFS</p>
                     <ul className="space-y-1">
-                      {assessment.tradeoffs.map((t, i) => <li key={i} className="text-xs leading-snug" style={{ color: 'var(--wr-text-secondary)' }}>· {t}</li>)}
+                      {list(assessment.tradeoffs).map((t, i) => <li key={i} className="text-xs leading-snug" style={{ color: 'var(--wr-text-secondary)' }}>· {t}</li>)}
                     </ul>
                   </div>
                 )}
-                {assessment.conditions_to_revisit?.length > 0 && (
+                {list(assessment.conditions_to_revisit).length > 0 && (
                   <div>
                     <p className="text-xs font-bold tracking-widest font-mono mb-2 flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}><Eye className="w-3 h-3" /> REVISIT IF</p>
                     <ul className="space-y-1">
-                      {assessment.conditions_to_revisit.map((t, i) => <li key={i} className="text-xs leading-snug" style={{ color: 'var(--wr-text-secondary)' }}>· {t}</li>)}
+                      {list(assessment.conditions_to_revisit).map((t, i) => <li key={i} className="text-xs leading-snug" style={{ color: 'var(--wr-text-secondary)' }}>· {t}</li>)}
                     </ul>
                   </div>
                 )}
@@ -513,10 +546,10 @@ export default function DecisionDetail() {
                   {a && (
                     <div className="space-y-2.5 mb-3 text-xs">
                       <p style={{ color: 'var(--wr-text-secondary)' }}>{a.risk_summary}</p>
-                      {a.key_risks?.length > 0 && (
+                      {list(a.key_risks).length > 0 && (
                         <div>
                           <p className="font-mono font-bold mb-1 flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}><ShieldAlert className="w-3 h-3" /> KEY RISKS</p>
-                          <ul className="space-y-0.5">{a.key_risks.map((k, j) => <li key={j} style={{ color: 'var(--wr-text-secondary)' }}>· {k}</li>)}</ul>
+                          <ul className="space-y-0.5">{list(a.key_risks).map((k, j) => <li key={j} style={{ color: 'var(--wr-text-secondary)' }}>· {k}</li>)}</ul>
                         </div>
                       )}
                       <p>
@@ -525,8 +558,8 @@ export default function DecisionDetail() {
                         </span>
                         <span style={{ color: 'var(--wr-text-muted)' }}>{a.acceptance_note}</span>
                       </p>
-                      {a.assumptions_at_risk?.length > 0 && (
-                        <p style={{ color: '#D68910' }}><span className="font-mono font-bold">ASSUMPTIONS AT RISK: </span>{a.assumptions_at_risk.join(' · ')}</p>
+                      {list(a.assumptions_at_risk).length > 0 && (
+                        <p style={{ color: '#D68910' }}><span className="font-mono font-bold">ASSUMPTIONS AT RISK: </span>{list(a.assumptions_at_risk).join(' · ')}</p>
                       )}
                       {a.accepted_risk_if_chosen && (
                         <p style={{ color: 'var(--wr-text-muted)' }}><span className="font-mono font-bold">IF CHOSEN, YOU ACCEPT: </span>{a.accepted_risk_if_chosen}</p>

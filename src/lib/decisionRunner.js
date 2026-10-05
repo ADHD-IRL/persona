@@ -231,6 +231,8 @@ Rules:
 - Recommend exactly one option. Lower risk is not automatically better: weigh peak risk, how many SMEs rated CRITICAL/HIGH and how confident they were, whether the option meets the acceptance criteria, and which assumptions it puts at risk.
 - Every reason must point at evidence: name SMEs, severities, confidences, or synthesis findings. No generic statements.
 - Be candid about what the chosen option still costs (the risk knowingly accepted) and what would change your recommendation.
+- Use the exact option ids shown in parentheses above for "recommended_option_id" and "option_id" — never the letter or the name.
+- Keep lists short: at most 5 rationale items, 4 key_risks per option, 3 assumptions_at_risk per option, 4 tradeoffs, 4 conditions_to_revisit. Every list value is a plain string.
 
 Return ONLY one JSON object, no markdown, in exactly this shape:
 {
@@ -256,11 +258,70 @@ Return ONLY one JSON object, no markdown, in exactly this shape:
 
   const raw = await callAnthropicStream({
     messages: [{ role: 'user', content: prompt }],
-    maxTokens: 3500,
+    maxTokens: 6000,
   });
-  const parsed = parseLooseJson(raw);
-  if (!parsed || !parsed.recommended_option_id || !Array.isArray(parsed.options)) {
+  let parsed;
+  try { parsed = parseLooseJson(raw); }
+  catch (e) { throw new Error(`The assessment did not come back as valid JSON (${e.message}). Try regenerating.`); }
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.options)) {
     throw new Error('The assessment came back in an unexpected shape. Try regenerating.');
   }
-  return parsed;
+  return normalizeAssessment(parsed, options);
+}
+
+// ── Shape normalisation ───────────────────────────────────────────────────────
+// The page renders this object straight from storage on every load, so a
+// single malformed reply (a string where a list was asked for, a letter where
+// an id was asked for) must never be persisted as-is.
+
+const toText = (x) => (x == null ? '' : typeof x === 'string' ? x : typeof x === 'object' ? JSON.stringify(x) : String(x));
+const toList = (x) => Array.isArray(x) ? x.map(toText).filter(Boolean) : (x == null || x === '' ? [] : [toText(x)]);
+const oneOf = (x, allowed, fallback) => { const v = toText(x).trim().toUpperCase(); return allowed.includes(v) ? v : fallback; };
+
+/** Map whatever the model called an option (id, letter, "Option B", or its name) to a real option id. */
+export function resolveOptionId(raw, options) {
+  if (raw == null) return null;
+  const s = toText(raw).trim();
+  if (!s) return null;
+  const byId = options.find(o => o.id === s);
+  if (byId) return byId.id;
+  const m = s.match(/^(?:option\s*)?([A-Za-z])\b/i);
+  if (m) { const idx = m[1].toUpperCase().charCodeAt(0) - 65; if (options[idx]) return options[idx].id; }
+  const low = s.toLowerCase();
+  const byName = options.find(o => (o.name || '').trim().toLowerCase() === low);
+  if (byName) return byName.id;
+  const byContains = options.find(o => o.name && low.includes(o.name.trim().toLowerCase()));
+  return byContains?.id || null;
+}
+
+export function normalizeAssessment(parsed, options) {
+  const recommended = resolveOptionId(parsed.recommended_option_id, options);
+  if (!recommended) {
+    throw new Error(`The assessment recommended "${toText(parsed.recommended_option_id)}", which is not one of this decision's options. Try regenerating.`);
+  }
+  const seen = new Set();
+  const normOptions = parsed.options
+    .filter(o => o && typeof o === 'object')
+    .map(o => ({
+      option_id: resolveOptionId(o.option_id, options),
+      verdict: oneOf(o.verdict, ['RECOMMENDED', 'VIABLE', 'NOT RECOMMENDED'], 'VIABLE'),
+      risk_summary: toText(o.risk_summary),
+      key_risks: toList(o.key_risks),
+      meets_acceptance_criteria: oneOf(o.meets_acceptance_criteria, ['YES', 'PARTIAL', 'NO', 'UNKNOWN'], 'UNKNOWN'),
+      acceptance_note: toText(o.acceptance_note),
+      assumptions_at_risk: toList(o.assumptions_at_risk),
+      accepted_risk_if_chosen: toText(o.accepted_risk_if_chosen),
+    }))
+    .filter(o => o.option_id && !seen.has(o.option_id) && seen.add(o.option_id))
+    // The recommended option's verdict follows the recommendation, whatever the model wrote.
+    .map(o => o.option_id === recommended ? { ...o, verdict: 'RECOMMENDED' } : o);
+  return {
+    recommended_option_id: recommended,
+    confidence: oneOf(parsed.confidence, ['HIGH', 'MEDIUM', 'LOW'], 'MEDIUM'),
+    headline: toText(parsed.headline),
+    rationale: toList(parsed.rationale),
+    options: normOptions,
+    tradeoffs: toList(parsed.tradeoffs),
+    conditions_to_revisit: toList(parsed.conditions_to_revisit),
+  };
 }
