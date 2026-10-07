@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { fetchAllRows } from './pageAll.js';
 
 const TABLE = {
   Agent:            'agents',
@@ -40,23 +41,13 @@ function makeEntity(entityName) {
   if (!table) throw new Error(`Unknown entity: ${entityName}`);
 
   return {
-    list: async (sort, limit) => {
-      let q = supabase.from(table).select('*');
-      q = applySort(q, sort);
-      if (limit) q = q.limit(limit);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
-    },
+    // list/filter page past PostgREST's 1,000-row cap (R-N11); a caller's
+    // explicit limit still means "at most this many".
+    list: async (sort, limit) =>
+      fetchAllRows(() => applySort(supabase.from(table).select('*'), sort), { limit: limit || undefined }),
 
-    filter: async (filters = {}, sort, limit) => {
-      let q = supabase.from(table).select('*').match(filters);
-      q = applySort(q, sort);
-      if (limit) q = q.limit(limit);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
-    },
+    filter: async (filters = {}, sort, limit) =>
+      fetchAllRows(() => applySort(supabase.from(table).select('*').match(filters), sort), { limit: limit || undefined }),
 
     get: async (id) => {
       const { data, error } = await supabase.from(table).select('*').eq('id', id).single();
