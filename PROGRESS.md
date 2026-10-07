@@ -41,3 +41,26 @@ Per-requirement status for work done under `AGENTS.md`. Newest first.
 **Surprises**
 - There was no record anywhere that a loop was in flight; "is it running?" was inferred from agent statuses, which is exactly the T5/T6 failure mode in AGENTS.md §5.1. The run record is now the thing that knows.
 - The owner tab must never see its own run as stale, otherwise a slow model call (longer than the stale window) would prompt the user to resume a run that is still going. `classifyRun` returns `own` for the owning tab regardless of age.
+
+## R-N11 — Reads page past the 1,000-row cap
+
+**Status:** implemented and verified locally (2026-10-07).
+
+**Problem:** PostgREST returns at most 1,000 rows per request and the data layer issued one `select('*')` per read, so any table past 1,000 rows was silently truncated. Agents crossed that line first (1,167 after the SME catalog load): the Experts page, the Domains tree, New Session, Chains, Decision Detail, Session Comparison, Agent Analytics and the persona JSON export all showed 1,000. The user saw it as "AgentDebate only shows 1,000 personas" on the domain page.
+
+**Acceptance criterion used:** a table of 1,167 rows is returned whole and in order by `db.Agent.list()`; an explicit small `limit` is still a single capped request; a failing page rejects rather than returning a partial list.
+
+**Verification (verbatim summary)**
+- `node scripts/pageAll.test.mjs` → `tests 8 · pass 8 · fail 0` (failed first with `ERR_MODULE_NOT_FOUND` before the module existed).
+- `node scripts/runState.test.mjs` → `tests 13 · pass 13 · fail 0`.
+- `npm run build` → `✓ built in 8.28s`, exit 0.
+- `npx eslint src/lib/pageAll.js src/lib/supabaseDb.js scripts/pageAll.test.mjs` → exit 0.
+
+**What was built**
+- `src/lib/pageAll.js` — `fetchAllRows(makeQuery, { limit })`: walks `.range()` pages of 1,000 until a short page; a limit at or under a page is one `.limit()` request; a larger limit pages then trims. Relative imports only, Node-testable.
+- `src/lib/supabaseDb.js` — `list` and `filter` build a fresh query per page through the helper. No caller changes.
+- `scripts/pageAll.test.mjs` — 8 `node:test` cases with a fake PostgREST builder.
+
+**What's left**
+- Port the same patch to `PanelRoom` and `PanelRoomStandAlone` (same `supabaseDb.js`).
+- Add R-N11 to the requirements workbook.
