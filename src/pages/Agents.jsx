@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
-import { Bot, Plus, Search, Sparkles, Trash2, Edit2, Copy, Upload, Trash, Wand2, Download } from 'lucide-react';
+import { Bot, Plus, Search, Sparkles, Trash2, Edit2, Copy, Upload, Trash, Wand2, Download, FileText } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import EmptyState from '@/components/ui/EmptyState';
 import WrButton from '@/components/ui/WrButton';
@@ -12,6 +12,7 @@ import AgentImportModal from '@/components/agents/AgentImportModal';
 import BulkDeleteModal from '@/components/agents/BulkDeleteModal';
 import DomainAssignModal from '@/components/agents/DomainAssignModal';
 import { downloadPersonaExport } from '@/lib/agentExport';
+import { exportPersonasPdf } from '@/lib/personaPdf';
 
 export default function Agents() {
   const { db, workspace } = useWorkspace();
@@ -26,6 +27,7 @@ export default function Agents() {
   const [selected, setSelected] = useState(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [aiSeed, setAiSeed] = useState(null);
+  const [pdfState, setPdfState] = useState({ busy: false, error: null });
 
   // Deep links from the Threat Map: ?domain=<id> filters, ?q= searches,
   // ?generate=1&expert_type=&domain_id= opens the AI-generate modal pre-seeded
@@ -124,6 +126,22 @@ export default function Agents() {
     downloadPersonaExport(toExport, domains);
   };
 
+  // Export personas to a formatted PDF (R-N13). Given a list, exports exactly
+  // that; otherwise the selection if any, else the agents currently in view.
+  // Every page carries the handling marking. Failures are shown, not swallowed.
+  const pdfTargets = () => (selected.size ? filtered.filter(a => selected.has(a.id)) : (filtered.length ? filtered : agents));
+  const handleExportPdf = async (list) => {
+    const toExport = list?.length ? list : pdfTargets();
+    if (!toExport.length) return;
+    setPdfState({ busy: true, error: null });
+    try {
+      await exportPersonasPdf(toExport, domains);
+      setPdfState({ busy: false, error: null });
+    } catch (err) {
+      setPdfState({ busy: false, error: `PDF export failed: ${err?.message || err}. Retry with Export PDF.` });
+    }
+  };
+
   // Build the filter list from domain_ids that agents actually reference.
   // Resolves name/color from loaded workspace domains where possible;
   // falls back to discipline-based label for agents with unresolved domain_ids.
@@ -157,6 +175,14 @@ export default function Agents() {
                 ? `Export the ${filtered.length} filtered agents as JSON`
                 : 'Export all agent personas as JSON'}>
               <Download className="w-4 h-4" /> Export
+            </WrButton>
+            <WrButton variant="outline" onClick={() => handleExportPdf()} disabled={!agents.length || pdfState.busy}
+              title={selected.size
+                ? `Export the ${selected.size} selected agents as a PDF`
+                : filtered.length < agents.length
+                  ? `Export the ${filtered.length} filtered agents as a PDF`
+                  : 'Export all agent personas as a PDF'}>
+              <FileText className="w-4 h-4" /> {pdfState.busy ? 'Building PDF…' : 'Export PDF'}
             </WrButton>
             <WrButton variant="outline" onClick={() => setModal('ai')}><Sparkles className="w-4 h-4" /> AI Generate</WrButton>
             <WrButton onClick={() => setModal('new')}><Plus className="w-4 h-4" /> New Agent</WrButton>
@@ -205,6 +231,14 @@ export default function Agents() {
 
         {/* Agent Grid */}
         <div className="flex-1 p-4">
+          {pdfState.error && (
+            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded text-sm" role="alert" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)', color: '#C0392B' }}>
+              <span className="flex-1">{pdfState.error}</span>
+              <button onClick={() => setPdfState({ busy: false, error: null })} className="text-xs px-3 py-1 rounded" style={{ backgroundColor: 'var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
+                Dismiss
+              </button>
+            </div>
+          )}
           {selected.size > 0 && (
             <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)' }}>
               <span className="text-sm font-medium" style={{ color: '#C0392B' }}>{selected.size} agent{selected.size !== 1 ? 's' : ''} selected</span>
@@ -298,6 +332,15 @@ export default function Agents() {
                           style={{ color: 'var(--wr-text-muted)' }}
                         >
                           <Copy className="w-3 h-3" /> Clone
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleExportPdf([agent]); }}
+                          disabled={pdfState.busy}
+                          title="Export this persona as a PDF"
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/5"
+                          style={{ color: 'var(--wr-text-muted)' }}
+                        >
+                          <FileText className="w-3 h-3" /> PDF
                         </button>
                         <button
                           onClick={() => handleDelete(agent)}

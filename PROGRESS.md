@@ -78,6 +78,35 @@ Per-requirement status for work done under `AGENTS.md`. Newest first.
 - There was no record anywhere that a loop was in flight; "is it running?" was inferred from agent statuses, which is exactly the T5/T6 failure mode in AGENTS.md §5.1. The run record is now the thing that knows.
 - The owner tab must never see its own run as stale, otherwise a slow model call (longer than the stale window) would prompt the user to resume a run that is still going. `classifyRun` returns `own` for the owning tab regardless of age.
 
+## R-N13 — Export SME personas to a formatted PDF
+
+**Status:** implemented and verified locally (2026-10-07).
+
+**Requirement (proposed, not yet in the workbook):** from the Agents page a user can export one persona, the current selection, or the filtered set as a readable PDF with real selectable text. The PDF carries every persona field the JSON export carries, grouped into sections, with coverage vectors drawn as bars, and every page bears the handling marking (AGENTS.md C1).
+
+**Acceptance criterion used:** the document contains every non-empty persona value and none of the empty ones or any id or workspace reference; jsonb blocks render as labeled lists and key-values; a sparse persona names the groups not recorded; the marking and page number appear in the footer of every rendered page; long personas paginate with no text outside the page; one agent names the file after the agent, several use a count and date.
+
+**Verification (verbatim summary)**
+- `node scripts/personaPdf.test.mjs` → `tests 7 · pass 7 · fail 0`. Failed first with `ERR_MODULE_NOT_FOUND` before the module existed. One assertion in the test was wrong on first run (it checked for the substring `ws` as a leaked workspace id and matched the word "shows"); the fixture ids were changed to distinctive tokens. No production code was changed to make a test pass.
+- `node scripts/pageAll.test.mjs` → `tests 8 · pass 8 · fail 0`; `node scripts/runState.test.mjs` → `tests 13 · pass 13 · fail 0`.
+- `npm run build` → `✓ built in 9.18s`, exit 0. jsPDF is a lazy chunk; the main bundle does not include it.
+- `eslint src/pages/Agents.jsx` → 0 errors, 7 warnings, all pre-existing unused-variable warnings.
+- Visual check: a two-agent sample rendered with real jsPDF under Node and rasterised with the Windows PDF renderer. First pass showed a section heading orphaned at the foot of a page and two-line key-value rows; both fixed (heading keeps its rule and two lines; key-values inline with a hanging indent).
+
+**What was built**
+- `src/lib/personaPdf.js` — `buildPersonaDocument` (pure document model: title, subtitle, meta, sections of paragraphs, lists, key-values, bars, not-recorded list, marking), `documentText`, `renderPersonaPdf` (jsPDF drawing with page flow and footer), `pdfFilename`, `exportPersonasPdf` (lazy `import('jspdf')`, Letter, compressed). Relative imports only; Node-testable with a fake jsPDF. `HANDLING_MARKING = 'LOW SENSITIVITY · NO CUI'`.
+- `src/pages/Agents.jsx` — header "Export PDF" (selection → filtered → all) and a per-card "PDF" action; busy state on the button; failures surface in a dismissible banner, never swallowed.
+- `scripts/personaPdf.test.mjs` — 7 `node:test` cases.
+- Dependency added: `jspdf` ^4.2.1.
+
+**What's left**
+- Add R-N13 to the requirements workbook.
+- Manual acceptance in the browser: Agents → PDF on one card → file opens with selectable text and the marking; Export PDF with a domain filter → one agent per page start.
+- Merge-order note: this branch and `feat/r-n12-mcp-readonly` both add dependencies to `package.json` and the lockfile; whichever merges second needs a trivial conflict resolution there.
+
+**Surprises**
+- The repo had no PDF code and no handling-marking constant despite AGENTS.md requiring one on every PDF export; this is the first, so it lives in `personaPdf.js` and should move to a shared module when a second export kind appears.
+
 ## R-N11 — Reads page past the 1,000-row cap
 
 **Status:** implemented and verified locally (2026-10-07).
