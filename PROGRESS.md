@@ -2,6 +2,42 @@
 
 Per-requirement status for work done under `AGENTS.md`. Newest first.
 
+## R-N12 — Read-only MCP endpoint over the agent bench
+
+**Status:** implemented and verified locally (2026-10-07). Not yet deployed: the owner sets four Vercel environment variables and issues a client key (see `docs/mcp.md`).
+
+**Requirement (proposed, not yet in the workbook):** any MCP client can browse and search the full AgentDebate persona bench and fetch complete personas over Streamable HTTP, authenticated by a bearer key, read-only, scoped to one workspace. The MCP serves the same database the app writes, so there is one system of record for personas.
+
+**Acceptance criterion used:** a client with a valid key can initialize, list five tools, search the bench and fetch a full persona; an invalid or missing key gets 401; GET gets 405; exceeding the rate limit gets 429 with a JSON-RPC error; a `get_agent` miss says why; an export carries no ids or workspace references; every agents query is scoped to the workspace.
+
+**Verification (verbatim summary)**
+- `node scripts/mcp.test.mjs` → `tests 15 · pass 15 · fail 0`. Failed first with `ERR_MODULE_NOT_FOUND` before the modules existed; then one real failure (`(intermediate value).or is not a function`) caught that Supabase builders are thenables and the repo was awaiting the builder early. Fixed by keeping `base()` synchronous.
+- `node scripts/pageAll.test.mjs` → `tests 8 · pass 8 · fail 0`; `node scripts/runState.test.mjs` → `tests 13 · pass 13 · fail 0`.
+- `npm run build` → `✓ built in 10.05s`, exit 0.
+- `eslint . --quiet` → 15 errors, all `unused-imports/no-unused-imports` in pre-existing page and component files; none in this change (the ESLint config only covers `src/components` and `src/pages`).
+- Not verified: a live call against the real Supabase project. That needs the service role key in the server environment, which agents do not touch (AGENTS.md §11).
+
+**What was built**
+- `api/mcp.js` — Vercel Node function. Boots once from `SUPABASE_URL` (or `VITE_SUPABASE_URL`), `SUPABASE_SERVICE_ROLE_KEY`, `MCP_WORKSPACE_ID`, `MCP_API_KEYS`; a missing variable returns a 500 naming it.
+- `api/_mcp/server.js` — stateless Streamable HTTP: a fresh `McpServer` and transport per POST, JSON responses, bearer auth, rate limit, per-call audit line (key label, tool, trimmed args, outcome, never persona text). Underscore folder so Vercel does not deploy helpers as functions.
+- `api/_mcp/auth.js` — `adb_live_` keys, sha256 hashes in `MCP_API_KEYS` as `hash[:label]`, fail-closed resolution.
+- `api/_mcp/ratelimit.js` — fixed window, 120/min per key, per instance, injectable clock.
+- `api/_mcp/repo.js` — read-only Supabase access; every query carries `workspace_id`; domain names resolve to ids; search is a quoted PostgREST `or(ilike)` over five text columns; uses `src/lib/pageAll.js`.
+- `api/_mcp/tools.js` — `list_domains`, `list_agents`, `search_agents`, `get_agent`, `export_agents`; persona shaping reuses `src/lib/agentExport.js` so the MCP and the in-app export agree.
+- `scripts/mcp-key.mjs` — mints a key, prints it once with its hash entry.
+- `docs/mcp.md` — setup, connecting, limits.
+- Dependencies added: `@modelcontextprotocol/sdk`, `zod`. `mcp-handler` was rejected: its current major requires Next.js.
+
+**What's left**
+- Owner: set the four env vars in Vercel, run `node scripts/mcp-key.mjs <label>`, add the hash to `MCP_API_KEYS`, deploy, connect a client (`claude mcp add --transport http ...`) and run one search and one `get_agent` as the live acceptance pass.
+- Add R-N12 to the requirements workbook.
+- Decide PersonaHub's direction now that the MCP serves from AgentDebate: point it at the `agents` table, or shelve it.
+- Rate limiting is per function instance; a shared store is a follow-up only if many keys are issued.
+
+**Surprises**
+- Supabase query builders are thenables. An `async` helper that returns a builder executes the query the moment it is awaited. The test suite caught it; the fix is a synchronous builder step with the async name-to-id resolution done first.
+- `mcp-handler` 2.x now peers on `next` and `@modelcontextprotocol/server` 2.0, so the SME_MCP route pattern could not be lifted as-is; the SDK transport is used directly instead.
+
 ## R-N10 — Long-running analysis survives leaving the page
 
 **Status:** implemented and verified locally (2026-10-05).
