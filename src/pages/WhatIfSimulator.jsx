@@ -3,14 +3,13 @@ import { Link, useParams } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { parseAnalysisConfigs } from '@/lib/chainBreakStorage';
 import { countermeasureText } from '@/lib/llm';
-import { computeSCRS, estimateCMDelta, projectSCRS, getPosture } from '@/lib/scrsEngine';
+import { computeSCRS, estimateCMDelta, getPosture } from '@/lib/scrsEngine';
 import SCRSGauge from '@/components/simulator/SCRSGauge';
 import RiskBreakdownCard from '@/components/simulator/RiskBreakdownCard';
 import CountermeasureToggle from '@/components/simulator/CountermeasureToggle';
 import PageHeader from '@/components/ui/PageHeader';
 import {
-  FlaskConical, ArrowRight, Save, FileText, ChevronDown, ChevronUp,
-  Shield, AlertTriangle, CheckCircle2, Zap,
+  FlaskConical, ArrowRight, Save, FileText, ChevronDown, ChevronUp, AlertTriangle,
 } from 'lucide-react';
 
 const CHAIN_RESILIENCE_COLOR = { HIGH: '#C0392B', MEDIUM: '#D68910', LOW: '#27AE60' };

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, ChevronDown, ChevronRight, Shield, Bot, Target, Link2, Swords, FileText, Globe, Lightbulb, AlertTriangle, CheckCircle2, Map, Brain, BarChart2, Search, Zap, Sparkles, Users, Scissors, LayoutDashboard, GitBranch, BookMarked, ShieldCheck } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronRight, Shield, Bot, Target, Link2, Swords, FileText, Globe, Lightbulb, AlertTriangle, CheckCircle2, Map, Brain, BarChart2, Search, Zap, Users, Scissors, LayoutDashboard, GitBranch, BookMarked, ShieldCheck } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 
 const sections = [

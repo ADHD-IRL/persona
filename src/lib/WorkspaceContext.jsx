@@ -1,8 +1,10 @@
-import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { supabaseDb } from '@/lib/supabaseDb';
 import { useAuth } from '@/lib/AuthContext';
-import { setWorkspaceApiKey, setKnowledgeRetriever } from '@/lib/llm';
+import { setKnowledgeRetriever } from '@/lib/llm';
+import { setWorkspaceApiKey, clearApiCredentials } from './apiCredentials.js';
+import { loadWorkspace } from './workspaceLifecycle.js';
 import { retrieveKnowledge } from '@/lib/knowledge';
 
 const WorkspaceContext = createContext(null);
@@ -26,108 +28,50 @@ export const WorkspaceProvider = ({ children }) => {
   const [workspace, setWorkspace] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  const generation = useRef(0);
+  const userId = user?.id;
+
+  const activateWorkspace = useCallback((ws) => {
+    setWorkspace(ws);
+    try { localStorage.setItem(WORKSPACE_KEY, ws.id); } catch { /* optional preference */ }
+    setWorkspaceApiKey(ws.anthropic_api_key);
+  }, []);
+
   useEffect(() => {
-    if (!isAuthenticated || !user) {
-      setWorkspace(null);
+    const current = ++generation.current;
+    const isCurrent = () => generation.current === current;
+    clearApiCredentials();
+    setWorkspace(null);
+    setError(null);
+    setIsLoading(true);
+    if (!isAuthenticated || !userId) {
       setIsLoading(false);
       return;
     }
-    initWorkspace(user.id);
-  }, [isAuthenticated, user]);
+    let preferredId;
+    try { preferredId = localStorage.getItem(WORKSPACE_KEY); } catch { /* optional preference */ }
+    loadWorkspace(supabase, userId, preferredId, isCurrent)
+      .then(ws => { if (isCurrent()) activateWorkspace(ws); })
+      .catch(err => { if (isCurrent()) setError(err.message || 'Unable to load your workspace.'); })
+      .finally(() => { if (isCurrent()) setIsLoading(false); });
+    return () => {
+      generation.current++;
+      clearApiCredentials();
+    };
+  }, [isAuthenticated, userId, attempt, activateWorkspace]);
 
-  const initWorkspace = async (userId) => {
-    setIsLoading(true);
-    try {
-      // Ensure profile row exists (trigger may not have fired for older accounts)
-      await supabase.from('profiles').upsert({ id: userId }, { onConflict: 'id', ignoreDuplicates: true });
-
-      // Load workspaces the user is a member of
-      const { data: members } = await supabase
-        .from('workspace_members')
-        .select('workspace_id, role')
-        .eq('user_id', userId);
-
-      if (members?.length > 0) {
-        const ids = members.map(m => m.workspace_id);
-        const { data: workspaces } = await supabase
-          .from('workspaces')
-          .select('*')
-          .in('id', ids);
-
-        const persistedId = localStorage.getItem(WORKSPACE_KEY);
-        const ws = workspaces?.find(w => w.id === persistedId) ?? workspaces?.[0];
-
-        if (ws) {
-          activateWorkspace(ws);
-          return;
-        }
-      }
-
-      // Check if user owns a workspace but has no member record (broken state)
-      const { data: ownedWorkspaces } = await supabase
-        .from('workspaces')
-        .select('*')
-        .eq('owner_id', userId);
-
-      if (ownedWorkspaces?.length > 0) {
-        const ws = ownedWorkspaces[0];
-        // Repair the missing member record
-        const { error: memberErr } = await supabase.from('workspace_members').insert({
-          workspace_id: ws.id,
-          user_id: userId,
-          role: 'admin',
-        });
-        if (!memberErr) {
-          activateWorkspace(ws);
-          return;
-        }
-      }
-
-      // No workspace — create one automatically
-      const { data: ws, error: wsErr } = await supabase
-        .from('workspaces')
-        .insert({ name: 'My Workspace', owner_id: userId })
-        .select()
-        .single();
-
-      if (wsErr || !ws) {
-        console.error('Failed to create workspace:', wsErr);
-        return;
-      }
-
-      const { error: memberErr } = await supabase.from('workspace_members').insert({
-        workspace_id: ws.id,
-        user_id: userId,
-        role: 'admin',
-      });
-
-      if (memberErr) {
-        console.error('Failed to add user to workspace_members:', memberErr);
-        // Workspace exists but user isn't a member — cannot proceed safely
-        return;
-      }
-
-      activateWorkspace(ws);
-    } catch (err) {
-      console.error('Workspace init failed:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const activateWorkspace = (ws) => {
-    setWorkspace(ws);
-    localStorage.setItem(WORKSPACE_KEY, ws.id);
-    // Make the workspace API key available to llm.js
-    if (ws.anthropic_api_key) {
-      setWorkspaceApiKey(ws.anthropic_api_key);
-    }
-  };
+  const retryWorkspace = () => setAttempt(value => value + 1);
 
   const refreshWorkspace = async () => {
     if (!workspace) return;
-    const { data } = await supabase.from('workspaces').select('*').eq('id', workspace.id).single();
-    if (data) activateWorkspace(data);
+    const current = generation.current;
+    const { data, error: refreshError } = await supabase.from('workspaces').select('*').eq('id', workspace.id).single();
+    if (generation.current !== current) return;
+    if (refreshError) throw refreshError;
+    if (!data) throw new Error('Unable to refresh your workspace.');
+    activateWorkspace(data);
   };
 
   const db = useMemo(() => {
@@ -167,6 +111,8 @@ export const WorkspaceProvider = ({ children }) => {
       workspace,
       db,
       isLoading,
+      error,
+      retryWorkspace,
       localUserId: user?.id,
       refreshWorkspace,
     }}>

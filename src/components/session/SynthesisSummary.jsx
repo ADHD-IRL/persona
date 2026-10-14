@@ -1,4 +1,4 @@
-import { CheckCircle2, Link2, ShieldAlert, BookOpen, Users, FileText } from 'lucide-react';
+import { CheckCircle2, Link2, ShieldAlert, BookOpen, Users } from 'lucide-react';
 import ChainFlowGraph from '@/components/chainbreaker/ChainFlowGraph';
 
 const SEV_COLOR = {

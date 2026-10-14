@@ -66,7 +66,7 @@ export function aggregateSessionRisk(sessionAgents) {
     let ll = l, ii = i;
     if ((!ll || !ii) && sev && SEV_TO_LI[sev]) { [ll, ii] = SEV_TO_LI[sev]; }
     const s = riskScore(ll, ii);
-    if (s != null) scored.push({ score: s, exposure: expectedExposure(ll, ii, conf) || s });
+    if (s != null) scored.push({ score: s, exposure: expectedExposure(ll, ii, conf) ?? s });
   }
   if (!scored.length) return null;
   const peak = Math.max(...scored.map(s => s.score));

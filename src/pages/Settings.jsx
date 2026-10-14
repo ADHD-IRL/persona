@@ -4,7 +4,8 @@ import { Settings2, Brain, Key, CheckCircle2, Loader2, Eye, EyeOff } from 'lucid
 import PageHeader from '@/components/ui/PageHeader';
 import WrButton from '@/components/ui/WrButton';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { setModelPref, setWorkspaceApiKey } from '@/lib/llm';
+import { setModelPref } from '@/lib/llm';
+import { saveWorkspaceKey } from '@/lib/workspaceLifecycle';
 import { supabase } from '@/lib/supabase';
 import DangerZone from '@/components/settings/DangerZone';
 
@@ -47,41 +48,30 @@ export default function Settings() {
   const [testStatus, setTestStatus] = useState(null);
   const [testError, setTestError] = useState('');
   const [testing, setTesting] = useState(false);
-const [saveError, setSaveError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
-    // Prefer localStorage so the key survives if Supabase RLS ever blocks the read
-    const localKey = localStorage.getItem('agd_anthropic_key');
-    if (localKey) {
-      setApiKeyState(localKey);
-    } else if (workspace?.anthropic_api_key) {
-      setApiKeyState(workspace.anthropic_api_key);
-    }
+    setApiKeyState(workspace?.anthropic_api_key || '');
+    setShowKey(false);
     const stored = localStorage.getItem('agd_llm_model') || 'claude_sonnet_4_6';
     setCurrentModel(stored);
   }, [workspace]);
+
+  useEffect(() => {
+    setTestStatus(null);
+    setSaved(false);
+    setSaveError('');
+  }, [workspace?.id]);
 
   const handleSave = async () => {
     setSaving(true);
     setSaveError('');
     const trimmed = apiKey.trim();
     try {
-      // Persist locally first — this always works regardless of RLS
-      localStorage.setItem('agd_anthropic_key', trimmed);
-      setWorkspaceApiKey(trimmed);
+      setSaved(false);
+      await saveWorkspaceKey(supabase, workspace.id, trimmed);
       setModelPref(currentModel);
-
-      // Also persist to Supabase for cross-device sync
-      const { error } = await supabase
-        .from('workspaces')
-        .update({ anthropic_api_key: trimmed })
-        .eq('id', workspace.id);
-      if (error) {
-        console.error('Workspace update failed:', error);
-        setSaveError(`DB: ${error.message}`);
-      } else {
-        if (refreshWorkspace) await refreshWorkspace();
-      }
+      await refreshWorkspace();
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -113,14 +103,8 @@ const [saveError, setSaveError] = useState('');
         }),
       });
       if (res.ok) {
-        // Save immediately on successful test so sessions can use the key right away
-        const trimmed = apiKey.trim();
-        localStorage.setItem('agd_anthropic_key', trimmed);
-        setWorkspaceApiKey(trimmed);
-        supabase.from('workspaces').update({ anthropic_api_key: trimmed }).eq('id', workspace?.id).then(({ error }) => {
-          if (error) console.warn('Workspace sync failed (key saved locally):', error.message);
-          else if (refreshWorkspace) refreshWorkspace();
-        });
+        await saveWorkspaceKey(supabase, workspace.id, apiKey.trim());
+        await refreshWorkspace();
         setTestStatus('ok');
       } else {
         const data = await res.json().catch(() => ({}));
@@ -151,7 +135,7 @@ const [saveError, setSaveError] = useState('');
             </h2>
           </div>
           <p className="text-xs mb-4" style={{ color: 'var(--wr-text-muted)' }}>
-            Required for all AI features. Stored locally in your browser — never sent anywhere except directly to Anthropic.
+            Required for all AI features. Saved in your Supabase workspace and shared with its members. Requests pass through the application proxy to Anthropic.
           </p>
           <div className="flex gap-2">
             <div className="flex-1 relative">
@@ -183,7 +167,7 @@ const [saveError, setSaveError] = useState('');
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
-                <WrButton onClick={handleTestKey} disabled={testing || !apiKey.trim()} variant="secondary">
+                <WrButton onClick={handleTestKey} disabled={testing || saving || !apiKey.trim()} variant="secondary">
                   {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
                 </WrButton>
               </TooltipTrigger>
@@ -249,7 +233,7 @@ const [saveError, setSaveError] = useState('');
         </div>
 
         <div className="flex items-center gap-3">
-          <WrButton onClick={handleSave} disabled={saving}>
+          <WrButton onClick={handleSave} disabled={saving || testing}>
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Settings'}
           </WrButton>
           {saved && (

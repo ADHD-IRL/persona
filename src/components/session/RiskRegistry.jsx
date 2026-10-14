@@ -1,4 +1,3 @@
-import { cn } from '@/lib/utils';
 
 const SEV_COLOR = {
   CRITICAL: { text: '#C0392B', bg: 'rgba(192,57,43,0.08)', border: 'rgba(192,57,43,0.25)' },

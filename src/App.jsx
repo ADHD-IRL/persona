@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { supabaseMisconfigured } from '@/lib/supabase';
 import { WorkspaceProvider, useWorkspace } from '@/lib/WorkspaceContext';
 import AppLayout from '@/components/layout/AppLayout';
-import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
 import SplashPage from '@/pages/SplashPage';
 import Domains from '@/pages/Domains';
@@ -49,13 +48,23 @@ const RequireAuth = ({ children }) => {
 };
 
 const WorkspaceGate = ({ children }) => {
-  const { isLoading } = useWorkspace();
+  const { isLoading, workspace, error, retryWorkspace } = useWorkspace();
   if (isLoading) return <LoadingScreen />;
+  if (error || !workspace) return (
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: 'var(--wr-bg-primary)', color: 'var(--wr-text-primary)' }}>
+      <div className="max-w-md space-y-4" role="alert">
+        <h1 className="text-lg font-bold">Unable to open your workspace</h1>
+        <p>{error || 'No active workspace is available.'}</p>
+        <button onClick={retryWorkspace} className="px-4 py-2 rounded" style={{ backgroundColor: 'var(--wr-amber)', color: '#0D1B2A' }}>Retry</button>
+        <a href="/" className="block underline">Return to sign in</a>
+      </div>
+    </div>
+  );
   return children;
 };
 
 const AppRoutes = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingScreen />;
 
   return (
@@ -67,7 +76,7 @@ const AppRoutes = () => {
 
       <Route element={
         <RequireAuth>
-          <WorkspaceProvider>
+          <WorkspaceProvider key={user?.id}>
             <WorkspaceGate>
               <AppLayout />
             </WorkspaceGate>

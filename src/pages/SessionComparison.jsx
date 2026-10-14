@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useWorkspace } from '@/lib/WorkspaceContext';
-import { GitCompare, ChevronDown, Users, CheckCircle2, AlertCircle, Minus } from 'lucide-react';
+import { GitCompare, ChevronDown, Users } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import SeverityBadge from '@/components/ui/SeverityBadge';
 import {

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { clearApiCredentials } from './apiCredentials.js';
 
 const AuthContext = createContext();
 
@@ -9,13 +10,20 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let activeUserId = null;
     supabase.auth.getSession().then(({ data: { session } }) => {
+      const nextUserId = session?.user?.id ?? null;
+      if (nextUserId !== activeUserId || !nextUserId) clearApiCredentials();
+      activeUserId = nextUserId;
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUserId = session?.user?.id ?? null;
+      if (nextUserId !== activeUserId || !nextUserId) clearApiCredentials();
+      activeUserId = nextUserId;
       setSession(session);
       setUser(session?.user ?? null);
     });
@@ -48,7 +56,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    clearApiCredentials();
   };
 
   const resetPassword = async (email) => {

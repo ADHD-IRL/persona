@@ -6,6 +6,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import ConvenePanelButton from '@/components/session/ConvenePanelButton';
 import EmptyState from '@/components/ui/EmptyState';
 import WrButton from '@/components/ui/WrButton';
+import { SESSION_AGENT_RESET } from '@/lib/sessionReset';
+import { toast } from '@/components/ui/use-toast';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 const STATUS_CONFIG = {
@@ -105,11 +107,7 @@ export default function Sessions() {
     setResetting(true);
     try {
       const agents = await db.SessionAgent.filter({ session_id: session.id });
-      const resetUpdates = {
-        round1_assessment: null, round1_severity: null, round1_confidence: null,
-        round2_rebuttal: null, round2_revised_severity: null, round2_confidence: null,
-        compound_chain_text: null, round0_briefing: null, status: 'pending',
-      };
+      const resetUpdates = SESSION_AGENT_RESET;
       await Promise.all(agents.map(sa => db.SessionAgent.update(sa.id, resetUpdates)));
 
       // Remove synthesis
@@ -124,6 +122,8 @@ export default function Sessions() {
         sa.session_id === session.id ? { ...sa, ...resetUpdates } : sa
       ));
       setSyntheses(prev => prev.filter(sy => sy.session_id !== session.id));
+    } catch (error) {
+      toast({ title: 'Session reset failed', description: error.message || 'Please retry the reset.', variant: 'destructive' });
     } finally {
       setResetting(false);
       setResetConfirmId(null);
@@ -507,7 +507,7 @@ export default function Sessions() {
                       </span>
                     </div>
                     <p style={{ fontSize: 11.5, color: 'var(--wr-text-muted)', textAlign: 'center', maxWidth: 340, lineHeight: 1.5 }}>
-                      This will clear all Round 1 and Round 2 agent assessments, pre-session briefings, confidence scores, and the synthesis report for <strong style={{ color: 'var(--wr-text-secondary)' }}>{session.name}</strong>. The session and its agents will remain but all generated data will be permanently deleted.
+                      This will clear Round 1 and Round 2 assessments, likelihood and impact ratings, confidence scores, briefings, and synthesis for <strong style={{ color: 'var(--wr-text-secondary)' }}>{session.name}</strong>. The session, agents, transcript, sources, saved chains, and mitigations will remain.
                     </p>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button

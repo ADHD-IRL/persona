@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Braces, ChevronDown, ChevronRight, Copy, Check, Bot, Target, Layers,
-  Swords, FileText, Link2, ShieldAlert, BookOpen, Sparkles, MessageSquare,
+  Swords, FileText, Link2, ShieldAlert, BookOpen, Sparkles,
 } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 

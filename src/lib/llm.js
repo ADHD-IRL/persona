@@ -3,6 +3,10 @@
 // hand and does NOT auto-sync. When you add, remove, or materially change a prompt
 // here (or in decisionContext.js / knowledge.js), update PromptLibrary.jsx to match.
 
+import { getApiKey } from './apiCredentials.js';
+import { readAnthropicStream } from './anthropicStream.js';
+export { getApiKey, setWorkspaceApiKey } from './apiCredentials.js';
+
 const MODEL_MAP = {
   claude_sonnet_4_6: 'claude-sonnet-4-6',
   claude_opus_4_6:   'claude-opus-4-7',
@@ -12,21 +16,6 @@ const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
 // Use backend proxy to avoid CORS preflight failures on deployed origins.
 const ANTHROPIC_URL = '/api/anthropic';
-
-// Workspace key set by WorkspaceContext on load (takes priority)
-let _workspaceApiKey = '';
-export function setWorkspaceApiKey(key) { _workspaceApiKey = key || ''; }
-
-export function getApiKey() {
-  return _workspaceApiKey
-    || localStorage.getItem('agd_anthropic_key')
-    || import.meta.env.VITE_ANTHROPIC_KEY
-    || '';
-}
-
-export function setApiKey(key) {
-  localStorage.setItem('agd_anthropic_key', key);
-}
 
 export function getModelId() {
   const val = localStorage.getItem('agd_llm_model');
@@ -55,38 +44,7 @@ export async function callAnthropicStream({ messages, maxTokens = 2000, system, 
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
   }
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let fullText = '';
-  let streamError = null;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const raw = line.slice(6).trim();
-      if (raw === '[DONE]') continue;
-      try {
-        const event = JSON.parse(raw);
-        if (event.type === 'error') {
-          streamError = new Error(event.error?.message || 'Stream error from Anthropic API');
-          break;
-        }
-        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-          fullText += event.delta.text;
-          onToken?.(event.delta.text, fullText);
-        }
-      } catch {}
-    }
-    if (streamError) break;
-  }
-  if (streamError) throw streamError;
-  await onDone?.(fullText);
-  return fullText;
+  return readAnthropicStream(res.body, { onToken, onDone });
 }
 
 export function parseSeverityFromText(text, fallback = 'HIGH') {

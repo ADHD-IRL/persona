@@ -1,9 +1,11 @@
 {
-  "name": "agentdebate",
+  "name": "agentdebate-local",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test": "node --test scripts/*.test.mjs",
+    "verify": "npm run lint && npm test && npm run build",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint . --quiet",
@@ -44,3 +46,4 @@
     "vite": "^6.1.0"
   }
 }
+

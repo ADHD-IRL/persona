@@ -3,7 +3,7 @@ import { useWorkspace } from '@/lib/WorkspaceContext';
 import { TrendingUp, TrendingDown, Minus, Brain, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import AgentPerformanceCard from '@/components/agents/AgentPerformanceCard';
 import TeamPerformanceSummary from '@/components/agents/TeamPerformanceSummary';

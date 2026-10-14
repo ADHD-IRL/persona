@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Scissors, Loader2, Sparkles, Link2, CheckCircle2 } from 'lucide-react';
+import { Scissors, Loader2, Link2, CheckCircle2 } from 'lucide-react';
 import WrButton from '@/components/ui/WrButton';
 import ProcessingBar from '@/components/ui/ProcessingBar';
 import { useElapsed } from '@/hooks/useElapsed';

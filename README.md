@@ -1,8 +1,11 @@
-# AgentDebate
+# AgentDebate-local
+
+Independent local repository for planning local database and hosting support. See [the local hosting plan](docs/LOCAL_HOSTING_PLAN.md). Runtime setup is planned; the copied application still needs Supabase services and Anthropic access.
+
 
 Structured multi-agent risk assessment and decision-support platform. Frame a design decision, assemble a panel of expert agents, run two-round red-team sessions, and turn what they surface into quantified risk, kill chains, and a tracked mitigation plan — or drop into the **Live Debate Room** for a real-time streaming debate you can facilitate on the fly.
 
-Multi-user, workspace-aware deployment backed by Supabase. All AI calls go directly from your browser to the Anthropic API using your own key.
+Multi-user, workspace-aware deployment backed by Supabase. AI requests use your active workspace's key and pass through the application proxy to Anthropic.
 
 ---
 
@@ -209,7 +212,7 @@ Domains are matched by name (case-insensitive) or auto-created if they don't exi
 npm run build
 ```
 
-Output goes to `dist/`. Deploy to any static host (Vercel, Netlify, GitHub Pages, S3, etc.). Set the Supabase environment variables in your hosting platform's settings:
+Output goes to `dist/`. Deploy on Vercel to include the `/api/anthropic` proxy, or provide an equivalent proxy when using another host. Set the Supabase environment variables in your hosting platform's settings:
 
 ```
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
@@ -217,6 +220,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-public-key
 ```
 
 The Anthropic API key is entered by each workspace in Settings and stored in the workspace record — it does not need to be set at build time.
+
+Run `npm run verify` to check lint, all Node tests, and the production build together.
 
 ---
 
@@ -233,3 +238,4 @@ The Anthropic API key is entered by each workspace in Settings and stored in the
 | Knowledge retrieval | Organizational Knowledge Base (Postgres full-text); Wikipedia API fallback for agent tool calls |
 | Charts | Recharts |
 | Icons | Lucide React |
+

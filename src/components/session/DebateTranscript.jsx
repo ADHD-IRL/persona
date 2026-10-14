@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Loader2, Swords, ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
+import { Swords, ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import WrButton from '@/components/ui/WrButton';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
