@@ -152,3 +152,81 @@
   0%, 100% { transform: scaleY(0.3); }
   50%       { transform: scaleY(1); }
 }
+/* Consistent disclosure and surface treatment inside the analyst dashboard. */
+.session-tracker details > summary { border-radius: 0.75rem; padding: 0.5rem; cursor: pointer; transition: background-color 150ms; }
+.session-tracker details > summary:hover { background-color: rgba(240, 165, 0, 0.08); }
+.session-tracker details > summary:focus-visible { outline: 2px solid var(--wr-amber); outline-offset: 2px; }
+.session-tracker article, .session-tracker details.rounded-xl { border-color: var(--wr-border); background-color: var(--wr-bg-secondary); }
+
+/* Application control contract. Explicit data-ui roles keep charts, cards,
+   disclosure rows and reference citations distinct from pill actions. */
+:root {
+  --ui-pill-radius: 9999px;
+  --ui-field-radius: 0.75rem;
+  --ui-card-radius: 1rem;
+  --ui-control-height: 2.5rem;
+}
+[data-ui="action"], [data-ui="icon"] {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  max-width: 100%;
+  border-radius: var(--ui-pill-radius) !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: var(--wr-border-strong);
+  padding: 0.45rem 0.95rem !important;
+  font-weight: 500;
+  line-height: 1.35;
+  text-decoration: none !important;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+  transition: border-color 150ms, background-color 150ms, color 150ms;
+}
+[data-ui="action"][data-size="md"], [data-ui="action"][data-size="lg"] { min-height: var(--ui-control-height); }
+[data-ui="action"][data-size="lg"] { padding: 0.65rem 1.3rem !important; }
+[data-ui="action"][data-size="xs"] { min-height: 2rem; padding: 0.3rem 0.7rem !important; }
+[data-ui="icon"] { min-width: 2rem; min-height: 2rem; padding: 0.4rem !important; flex-shrink: 0; }
+[data-ui="action"] svg, [data-ui="icon"] svg { flex-shrink: 0; }
+[data-ui="action"]:not(:disabled):not([aria-disabled="true"]):hover,
+[data-ui="icon"]:not(:disabled):not([aria-disabled="true"]):hover { border-color: var(--wr-amber); }
+[data-ui="action"]:disabled, [data-ui="icon"]:disabled,
+[data-ui="action"][aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+[data-ui="card"], [data-ui="surface"] { border-radius: var(--ui-card-radius) !important; }
+[data-ui="card"] { text-decoration: none !important; overflow-wrap: anywhere; }
+[data-ui="disclosure"] { border-radius: var(--ui-field-radius) !important; }
+[data-ui="reference"] { text-underline-offset: 3px; }
+[data-ui="reference"]:hover { text-decoration: underline; }
+button:focus-visible, a:focus-visible, summary:focus-visible,
+[role="button"]:focus-visible, [role="tab"]:focus-visible {
+  outline: 2px solid var(--wr-amber) !important;
+  outline-offset: 3px;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
+select, textarea {
+  border-radius: var(--ui-field-radius) !important;
+  min-height: var(--ui-control-height);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--wr-amber) !important;
+  outline-offset: 2px;
+}
+input[type="checkbox"], input[type="radio"] { accent-color: var(--wr-amber); }
+input:disabled, select:disabled, textarea:disabled { opacity: 0.5; cursor: not-allowed; }
+summary { cursor: pointer; border-radius: var(--ui-field-radius); }
+@media (prefers-reduced-motion: reduce) {
+  [data-ui="action"], [data-ui="icon"] { transition: none; }
+}
+
+[data-ui="action"], [data-ui="icon"] { font-family: inherit !important; font-size: 0.8125rem !important; }
+[data-ui="action"][data-size="xs"] { font-size: 0.75rem !important; }
+[data-ui="badge"] { border-radius: var(--ui-pill-radius) !important; }
+[data-ui="action"].sidebar-link {
+  width: calc(100% - 1rem);
+  justify-content: flex-start;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}

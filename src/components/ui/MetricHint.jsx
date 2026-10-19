@@ -31,7 +31,7 @@ export default function MetricHint({
     >
       {children}
       {show && (
-        <div
+        <div data-ui="surface"
           className={`absolute z-40 ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 ${width} rounded-lg p-3 text-left pointer-events-none`}
           style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', boxShadow: '0 8px 28px rgba(0,0,0,0.45)' }}
         >

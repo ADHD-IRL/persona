@@ -68,7 +68,7 @@ export default function NextSteps({
   ];
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
       <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--wr-border)' }}>
         <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>NEXT STEPS</p>
         <p className="text-xs mt-0.5" style={{ color: 'var(--wr-text-muted)' }}>
@@ -89,7 +89,7 @@ export default function NextSteps({
                 <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{s.status}</p>
               </div>
               {clickable ? (
-                <button onClick={s.onClick}
+                <button data-ui="action" onClick={s.onClick}
                   className="flex items-center gap-1 text-xs font-mono font-bold px-2.5 py-1 rounded flex-shrink-0"
                   style={{ backgroundColor: `${s.color}18`, color: s.color, border: `1px solid ${s.color}44` }}>
                   {s.cta} <ArrowRight className="w-3 h-3" />

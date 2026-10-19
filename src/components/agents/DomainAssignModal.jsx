@@ -32,7 +32,7 @@ export default function DomainAssignModal({ agents, domains, onClose, onDone }) 
   const run = async () => {
     setError('');
     const targets = scope === 'unassigned' ? agents.filter(a => !a.domain_id) : agents;
-    if (!targets.length) { setError('No agents to assign.'); return; }
+    if (!targets.length) { setError('No SMEs to organize.'); return; }
     setPhase('running');
     try {
       // Results are aligned to input order — suggestions[k] is for targets[k].
@@ -54,7 +54,7 @@ export default function DomainAssignModal({ agents, domains, onClose, onDone }) 
       setRows(built);
       setPhase('review');
     } catch (e) {
-      setError(e.message || 'Assignment failed.');
+      setError(e.message || 'Domain organization failed.');
       setPhase('config');
     }
   };
@@ -87,7 +87,7 @@ export default function DomainAssignModal({ agents, domains, onClose, onDone }) 
         const existing = freshDomains.find(d => d.name.toLowerCase().trim() === key);
         if (existing) { createdByName[key] = existing.id; return existing.id; }
         const color = NEW_DOMAIN_COLORS[Object.keys(createdByName).length % NEW_DOMAIN_COLORS.length];
-        const created = await db.Domain.create({ name, color, description: 'Auto-assigned from SME personas' });
+        const created = await db.Domain.create({ name, color, description: 'Suggested from SME personas' });
         createdByName[key] = created.id;
         return created.id;
       };
@@ -116,26 +116,26 @@ export default function DomainAssignModal({ agents, domains, onClose, onDone }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-      <div className="w-[720px] max-w-full max-h-[90vh] overflow-hidden flex flex-col rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="w-[720px] max-w-full max-h-[90vh] overflow-hidden flex flex-col rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--wr-border)' }}>
           <div className="flex items-center gap-2">
             <Wand2 className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
-            <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>ASSIGN DOMAINS FROM PERSONAS</h2>
+            <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>ORGANIZE SME DOMAINS</h2>
           </div>
-          <button onClick={close}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+          <button aria-label="Close" data-ui="icon" onClick={close}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
         </div>
 
         <div className="p-6 overflow-y-auto">
           {(phase === 'config' || phase === 'running') && (
             <div className="space-y-4">
               <p className="text-sm" style={{ color: 'var(--wr-text-secondary)' }}>
-                Claude reads each agent's persona, discipline, and focus and assigns the best-fit domain — reusing your existing domains where they fit and proposing broad new ones only where nothing does. You review and override everything before anything is saved.
+                The model reads each SME’s persona, discipline, and focus and suggests the best-fit domain — reusing your existing domains where they fit and proposing broad new ones only where nothing does. You review and override everything before anything is saved.
               </p>
-              <div className="rounded p-3 space-y-2" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-3 space-y-2" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                 {[
-                  ['unassigned', `Only unassigned agents (${unassignedCount})`, 'Agents that currently have no domain.'],
-                  ['all', `All agents (${agents.length})`, 'Re-review every agent, including those already assigned.'],
+                  ['unassigned', `Only SMEs without a domain (${unassignedCount})`, 'SMEs that currently have no domain.'],
+                  ['all', `All SMEs (${agents.length})`, 'Review every SME, including those already categorized.'],
                 ].map(([val, label, desc]) => (
                   <label key={val} className="flex items-start gap-2 cursor-pointer">
                     <input type="radio" name="scope" checked={scope === val} onChange={() => setScope(val)} disabled={running} className="mt-0.5 accent-amber-500" />
@@ -158,11 +158,11 @@ export default function DomainAssignModal({ agents, domains, onClose, onDone }) 
                   {includedCount} OF {rows.length} WILL BE UPDATED
                 </p>
                 <div className="flex gap-3 text-xs">
-                  <button onClick={() => setRows(rs => rs.map(r => ({ ...r, include: true })))} style={{ color: 'var(--wr-amber)' }}>Select all</button>
-                  <button onClick={() => setRows(rs => rs.map(r => ({ ...r, include: false })))} style={{ color: 'var(--wr-text-muted)' }}>Select none</button>
+                  <button data-ui="action" onClick={() => setRows(rs => rs.map(r => ({ ...r, include: true })))} style={{ color: 'var(--wr-amber)' }}>Select all</button>
+                  <button data-ui="action" onClick={() => setRows(rs => rs.map(r => ({ ...r, include: false })))} style={{ color: 'var(--wr-text-muted)' }}>Select none</button>
                 </div>
               </div>
-              <div className="rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
                 <div className="grid grid-cols-[24px_1fr_1fr] gap-2 px-3 py-2 text-[10px] font-mono font-bold tracking-wider" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)' }}>
                   <span></span><span>AGENT</span><span>DOMAIN</span>
                 </div>
@@ -173,7 +173,7 @@ export default function DomainAssignModal({ agents, domains, onClose, onDone }) 
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate" style={{ color: 'var(--wr-text-primary)' }}>{r.agent.name}</p>
                         <p className="text-xs truncate" style={{ color: 'var(--wr-text-muted)' }}>
-                          {r.agent.discipline || '—'}{r.current ? ` · now: ${r.current}` : ' · unassigned'}
+                          {r.agent.discipline || '—'}{r.current ? ` · now: ${r.current}` : ' · no domain'}
                         </p>
                       </div>
                       <div>
@@ -185,11 +185,11 @@ export default function DomainAssignModal({ agents, domains, onClose, onDone }) 
                             className="flex-1 min-w-0 px-2 py-1 text-xs rounded outline-none"
                             style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}
                           >
-                            <option value="">— leave unassigned —</option>
+                            <option value="">— no domain —</option>
                             {options.map(name => <option key={name} value={name}>{name}</option>)}
                           </select>
                           {r.isNew && r.choice && (
-                            <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded flex-shrink-0" style={{ backgroundColor: 'rgba(39,174,96,0.15)', color: '#27AE60' }}>NEW</span>
+                            <span data-ui="badge" className="text-[9px] font-mono font-bold px-1 py-0.5 rounded flex-shrink-0" style={{ backgroundColor: 'rgba(39,174,96,0.15)', color: '#27AE60' }}>NEW</span>
                           )}
                         </div>
                         {r.why && <p className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--wr-text-muted)' }}>{r.why}</p>}
@@ -208,7 +208,7 @@ export default function DomainAssignModal({ agents, domains, onClose, onDone }) 
           {phase === 'done' && (
             <div className="flex flex-col items-center py-8 gap-3 text-center">
               <CheckCircle2 className="w-10 h-10" style={{ color: '#27AE60' }} />
-              <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>Domains assigned.</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>Domains saved.</p>
               <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{committedCount} agent{committedCount !== 1 ? 's' : ''} updated.</p>
             </div>
           )}

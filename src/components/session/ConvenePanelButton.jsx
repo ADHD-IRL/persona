@@ -135,7 +135,7 @@ export default function ConvenePanelButton({ variant, size = 'sm', className }) 
 
       {picking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-          <div className="w-[520px] max-w-full max-h-[85vh] flex flex-col rounded-lg overflow-hidden"
+          <div data-ui="surface" className="w-[520px] max-w-full max-h-[85vh] flex flex-col rounded-lg overflow-hidden"
             style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--wr-border)' }}>
               <div>
@@ -144,7 +144,7 @@ export default function ConvenePanelButton({ variant, size = 'sm', className }) 
                   Who's in the room? You can change this later.
                 </p>
               </div>
-              <button onClick={() => setPicking(false)}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+              <button aria-label="Close" data-ui="icon" onClick={() => setPicking(false)}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
             </div>
 
             {!loading && agents.length > 0 && (
@@ -165,7 +165,7 @@ export default function ConvenePanelButton({ variant, size = 'sm', className }) 
                     Showing {filtered.length} of {agents.length}
                   </span>
                   {anyFilter && (
-                    <button onClick={resetFilters} className={linkBtn} style={{ color: 'var(--wr-text-muted)' }}>
+                    <button data-ui="action" onClick={resetFilters} className={linkBtn} style={{ color: 'var(--wr-text-muted)' }}>
                       Reset filters
                     </button>
                   )}
@@ -178,17 +178,17 @@ export default function ConvenePanelButton({ variant, size = 'sm', className }) 
                 <div className="py-10 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: 'var(--wr-text-muted)' }} /></div>
               ) : agents.length === 0 ? (
                 <p className="p-4 text-sm" style={{ color: 'var(--wr-text-muted)' }}>
-                  No SMEs yet — build your panel on the Agents page first.
+                  No SMEs yet — build your panel on the SMEs page first.
                 </p>
               ) : filtered.length === 0 ? (
                 <p className="p-4 text-sm" style={{ color: 'var(--wr-text-muted)' }}>
                   No SMEs match these filters.{' '}
-                  <button onClick={resetFilters} className="underline" style={{ color: '#9B59B6' }}>Reset</button>
+                  <button data-ui="action" onClick={resetFilters} className="underline" style={{ color: '#9B59B6' }}>Reset</button>
                 </p>
               ) : filtered.map(a => {
                 const on = selected.has(a.id);
                 return (
-                  <button key={a.id} onClick={() => toggle(a.id)}
+                  <button data-ui="card" key={a.id} onClick={() => toggle(a.id)}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors hover:bg-white/5">
                     <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
                       style={{ border: `1.5px solid ${on ? '#9B59B6' : 'var(--wr-border-strong)'}`, backgroundColor: on ? '#9B59B6' : 'transparent' }}>
@@ -209,12 +209,12 @@ export default function ConvenePanelButton({ variant, size = 'sm', className }) 
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>{selected.size} selected</span>
                 {filtered.length > 0 && (
-                  <button onClick={selectAllFiltered} className={linkBtn} style={{ color: '#9B59B6' }}>
+                  <button data-ui="action" onClick={selectAllFiltered} className={linkBtn} style={{ color: '#9B59B6' }}>
                     Select all {filtered.length}
                   </button>
                 )}
                 {selected.size > 0 && (
-                  <button onClick={clearSelection} className={linkBtn} style={{ color: 'var(--wr-text-muted)' }}>
+                  <button data-ui="action" onClick={clearSelection} className={linkBtn} style={{ color: 'var(--wr-text-muted)' }}>
                     Clear
                   </button>
                 )}

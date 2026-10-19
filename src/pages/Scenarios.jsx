@@ -89,12 +89,12 @@ function ScenarioModal({ scenario, domains, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-      <div className="w-[640px] max-h-[90vh] overflow-y-auto rounded-lg p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="w-[640px] max-h-[90vh] overflow-y-auto rounded-lg p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>
             {scenario?.id ? 'EDIT SCENARIO' : 'NEW SCENARIO'}
           </h2>
-          <button onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+          <button aria-label="Close" data-ui="icon" onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
         </div>
         <div className="space-y-4">
           <WrInput label="NAME" value={form.name} onChange={v => set('name', v)} placeholder="Scenario name" />
@@ -113,7 +113,7 @@ function ScenarioModal({ scenario, domains, onSave, onClose }) {
               <label className="text-xs font-medium tracking-wide" style={{ color: 'var(--wr-text-secondary)' }}>CONTEXT DOCUMENT</label>
               <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={aiAssist} disabled={aiLoading} className="flex items-center gap-1 text-xs px-2 py-1 rounded"
+                <button data-ui="action" onClick={aiAssist} disabled={aiLoading} className="flex items-center gap-1 text-xs px-2 py-1 rounded"
                   style={{ color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)', backgroundColor: 'rgba(240,165,0,0.05)' }}>
                   <Sparkles className="w-3 h-3" />
                   {aiLoading ? 'Improving...' : 'AI Assist'}
@@ -124,7 +124,7 @@ function ScenarioModal({ scenario, domains, onSave, onClose }) {
             </div>
             {/* URL Ingestion */}
             <div className="flex gap-2 mb-2">
-              <div className="flex-1 flex items-center gap-2 px-2 py-1.5 rounded"
+              <div data-ui="surface" className="flex-1 flex items-center gap-2 px-2 py-1.5 rounded"
                 style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                 <Link2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }} />
                 <input
@@ -138,7 +138,7 @@ function ScenarioModal({ scenario, domains, onSave, onClose }) {
               </div>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
+                  <button data-ui="action"
                     onClick={fetchFromUrl}
                     disabled={urlLoading || !urlInput.trim()}
                     className="flex items-center gap-1 text-xs px-3 py-1.5 rounded transition-colors disabled:opacity-40"
@@ -175,22 +175,17 @@ export default function Scenarios() {
   const { db } = useWorkspace();
   const [scenarios, setScenarios] = useState([]);
   const [domains, setDomains] = useState([]);
-  const [sessions, setSessions] = useState([]);
   const [selected, setSelected] = useState(null);
   const [modal, setModal] = useState(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  // Track updated_date at time of last save to detect edits after session was run
-  const [scenarioEditedAt, setScenarioEditedAt] = useState({});
 
   const load = async () => {
     if (!db) return;
     const scen = await queued(() => db.Scenario.list());
     const doms = await queued(() => db.Domain.list());
-    const sess = await queued(() => db.Session.list());
     setScenarios(scen);
     setDomains(doms);
-    setSessions(sess);
     setLoading(false);
   };
 
@@ -201,7 +196,6 @@ export default function Scenarios() {
     if (form.id && form.name === originalScenario?.name) {
       // Name unchanged — update in place
       await db.Scenario.update(form.id, form);
-      setScenarioEditedAt(prev => ({ ...prev, [form.id]: Date.now() }));
     } else if (form.id) {
       // Name changed — create a new scenario, leave the original intact
       const { id: _dropped, ...rest } = form;
@@ -211,20 +205,6 @@ export default function Scenarios() {
     }
     setModal(null);
     load();
-  };
-
-  // Returns true if the scenario has been used in at least one session
-  // AND has NOT been edited since the most recent session was created
-  const isRunBlocked = (scen) => {
-    if (!scen) return false;
-    const relatedSessions = sessions.filter(s => s.scenario_id === scen.id);
-    if (relatedSessions.length === 0) return false;
-    // If user edited it locally this browser session, allow running
-    if (scenarioEditedAt[scen.id]) return false;
-    // Compare scenario's updated_date vs the latest session's created_date
-    const latestSessionDate = Math.max(...relatedSessions.map(s => new Date(s.created_at).getTime()));
-    const scenarioUpdated = new Date(scen.updated_date).getTime();
-    return scenarioUpdated <= latestSessionDate;
   };
 
   const handleDelete = async (scen) => {
@@ -313,7 +293,7 @@ export default function Scenarios() {
         {/* Left list */}
         <div className="w-72 flex-shrink-0 border-r flex flex-col" style={{ borderColor: 'var(--wr-border)' }}>
           <div className="p-3 border-b" style={{ borderColor: 'var(--wr-border)' }}>
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+            <div data-ui="surface" className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
               <Search className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search scenarios..."
                 className="flex-1 text-sm outline-none bg-transparent" style={{ color: 'var(--wr-text-primary)' }} />
@@ -329,7 +309,7 @@ export default function Scenarios() {
               const dom = domainById(s.domain_id);
               return (
                 <div key={s.id} className="relative group">
-                  <button onClick={() => setSelected(s)}
+                  <button data-ui="card" onClick={() => setSelected(s)}
                     className="w-full text-left p-3 pr-9 border-b transition-colors hover:bg-white/3"
                     style={{
                       borderColor: 'var(--wr-border)',
@@ -338,13 +318,13 @@ export default function Scenarios() {
                     }}>
                     <p className="text-sm font-medium" style={{ color: 'var(--wr-text-primary)' }}>{s.name}</p>
                     <div className="flex items-center gap-2 mt-1">
-                      {dom && <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${dom.color}22`, color: dom.color }}>{dom.name}</span>}
-                      <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: `${STATUS_COLOR[s.status]}22`, color: STATUS_COLOR[s.status] }}>
+                      {dom && <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${dom.color}22`, color: dom.color }}>{dom.name}</span>}
+                      <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: `${STATUS_COLOR[s.status]}22`, color: STATUS_COLOR[s.status] }}>
                         {s.status?.toUpperCase()}
                       </span>
                     </div>
                   </button>
-                  <button
+                  <button data-ui="icon"
                     onClick={(e) => { e.stopPropagation(); handleDelete(s); }}
                     title="Delete scenario"
                     aria-label={`Delete scenario ${s.name}`}
@@ -387,25 +367,11 @@ export default function Scenarios() {
                   <WrButton variant="outline" size="sm" onClick={() => exportPdf(selected)}>
                     <FileText className="w-3.5 h-3.5" /> PDF
                   </WrButton>
-                  {isRunBlocked(selected) ? (
-                    <div className="relative group">
-                      <WrButton size="sm" disabled>
-                        <ChevronRight className="w-3.5 h-3.5" /> Run Session
-                      </WrButton>
-                      <div className="absolute right-0 top-full mt-1 z-10 w-52 text-xs rounded px-2.5 py-1.5 hidden group-hover:block"
-                        style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}>
-                        This scenario has already been run. Edit it first to unlock a new session.
-                      </div>
-                    </div>
-                  ) : (
-                    <Link to={`/sessions/new?scenario=${selected.id}`}>
-                      <WrButton size="sm"><ChevronRight className="w-3.5 h-3.5" /> Run Session</WrButton>
-                    </Link>
-                  )}
+                  <WrButton asChild size="sm"><Link data-ui="action" to={`/analysis?scenario=${selected.id}`}><ChevronRight className="w-3.5 h-3.5" /> Start session with this scenario</Link></WrButton>
                 </div>
               </div>
               {selected.context_document && (
-                <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                   <h3 className="text-xs font-bold tracking-widest mb-3 font-mono" style={{ color: 'var(--wr-text-muted)' }}>CONTEXT DOCUMENT</h3>
                   <SynthesisDocument text={selected.context_document} />
                 </div>

@@ -29,7 +29,7 @@ function Divider({ text }) {
   return (
     <div className="flex items-center gap-3 my-5">
       <div className="flex-1 h-px" style={{ backgroundColor: 'var(--wr-border)' }} />
-      <span className="text-xs font-bold font-mono tracking-widest px-3 py-1 rounded"
+      <span data-ui="badge" className="text-xs font-bold font-mono tracking-widest px-3 py-1 rounded"
         style={{ color: 'var(--wr-text-muted)', backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
         {text}
       </span>
@@ -44,7 +44,7 @@ function ToolChip({ tc }) {
     ? tc.input.query
     : (tc.input.url || '').replace(/^https?:\/\//, '').slice(0, 50);
   return (
-    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full mr-1 mb-1"
+    <span data-ui="badge" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full mr-1 mb-1"
       style={{ backgroundColor: 'rgba(26,188,156,0.12)', color: '#1ABC9C', border: '1px solid rgba(26,188,156,0.25)' }}>
       <Icon className="w-2.5 h-2.5 flex-shrink-0" />
       {label}
@@ -60,13 +60,13 @@ function AgentBubble({ msg, agent, color, isStreaming }) {
         <span className="text-xs font-bold" style={{ color }}>{msg.agentName}</span>
         {msg.discipline && <span className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>· {msg.discipline}</span>}
         {msg.severity && (
-          <span className="text-xs font-bold font-mono px-1.5 py-0.5 rounded ml-auto"
+          <span data-ui="badge" className="text-xs font-bold font-mono px-1.5 py-0.5 rounded ml-auto"
             style={{ backgroundColor: `${SEV_COLOR[msg.severity]}15`, color: SEV_COLOR[msg.severity] }}>
             {msg.severity}
           </span>
         )}
         {msg.confidence != null && (
-          <span className="text-xs font-mono px-1.5 py-0.5 rounded"
+          <span data-ui="badge" className="text-xs font-mono px-1.5 py-0.5 rounded"
             title="Agent's self-assessed confidence in this assessment"
             style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)' }}>
             {msg.confidence}%
@@ -78,7 +78,7 @@ function AgentBubble({ msg, agent, color, isStreaming }) {
           {msg.toolCalls.map((tc, i) => <ToolChip key={i} tc={tc} />)}
         </div>
       )}
-      <div className="rounded p-3 text-sm leading-relaxed whitespace-pre-wrap"
+      <div data-ui="surface" className="rounded p-3 text-sm leading-relaxed whitespace-pre-wrap"
         style={{
           backgroundColor: `${color}08`,
           borderLeft: `3px solid ${color}`,
@@ -101,14 +101,14 @@ function UserBubble({ msg }) {
       <div style={{ maxWidth: '60%' }}>
         <div className="flex items-center justify-end gap-2 mb-1.5 flex-wrap">
 {msg.targetAgentName && (
-            <span className="text-xs px-1.5 py-0.5 rounded"
+            <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded"
               style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.2)' }}>
               → {msg.targetAgentName}
             </span>
           )}
           <span className="text-xs font-bold font-mono" style={{ color: 'var(--wr-amber)' }}>FACILITATOR</span>
         </div>
-        <div className="rounded p-3 text-sm leading-relaxed"
+        <div data-ui="surface" className="rounded p-3 text-sm leading-relaxed"
           style={{
             backgroundColor: 'rgba(240,165,0,0.07)',
             borderRight: '3px solid var(--wr-amber)',
@@ -140,7 +140,7 @@ function RosterRow({ agent, color, status, onAddress }) {
       )}
 <Tooltip>
         <TooltipTrigger asChild>
-          <button onClick={onAddress} style={{ width: 24, height: 24, borderRadius: 4, border: 'none', cursor: 'pointer', backgroundColor: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--wr-text-muted)' }}>
+          <button data-ui="icon" onClick={onAddress} style={{ width: 24, height: 24, borderRadius: 4, border: 'none', cursor: 'pointer', backgroundColor: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--wr-text-muted)' }}>
             <ArrowRight style={{ width: 12, height: 12 }} />
           </button>
         </TooltipTrigger>
@@ -157,7 +157,7 @@ function Toggle({ checked, onChange, label, desc }) {
         <p style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--wr-text-primary)' }}>{label}</p>
         {desc && <p style={{ fontSize: 10, color: 'var(--wr-text-muted)' }}>{desc}</p>}
       </div>
-      <button
+      <button data-ui="switch"
         role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
         style={{
           width: 34, height: 18, borderRadius: 9, flexShrink: 0, border: 'none', cursor: 'pointer', position: 'relative',
@@ -276,8 +276,8 @@ const streamControllerRef = useRef(null);
   const push = useCallback(msg =>
     setMessages(prev => [...prev, { id: Date.now() + Math.random(), ...msg }]), []);
 
-  const appendToken = useCallback((tempId, token) => {
-    streamBuf.current[tempId] = (streamBuf.current[tempId] || '') + token;
+  const appendToken = useCallback((tempId, full) => {
+    streamBuf.current[tempId] = full;
     const text = streamBuf.current[tempId];
     setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content: text } : m));
   }, []);
@@ -361,7 +361,7 @@ const scenarioCtx = decisionFraming + (scenario?.context_document || session?.co
         await generateRound1Stream({
           agent, scenarioContext: scenarioCtx, phaseFocus: session?.phase_focus,
           threatCatalog: threats,
-          onToken: token => { setAgentStatus(s => ({ ...s, [sa.agent_id]: 'streaming' })); appendToken(tempId, token); },
+          onToken: (_token, full) => { setAgentStatus(s => ({ ...s, [sa.agent_id]: 'streaming' })); appendToken(tempId, full); },
           onDone: async text => {
             const { assessment, severity, confidence, likelihood, impact, compound_chain_text } = parseMarkers(text, agent.severity_default || 'HIGH');
             finishStream(tempId, assessment, { severity, confidence });
@@ -421,8 +421,9 @@ const scenarioCtx = decisionFraming + (scenario?.context_document || session?.co
       try {
         await generateRound2Stream({
           agent, scenarioContext: scenarioCtx, phaseFocus: session?.phase_focus,
+          ownAssessment: sa.round1_assessment,
           othersAssessments: othersCtx(sa.agent_id), threatCatalog: threats,
-          onToken: token => { setAgentStatus(s => ({ ...s, [sa.agent_id]: 'streaming' })); appendToken(tempId, token); },
+          onToken: (_token, full) => { setAgentStatus(s => ({ ...s, [sa.agent_id]: 'streaming' })); appendToken(tempId, full); },
           onDone: async text => {
             const { assessment, severity, confidence, likelihood, impact, compound_chain_text } = parseMarkers(text, sa.round1_severity || 'HIGH');
             finishStream(tempId, assessment, { severity, confidence });
@@ -488,7 +489,7 @@ const scenarioCtx = decisionFraming + (scenario?.context_document || session?.co
         } else {
           await generateAgentReply({
             agent, question: q, priorMessages: priorCtx, scenarioContext: scenarioCtx,
-            onToken: token => { setAgentStatus(s => ({ ...s, [sa.agent_id]: 'streaming' })); appendToken(tempId, token); },
+            onToken: (_token, full) => { setAgentStatus(s => ({ ...s, [sa.agent_id]: 'streaming' })); appendToken(tempId, full); },
             onDone: async text => {
               finishStream(tempId, text);
               setAgentStatus(s => ({ ...s, [sa.agent_id]: phase.endsWith('done') ? 'done' : 'idle' }));
@@ -524,10 +525,10 @@ return (
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4 px-5 py-3 flex-shrink-0"
         style={{ backgroundColor: 'var(--wr-bg-card)', borderBottom: '1px solid var(--wr-border)' }}>
-        <button onClick={() => navigate(`/sessions/${id}`)}
+        <button data-ui="action" onClick={() => navigate(`/session-tracker?session=${id}`)}
           className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70 flex-shrink-0"
           style={{ color: 'var(--wr-text-muted)' }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> Return to Session Tracker
         </button>
         <div className="flex-1 flex items-center gap-2 min-w-0">
           <Zap className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--wr-amber)' }} />
@@ -537,7 +538,7 @@ return (
         <div className="flex items-center gap-2 flex-shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button onClick={() => setToolsEnabled(v => !v)}
+              <button data-ui="action" onClick={() => setToolsEnabled(v => !v)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold font-mono transition-all"
                 style={{ backgroundColor: toolsEnabled ? 'rgba(26,188,156,0.12)' : 'transparent', border: `1px solid ${toolsEnabled ? '#1ABC9C' : 'var(--wr-border)'}`, color: toolsEnabled ? '#1ABC9C' : 'var(--wr-text-muted)' }}>
                 <FlaskConical className="w-3 h-3" /> TOOLS {toolsEnabled ? 'ON' : 'OFF'}
@@ -548,7 +549,7 @@ return (
           {running ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button onClick={stopRound}
+                <button data-ui="action" onClick={stopRound}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold font-mono transition-all"
                   style={{ backgroundColor: 'rgba(192,57,43,0.12)', border: '1px solid #C0392B', color: '#C0392B' }}>
                   <StopCircle className="w-3 h-3" /> STOP
@@ -564,7 +565,7 @@ return (
               ].map(({ label, can, action, color, tip }) => (
                 <Tooltip key={label}>
                   <TooltipTrigger asChild>
-                    <button onClick={action} disabled={!can}
+                    <button data-ui="action" onClick={action} disabled={!can}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold font-mono transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                       style={{ backgroundColor: can ? `${color}18` : 'transparent', border: `1px solid ${can ? color : 'var(--wr-border)'}`, color: can ? color : 'var(--wr-text-muted)' }}>
                       <Play className="w-3 h-3" /> {label}
@@ -576,7 +577,7 @@ return (
               {phase === 'r1done' && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button onClick={() => resetAllAgents(1)}
+                    <button data-ui="action" onClick={() => resetAllAgents(1)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold font-mono transition-all"
                       style={{ backgroundColor: 'transparent', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}>
                       <RotateCcw className="w-3 h-3" /> RESET R1
@@ -588,7 +589,7 @@ return (
               {phase === 'r2done' && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button onClick={() => resetAllAgents(2)}
+                    <button data-ui="action" onClick={() => resetAllAgents(2)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold font-mono transition-all"
                       style={{ backgroundColor: 'transparent', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}>
                       <RotateCcw className="w-3 h-3" /> RESET R2
@@ -601,7 +602,7 @@ return (
           )}
           <Tooltip>
             <TooltipTrigger asChild>
-              <button disabled={!canSynth} onClick={() => navigate(`/sessions/${id}?autoSynth=1`)}
+              <button data-ui="action" disabled={!canSynth} onClick={() => navigate(`/sessions/${id}?autoSynth=1`)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold font-mono transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 style={{ backgroundColor: canSynth ? 'rgba(240,165,0,0.15)' : 'transparent', border: `1px solid ${canSynth ? 'var(--wr-amber)' : 'var(--wr-border)'}`, color: canSynth ? 'var(--wr-amber)' : 'var(--wr-text-muted)' }}>
                 <Zap className="w-3 h-3" /> SYNTHESIZE
@@ -681,7 +682,7 @@ targetAgentId={targetAgentId}
               />
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
+                  <button data-ui="action"
                     onClick={() => interrupt()}
                     className="flex items-center justify-center rounded transition-opacity hover:opacity-70"
                     style={{ width: 34, height: 34, border: '1px solid var(--wr-border)', backgroundColor: 'transparent', color: 'var(--wr-text-muted)', cursor: 'pointer', flexShrink: 0 }}>
@@ -690,7 +691,7 @@ targetAgentId={targetAgentId}
                 </TooltipTrigger>
                 <TooltipContent side="top">Interrupt current speaker and take the floor (H)</TooltipContent>
               </Tooltip>
-              <button onClick={handleAsk} disabled={asking || !question.trim()}
+              <button data-ui="action" onClick={handleAsk} disabled={asking || !question.trim()}
                 className="flex items-center gap-1.5 px-4 py-2 rounded text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
                 style={{ backgroundColor: 'var(--wr-amber)', color: '#0D1B2A' }}>
                 {asking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -741,7 +742,7 @@ targetAgentId={targetAgentId}
                   {!running && (hasR1 || hasR2) && (
                     <div className="flex gap-1 px-3 pb-2">
                       {hasR1 && (
-                        <button onClick={() => resetAgent(sa, 1)}
+                        <button data-ui="action" onClick={() => resetAgent(sa, 1)}
                           className="flex items-center gap-1 text-xs px-2 py-0.5 rounded font-mono"
                           style={{ backgroundColor: 'transparent', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}
                           title="Clear Round 1 assessment">
@@ -749,7 +750,7 @@ targetAgentId={targetAgentId}
                         </button>
                       )}
                       {hasR2 && (
-                        <button onClick={() => resetAgent(sa, 2)}
+                        <button data-ui="action" onClick={() => resetAgent(sa, 2)}
                           className="flex items-center gap-1 text-xs px-2 py-0.5 rounded font-mono"
                           style={{ backgroundColor: 'transparent', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}
                           title="Clear Round 2 assessment">
@@ -772,7 +773,7 @@ targetAgentId={targetAgentId}
                   <Globe className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: '#1ABC9C' }} />
                   <div className="min-w-0">
                     {pin.label && <p className="text-xs font-medium truncate" style={{ color: 'var(--wr-text-secondary)' }}>{pin.label}</p>}
-                    <a href={pin.url} target="_blank" rel="noreferrer" className="text-xs truncate block hover:underline" style={{ color: 'var(--wr-text-muted)' }}>
+                    <a data-ui="reference" href={pin.url} target="_blank" rel="noreferrer" className="text-xs truncate block hover:underline" style={{ color: 'var(--wr-text-muted)' }}>
                       {pin.url.replace(/^https?:\/\//, '').slice(0, 28)}…
                     </a>
                   </div>
@@ -786,12 +787,12 @@ targetAgentId={targetAgentId}
             <div className="p-4">
               <p className="text-xs font-bold font-mono tracking-widest mb-2" style={{ color: 'var(--wr-text-muted)' }}>THREATS ({threats.length})</p>
               {threats.map(t => (
-                <div key={t.id} className="mb-2 rounded p-2" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" key={t.id} className="mb-2 rounded p-2" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <p className="text-xs font-semibold leading-tight" style={{ color: 'var(--wr-text-primary)' }}>{t.name}</p>
                     <span className="text-xs font-bold font-mono flex-shrink-0" style={{ color: SEV_COLOR[t.severity] || 'var(--wr-text-muted)' }}>{t.severity?.[0]}</span>
                   </div>
-                  <button
+                  <button data-ui="action"
                     onClick={() => setQuestion(`Regarding the threat "${t.name}": ${t.description || ''} What are the implications for this scenario?`)}
                     className="flex items-center gap-1 text-xs transition-opacity hover:opacity-80 mt-1"
                     style={{ color: 'var(--wr-amber)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>

@@ -13,7 +13,7 @@ There are two ways to run a session:
 
 ### 1. Set your API key
 
-Go to **Settings** (gear icon) and paste your Anthropic API key. This is stored encrypted in your workspace and shared with any members you invite. Without it, no AI features will work.
+Go to **Settings** to select and test your model connection. For MITRE AIP, the local server manages credentials. A working model connection is required for AI features.
 
 ### 2. Create domains
 
@@ -404,3 +404,17 @@ Used by the Threat Map for bench-vs-landscape coverage.
 
 - **Only three fields directly touch the numbers.** `expertise_level` weights the SCRS base score; `risk_posture` and `severity_default` calibrate the likelihood / impact / confidence each SME emits. Everything else shapes *reasoning*, which then flows into those numbers.
 - **Graceful degradation.** Every persona line is conditional, so a partly-filled SME still works — it just reasons with less structure. The `jsonb` fields default to `{}` / `[]` and never break a session.
+
+
+## Token limits and evidence preservation
+
+Token limits and evidence preservation: SME rounds request 4,096 output tokens; synthesis, comparison and decision briefs request 6,144. MITRE AIP retries output-limit failures at most twice with a larger allowance, up to the server-configured ceiling (8,192 by default). The input stays unchanged; incomplete text is replaced and never marked complete. Completed SME turns remain saved. Oversized synthesis and brief inputs use section reviews with exact-quote and section-coverage checks. These checks do not guarantee semantic equivalence; review original evidence and disagreements before accepting conclusions. If sections cannot fit or validation fails, the analysis stops explicitly. The knowledge retriever still selects relevant chunks; it does not send the entire library. Retry attempts take additional time and model usage. Provider context limits and output limits are different; verify model support before increasing LLM_MAX_TOKENS. Changes apply to newly generated steps; completed results are not rewritten.
+
+
+## Verify findings and collect reviewed examples
+
+Open Session Tracker → Verify findings to inspect model-assisted evidence strength. New guided analyses check findings after synthesis; existing sessions use Check new or changed findings. Inspect exact supporting and opposing passages, publication age, source quality and next checks. Add source text or retrieve HTML/plain text from an approved public URL. Scenario premises and generated SME agreement are not independent evidence. Changed checks are automatically rerun while this panel is open unless you clear the checkbox; this uses the configured LLM. Strong support is not a truth probability. Save your own per-claim judgment, rationale and exact quotations to collect analyst-reviewed examples. Export produces local JSONL and does not train or upload data. Prior checks remain available. Add verification follow-up creates an action in the selected session. See docs/VERIFICATION_AND_REVIEWED_EXAMPLES.md for rating rules, limits, dataset recommendations and the evaluation workflow.
+
+## Single-analyst workflow
+
+Use Session Tracker to manage your own findings, follow-up, evidence and conclusions. Threats, chains and mitigation lists use review status, rationale and evidence confidence. Follow-up actions use due dates, completion criteria and verification notes. In the expert panel, your transcript name and optional analytical focus describe your contributions; the remaining speakers are AI SMEs. Organize SMEs by domain from the SME library or Domains heatmap.

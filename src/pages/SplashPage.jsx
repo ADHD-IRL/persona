@@ -39,8 +39,8 @@ function AuthenticatedPanel({ user, signOut }) {
       </div>
 
       {/* Continue button */}
-      <button
-        onClick={() => navigate('/sessions')}
+      <button data-ui="action"
+        onClick={() => navigate('/session-tracker')}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           width: '100%', padding: '13px 16px', borderRadius: 6, border: 'none', marginBottom: 12,
@@ -55,8 +55,8 @@ function AuthenticatedPanel({ user, signOut }) {
         ENTER WORKSPACE
       </button>
 
-      <button
-        onClick={() => navigate('/sessions')}
+      <button data-ui="action"
+        onClick={() => navigate('/session-tracker')}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           width: '100%', padding: '10px 16px', borderRadius: 6, border: 'none', marginBottom: 28,
@@ -69,7 +69,7 @@ function AuthenticatedPanel({ user, signOut }) {
         Go to Dashboard
       </button>
 
-      <button
+      <button data-ui="action"
         onClick={handleSignOut}
         disabled={signingOut}
         style={{
@@ -100,7 +100,7 @@ function LoginPanel() {
     setLoading(true);
     try {
       await signIn({ email, password });
-      navigate('/sessions');
+      navigate('/session-tracker');
     } catch (err) {
       setError(err.message || 'Sign in failed. Check your credentials.');
     } finally {
@@ -148,7 +148,7 @@ function LoginPanel() {
             style={INPUT_STYLE}
           />
         </div>
-        <button
+        <button data-ui="action"
           type="submit" disabled={loading}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
@@ -171,7 +171,7 @@ function LoginPanel() {
 
       <p style={{ fontSize: 12, color: '#546E7A', textAlign: 'center', marginBottom: 32 }}>
         No account?{' '}
-        <Link to="/signup" style={{ color: '#F0A500', textDecoration: 'none', fontWeight: 600 }}>
+        <Link data-ui="action" to="/signup" style={{ color: '#F0A500', textDecoration: 'none', fontWeight: 600 }}>
           Request access →
         </Link>
       </p>

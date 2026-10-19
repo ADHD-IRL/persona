@@ -135,7 +135,7 @@ export default function ThreatMap() {
 
       {filterSession && (
         <div className="px-6 pt-4">
-          <button onClick={() => navigate(`/sessions/${filterSession}`)} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
+          <button data-ui="action" onClick={() => navigate(`/sessions/${filterSession}`)} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
             style={{ color: 'var(--wr-amber)', backgroundColor: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.25)', cursor: 'pointer' }}>
             ← Back to session · filtered to this session
           </button>
@@ -148,9 +148,9 @@ export default function ThreatMap() {
         style={{ backgroundColor: 'var(--wr-bg-secondary)', borderColor: 'var(--wr-border)' }}
       >
         {/* View tabs */}
-        <div className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
           {views.map(v => (
-            <button
+            <button data-ui="action"
               key={v.id}
               onClick={() => setParam('view', v.id === 'heatmap' ? '' : v.id)}
               className="px-4 py-1.5 text-xs font-mono font-bold tracking-wider transition-colors"
@@ -167,9 +167,9 @@ export default function ThreatMap() {
         {/* Axis toggle */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono font-bold" style={{ color: 'var(--wr-text-muted)' }}>GROUP BY</span>
-          <div className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
             {[{ id: 'domain', label: 'DOMAIN' }, { id: 'discipline', label: 'DISCIPLINE' }].map(a => (
-              <button
+              <button data-ui="action"
                 key={a.id}
                 onClick={() => setParam('axis', a.id === 'domain' ? '' : a.id)}
                 className="px-3 py-1.5 text-xs font-mono font-bold tracking-wider transition-colors"
@@ -189,7 +189,7 @@ export default function ThreatMap() {
           {SEV_ORDER.map(s => {
             const active = filterSev === s;
             return (
-              <button
+              <button data-ui="action"
                 key={s}
                 onClick={() => setParam('sev', active ? '' : s)}
                 className="text-xs px-2 py-1 rounded font-mono font-bold transition-colors"
@@ -242,13 +242,13 @@ export default function ThreatMap() {
         <div className="p-6 space-y-6">
           {/* Unassigned threats banner */}
           {unassignedThreats.length > 0 && (
-            <div className="px-4 py-3 rounded text-xs flex items-center justify-between"
+            <div data-ui="surface" className="px-4 py-3 rounded text-xs flex items-center justify-between"
               style={{ backgroundColor: 'rgba(214,137,16,0.08)', border: '1px solid rgba(214,137,16,0.3)' }}>
               <span style={{ color: '#D68910' }}>
                 <strong>{unassignedThreats.length} threat{unassignedThreats.length !== 1 ? 's' : ''}</strong> have no domain assignment —
                 they appear in the <em>Unassigned</em> row instead of being spread across every {axisLabel}. Assign domains for accurate mapping.
               </span>
-              <button
+              <button data-ui="action"
                 onClick={() => navigate('/threats')}
                 className="ml-4 flex-shrink-0 px-2 py-1 rounded font-mono font-bold"
                 style={{ backgroundColor: 'rgba(214,137,16,0.15)', color: '#D68910', border: '1px solid rgba(214,137,16,0.3)' }}
@@ -260,7 +260,7 @@ export default function ThreatMap() {
 
           {/* Category near-duplicate nudge */}
           {categoryDups.length > 0 && (
-            <div className="px-4 py-3 rounded text-xs space-y-2"
+            <div data-ui="surface" className="px-4 py-3 rounded text-xs space-y-2"
               style={{ backgroundColor: 'rgba(46,134,171,0.08)', border: '1px solid rgba(46,134,171,0.3)' }}>
               <div className="flex items-center gap-2" style={{ color: '#2E86AB' }}>
                 <Merge className="w-3.5 h-3.5 flex-shrink-0" />
@@ -271,7 +271,7 @@ export default function ThreatMap() {
                   <span style={{ color: 'var(--wr-text-secondary)' }}>
                     {dup.merge.map(m => `"${m.name}" (${m.count})`).join(', ')} → <strong>"{dup.keep}"</strong>
                   </span>
-                  <button
+                  <button data-ui="action"
                     onClick={() => mergeCategories(dup)}
                     disabled={merging}
                     className="flex-shrink-0 px-2 py-1 rounded font-mono font-bold"
@@ -285,7 +285,7 @@ export default function ThreatMap() {
           )}
 
           {/* Summary stats bar */}
-          <div
+          <div data-ui="surface"
             className="rounded px-5 py-3 flex items-center gap-6 flex-wrap"
             style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}
           >
@@ -308,7 +308,7 @@ export default function ThreatMap() {
             {(filterSession || filterSev) && (
               <>
                 <div className="w-px h-10 flex-shrink-0" style={{ backgroundColor: 'var(--wr-border)' }} />
-                <div
+                <div data-ui="surface"
                   className="text-xs font-mono px-2.5 py-1 rounded"
                   style={{ backgroundColor: hexToRgba('#F0A500', 0.12), color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)' }}
                 >

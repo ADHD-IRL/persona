@@ -5,7 +5,7 @@ import { getApiKey, setWorkspaceApiKey, clearApiCredentials } from '../src/lib/a
 import { callAnthropicStream } from '../src/lib/llm.js';
 import { aggregateSessionRisk } from '../src/lib/risk.js';
 import { SESSION_AGENT_RESET } from '../src/lib/sessionReset.js';
-import { loadWorkspace, saveWorkspaceKey } from '../src/lib/workspaceLifecycle.js';
+import { loadWorkspace, saveWorkspaceKey } from './fixtures/workspaceLifecycleLegacy.js';
 
 const event = (data) => `data: ${JSON.stringify(data)}\n\n`;
 const delta = text => event({ type: 'content_block_delta', delta: { type: 'text_delta', text } });

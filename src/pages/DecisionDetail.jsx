@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { apiRequest } from '@/lib/apiClient';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import {
   ArrowLeft, Plus, X, Play, CheckCircle2, AlertTriangle, Trophy, StopCircle,
@@ -16,6 +17,7 @@ import {
 } from '@/lib/decisionRunner';
 import { useRunRecord } from '@/hooks/useRunRecord';
 import { describeRun } from '@/lib/runState';
+import { getRecommendedOptionId } from '@/lib/decisionAssessment';
 
 const CRIT_COLOR = { LOW: '#27AE60', MEDIUM: '#D68910', HIGH: '#C0392B' };
 const ASSUMPTION_STATUS = { holds: '#27AE60', monitoring: '#D68910', invalidated: '#C0392B' };
@@ -23,6 +25,7 @@ const SEV_COLORS = { CRITICAL: '#C0392B', HIGH: '#D68910', MEDIUM: '#2E86AB', LO
 const VERDICT = {
   'RECOMMENDED':     { color: '#27AE60', label: 'RECOMMENDED' },
   'VIABLE':          { color: '#D68910', label: 'VIABLE' },
+  'NEEDS EVIDENCE':  { color: '#546E7A', label: 'NEEDS EVIDENCE' },
   'NOT RECOMMENDED': { color: '#C0392B', label: 'NOT RECOMMENDED' },
 };
 const ACCEPT = { YES: '#27AE60', PARTIAL: '#D68910', NO: '#C0392B', UNKNOWN: '#546E7A' };
@@ -38,7 +41,9 @@ const field = { backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid va
 
 export default function DecisionDetail() {
   const { id } = useParams();
-  const { db } = useWorkspace();
+  const { db, workspace } = useWorkspace();
+  const navigate = useNavigate();
+  const [inputStale, setInputStale] = useState(false);
 
   const [decision, setDecision] = useState(null);
   const [options, setOptions] = useState([]);
@@ -164,20 +169,29 @@ export default function DecisionDetail() {
   // Stale when the sessions it was built from are no longer the ones that
   // count: a newer session for an option, an option added or removed since,
   // or a recommendation pointing at an option that no longer exists.
-  const assessmentStale = useMemo(() => {
+  const sessionAssessmentStale = useMemo(() => {
     if (!assessment) return false;
     const ids = new Set(assessmentRec.session_ids || []);
     if (ids.size !== options.length) return true;
-    if (!options.some(o => o.id === assessment.recommended_option_id)) return true;
+    if (assessment.recommended_option_id && !options.some(o => o.id === assessment.recommended_option_id)) return true;
+    const assessedIds = new Set((assessment.options || []).map(o => o.option_id));
+    if (assessedIds.size !== options.length || options.some(o => !assessedIds.has(o.id))) return true;
     return options.some(o => !optionData[o.id]?.session || !ids.has(optionData[o.id].session.id));
   }, [assessment, assessmentRec, options, optionData]);
 
-  const recommendedId = assessment?.recommended_option_id
-    || (() => {
-      const scored = options.map(o => ({ o, agg: optionData[o.id]?.agg })).filter(x => x.agg);
-      if (!scored.length) return null;
-      return scored.sort((a, b) => a.agg.peak - b.agg.peak || a.agg.avgExposure - b.agg.avgExposure)[0].o.id;
-    })();
+  useEffect(() => {
+    let live = true;
+    setInputStale(!!assessment && !assessmentRec?.analysis_job_id);
+    if (assessmentRec?.analysis_job_id) apiRequest('/api/analyses/' + assessmentRec.analysis_job_id + '/freshness?workspace_id=' + workspace.id).then(result => { if (live) setInputStale(result.stale); }).catch(() => { if (live) setInputStale(true); });
+    return () => { live = false; };
+  }, [assessmentRec, workspace.id, options, assumptions, scenario, agents]);
+  const assessmentStale = sessionAssessmentStale || inputStale;
+  const recommendedId = getRecommendedOptionId(assessment, options, optionData);
+  const recommendationLabel = assessment?.recommendation_status === 'REJECT_ALL'
+    ? 'No acceptable option' : assessment?.recommendation_status === 'NEEDS_MORE_INFORMATION'
+      ? 'More information needed' : 'Panel recommendation';
+  const recommendationColor = assessment?.recommendation_status === 'REJECT_ALL'
+    ? '#C0392B' : assessment?.recommendation_status === 'NEEDS_MORE_INFORMATION' ? '#D68910' : '#27AE60';
 
   const foreignRun = run.status === 'alive';     // another tab is driving this decision's panel
   const interrupted = run.status === 'stale';    // a run stopped without finishing (reload, tab closed, remount)
@@ -188,7 +202,7 @@ export default function DecisionDetail() {
   // options with a partial session are continued where they stopped, and only
   // missing options get a new session.
 
-  const runPanel = async ({ rerunAll = false } = {}) => {
+  const runLegacyPanel = async ({ rerunAll = false } = {}) => {
     if (!canRun) return;
     cancelRef.current = false;
     setRunError(null);
@@ -245,6 +259,8 @@ export default function DecisionDetail() {
       load();
     }
   };
+
+  const runPanel = () => navigate('/analysis?decision=' + id);
 
   // Clear an interrupted run's record without resuming. Partial sessions stay
   // and will be continued by the next run.
@@ -327,7 +343,7 @@ export default function DecisionDetail() {
     <div style={{ backgroundColor: 'var(--wr-bg-primary)', minHeight: '100vh' }}>
       {/* Header */}
       <div className="px-6 py-4 border-b" style={{ backgroundColor: 'var(--wr-bg-primary)', borderColor: 'var(--wr-border)' }}>
-        <Link to="/decisions" className="text-xs flex items-center gap-1 mb-2" style={{ color: 'var(--wr-text-muted)' }}><ArrowLeft className="w-3 h-3" /> Decisions</Link>
+        <Link data-ui="action" to="/decisions" className="text-xs flex items-center gap-1 mb-2" style={{ color: 'var(--wr-text-muted)' }}><ArrowLeft className="w-3 h-3" /> Decisions</Link>
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-lg font-bold" style={{ color: 'var(--wr-text-primary)' }}>{decision.title}</h1>
@@ -337,11 +353,12 @@ export default function DecisionDetail() {
             )}
           </div>
           {decision.status !== 'decided' && (
-            <WrButton onClick={openRecord} disabled={!recommendedOpt || !!running}><Trophy className="w-4 h-4" /> Record Decision</WrButton>
+            <div className="flex items-center gap-3"><Link data-ui="action" className="text-sm underline" to={`/analysis?decision=${id}`}>Start session for this decision</Link>
+            <WrButton onClick={openRecord} disabled={!options.length || !!running}><Trophy className="w-4 h-4" /> Record Decision</WrButton></div>
           )}
         </div>
         {decision.status === 'decided' && (
-          <div className="mt-3 rounded px-4 py-2 flex items-center gap-2" style={{ backgroundColor: 'rgba(39,174,96,0.1)', border: '1px solid rgba(39,174,96,0.3)' }}>
+          <div data-ui="surface" className="mt-3 rounded px-4 py-2 flex items-center gap-2" style={{ backgroundColor: 'rgba(39,174,96,0.1)', border: '1px solid rgba(39,174,96,0.3)' }}>
             <CheckCircle2 className="w-4 h-4" style={{ color: '#27AE60' }} />
             <span className="text-sm" style={{ color: '#27AE60' }}>
               Decided: <strong>{chosen?.name || '—'}</strong>{decision.decided_by && ` · by ${decision.decided_by}`}
@@ -354,7 +371,7 @@ export default function DecisionDetail() {
 
         {/* ── Durable run state (R-N10): alive elsewhere, or interrupted ── */}
         {!running && foreignRun && run.record && (
-          <div className="rounded-lg p-4 flex items-start gap-3" style={{ ...card, border: '1px solid rgba(46,134,171,0.4)' }}>
+          <div data-ui="surface" className="rounded-lg p-4 flex items-start gap-3" style={{ ...card, border: '1px solid rgba(46,134,171,0.4)' }}>
             <RefreshCw className="w-4 h-4 flex-shrink-0 mt-0.5 animate-spin" style={{ color: '#2E86AB' }} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#2E86AB' }}>RUNNING IN ANOTHER TAB</p>
@@ -366,7 +383,7 @@ export default function DecisionDetail() {
           </div>
         )}
         {!running && interrupted && run.record && (
-          <div className="rounded-lg p-4 flex items-start gap-3" style={{ ...card, border: '1px solid rgba(214,137,16,0.45)' }}>
+          <div data-ui="surface" className="rounded-lg p-4 flex items-start gap-3" style={{ ...card, border: '1px solid rgba(214,137,16,0.45)' }}>
             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#D68910' }} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#D68910' }}>INTERRUPTED RUN</p>
@@ -380,20 +397,20 @@ export default function DecisionDetail() {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <WrButton size="sm" variant="secondary" onClick={dismissInterrupted}>Dismiss</WrButton>
-              <WrButton size="sm" onClick={() => runPanel()} disabled={!canRun}><Play className="w-3.5 h-3.5" /> Resume</WrButton>
+              <WrButton size="sm" onClick={() => runLegacyPanel()} disabled={!canRun}><Play className="w-3.5 h-3.5" /> Resume</WrButton>
             </div>
           </div>
         )}
         {run.warning && (
-          <div className="rounded p-3 flex items-start gap-2 text-xs" style={{ backgroundColor: 'rgba(214,137,16,0.08)', border: '1px solid rgba(214,137,16,0.3)', color: '#D68910' }}>
+          <div data-ui="surface" className="rounded p-3 flex items-start gap-2 text-xs" style={{ backgroundColor: 'rgba(214,137,16,0.08)', border: '1px solid rgba(214,137,16,0.3)', color: '#D68910' }}>
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /><span className="flex-1">{run.warning}</span>
-            <button onClick={run.clearWarning}><X className="w-3.5 h-3.5" /></button>
+            <button aria-label="Close" data-ui="icon" onClick={run.clearWarning}><X className="w-3.5 h-3.5" /></button>
           </div>
         )}
 
         {/* ── Run / progress / error ────────────────────────────────────── */}
         {running && (
-          <div className="rounded-lg p-5" style={{ ...card, border: '1px solid rgba(240,165,0,0.35)' }}>
+          <div data-ui="surface" className="rounded-lg p-5" style={{ ...card, border: '1px solid rgba(240,165,0,0.35)' }}>
             <ProcessingBar
               label={running.stage === 'assessment'
                 ? 'Comparing the options and writing the reasoned assessment…'
@@ -419,10 +436,10 @@ export default function DecisionDetail() {
         )}
 
         {runError && !running && (
-          <div className="rounded p-3 flex items-start gap-2" style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)' }}>
+          <div data-ui="surface" className="rounded p-3 flex items-start gap-2" style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)' }}>
             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C0392B' }} />
             <p className="text-sm flex-1" style={{ color: '#C0392B' }}>{runError}</p>
-            <button onClick={() => setRunError(null)}><X className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>
+            <button aria-label="Close" data-ui="icon" onClick={() => setRunError(null)}><X className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>
           </div>
         )}
 
@@ -437,7 +454,7 @@ export default function DecisionDetail() {
                   {options.length < 2 && <span style={{ color: '#D68910' }}> Add at least two options first.</span>}
                 </p>
               </div>
-              {assessment && <button onClick={() => setSetupOpen(false)} className="text-xs underline" style={{ color: 'var(--wr-text-muted)' }}>close</button>}
+              {assessment && <button data-ui="action" onClick={() => setSetupOpen(false)} className="text-xs underline" style={{ color: 'var(--wr-text-muted)' }}>close</button>}
             </div>
 
             <div className="grid grid-cols-2 gap-5">
@@ -448,23 +465,23 @@ export default function DecisionDetail() {
                 </WrSelect>
                 {scenarios.length === 0 && <p className="text-xs mt-1" style={{ color: '#D68910' }}>No scenarios yet — create one on the Scenarios page.</p>}
                 <p className="text-xs mt-3" style={{ color: 'var(--wr-text-muted)' }}>
-                  Each option gets its own session named “{decision.title} — <em>option</em>”, linked back here. Options that already have a complete session are reused unless you choose to re-run everything.
+                  Each option gets its own session named “{decision.title} — <em>option</em>”, linked back here. The guided background workflow reuses only assessments with unchanged saved inputs and intact evidence.
                 </p>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>EXPERT BENCH · {bench.length}</label>
                   <div className="flex gap-2 text-xs">
-                    <button onClick={() => setAgentIds(new Set(agents.map(a => a.id)))} className="underline" style={{ color: 'var(--wr-text-muted)' }}>all</button>
-                    <button onClick={() => setAgentIds(new Set())} className="underline" style={{ color: 'var(--wr-text-muted)' }}>none</button>
+                    <button data-ui="action" onClick={() => setAgentIds(new Set(agents.map(a => a.id)))} className="underline" style={{ color: 'var(--wr-text-muted)' }}>all</button>
+                    <button data-ui="action" onClick={() => setAgentIds(new Set())} className="underline" style={{ color: 'var(--wr-text-muted)' }}>none</button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                   {agents.length === 0 && <span className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>No agents in this workspace yet.</span>}
                   {agents.map(a => {
                     const on = agentIds.has(a.id);
                     return (
-                      <button key={a.id} onClick={() => setAgentIds(prev => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })}
+                      <button data-ui="action" key={a.id} onClick={() => setAgentIds(prev => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })}
                         className="text-xs px-2 py-1 rounded transition-colors" title={a.discipline}
                         style={{
                           backgroundColor: on ? 'rgba(240,165,0,0.15)' : 'transparent',
@@ -485,7 +502,7 @@ export default function DecisionDetail() {
               </p>
               <div className="flex items-center gap-2">
                 {allAnalyzed && (
-                  <WrButton variant="secondary" onClick={() => { if (window.confirm('Run fresh sessions for every option? Existing sessions are kept but the assessment will use the new ones.')) runPanel({ rerunAll: true }); }} disabled={!canRun}>
+                  <WrButton variant="secondary" onClick={() => navigate('/analysis?decision=' + id + '&fresh=1')} disabled={!canRun}>
                     <RefreshCw className="w-3.5 h-3.5" /> Re-run everything
                   </WrButton>
                 )}
@@ -499,30 +516,30 @@ export default function DecisionDetail() {
 
         {/* ── Reasoned assessment ─────────────────────────────────────── */}
         {assessment && !running && (
-          <div className="rounded-lg overflow-hidden" style={{ ...card, border: '1px solid rgba(39,174,96,0.35)' }}>
-            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--wr-border)', backgroundColor: 'rgba(39,174,96,0.06)' }}>
+          <div data-ui="surface" className="rounded-lg overflow-hidden" style={{ ...card, border: `1px solid ${recommendationColor}59` }}>
+            <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--wr-border)', backgroundColor: `${recommendationColor}0f` }}>
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Scale className="w-4 h-4" style={{ color: '#27AE60' }} />
-                    <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: '#27AE60' }}>PANEL RECOMMENDATION</h2>
-                    <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${CONF_COLOR[assessment.confidence] || '#546E7A'}1f`, color: CONF_COLOR[assessment.confidence] || '#546E7A' }}>
+                    <Scale className="w-4 h-4" style={{ color: recommendationColor }} />
+                    <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: recommendationColor }}>{recommendationLabel.toUpperCase()}</h2>
+                    <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${CONF_COLOR[assessment.confidence] || '#546E7A'}1f`, color: CONF_COLOR[assessment.confidence] || '#546E7A' }}>
                       {assessment.confidence || '—'} CONFIDENCE
                     </span>
                     {assessmentStale && (
-                      <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(214,137,16,0.15)', color: '#D68910' }}>options or sessions changed since — run again</span>
+                      <span data-ui="badge" className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(214,137,16,0.15)', color: '#D68910' }}>inputs changed or freshness unverified — review and reassess</span>
                     )}
                   </div>
                   <p className="text-base font-semibold" style={{ color: 'var(--wr-text-primary)' }}>
-                    {recommendedOpt ? <span style={{ color: '#27AE60' }}>Option {letter(options.indexOf(recommendedOpt))} · {recommendedOpt.name}</span> : null}
+                    {recommendedOpt ? <span style={{ color: recommendationColor }}>Option {letter(options.indexOf(recommendedOpt))} · {recommendedOpt.name}</span> : <span>{recommendationLabel}</span>}
                   </p>
                   <p className="text-sm mt-1" style={{ color: 'var(--wr-text-secondary)' }}>{assessment.headline}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={regenerateAssessment} className="text-xs inline-flex items-center gap-1 px-2 py-1 rounded" style={{ color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }} title="Re-write the assessment from the existing sessions">
+                  <button data-ui="action" onClick={() => navigate('/analysis?decision=' + id)} className="text-xs inline-flex items-center gap-1 px-2 py-1 rounded" style={{ color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }} title="Review current inputs and reuse only unchanged assessments">
                     <Sparkles className="w-3 h-3" /> Regenerate
                   </button>
-                  <button onClick={() => setSetupOpen(o => !o)} className="text-xs inline-flex items-center gap-1 px-2 py-1 rounded" style={{ color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
+                  <button data-ui="action" onClick={() => setSetupOpen(o => !o)} className="text-xs inline-flex items-center gap-1 px-2 py-1 rounded" style={{ color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
                     <RefreshCw className="w-3 h-3" /> Panel setup
                   </button>
                 </div>
@@ -535,7 +552,7 @@ export default function DecisionDetail() {
                 <ul className="space-y-1.5">
                   {list(assessment.rationale).map((r, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm" style={{ color: 'var(--wr-text-secondary)' }}>
-                      <span className="text-xs font-mono font-bold mt-0.5 flex-shrink-0" style={{ color: '#27AE60' }}>{i + 1}.</span>{r}
+                      <span className="text-xs font-mono font-bold mt-0.5 flex-shrink-0" style={{ color: recommendationColor }}>{i + 1}.</span>{r}
                     </li>
                   ))}
                 </ul>
@@ -578,12 +595,12 @@ export default function DecisionDetail() {
               const band = agg ? riskBandFromScore(agg.peak) : null;
               const borderColor = isChosen ? '#27AE60' : verdict ? `${verdict.color}66` : isRec ? 'rgba(240,165,0,0.5)' : 'var(--wr-border)';
               return (
-                <div key={opt.id} className="rounded-lg p-4 flex flex-col" style={{ backgroundColor: 'var(--wr-bg-card)', border: `1px solid ${borderColor}` }}>
+                <div data-ui="surface" key={opt.id} className="rounded-lg p-4 flex flex-col" style={{ backgroundColor: 'var(--wr-bg-card)', border: `1px solid ${borderColor}` }}>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-xs font-mono font-bold w-5 h-5 flex items-center justify-center rounded" style={{ backgroundColor: 'rgba(240,165,0,0.15)', color: 'var(--wr-amber)' }}>{letter(i)}</span>
-                    {isChosen && <span className="text-xs font-mono font-bold px-1.5 rounded flex items-center gap-1" style={{ backgroundColor: 'rgba(39,174,96,0.15)', color: '#27AE60' }}><CheckCircle2 className="w-3 h-3" /> CHOSEN</span>}
-                    {verdict && <span className="text-xs font-mono font-bold px-1.5 rounded" style={{ backgroundColor: `${verdict.color}1f`, color: verdict.color }}>{verdict.label}</span>}
-                    {!verdict && isRec && !isChosen && agg && <span className="text-xs font-mono font-bold px-1.5 rounded" style={{ backgroundColor: 'rgba(240,165,0,0.15)', color: 'var(--wr-amber)' }}>LOWEST RISK</span>}
+                    {isChosen && <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 rounded flex items-center gap-1" style={{ backgroundColor: 'rgba(39,174,96,0.15)', color: '#27AE60' }}><CheckCircle2 className="w-3 h-3" /> CHOSEN</span>}
+                    {verdict && <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 rounded" style={{ backgroundColor: `${verdict.color}1f`, color: verdict.color }}>{verdict.label}</span>}
+                    {!verdict && isRec && !isChosen && agg && <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 rounded" style={{ backgroundColor: 'rgba(240,165,0,0.15)', color: 'var(--wr-amber)' }}>LOWEST RISK</span>}
                   </div>
                   <p className="text-sm font-semibold mb-1" style={{ color: 'var(--wr-text-primary)' }}>{opt.name}</p>
                   {opt.description && <p className="text-xs mb-3" style={{ color: 'var(--wr-text-muted)' }}>{opt.description}</p>}
@@ -597,7 +614,7 @@ export default function DecisionDetail() {
                       <div className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>exposure {agg.avgExposure}</div>
                       <div className="flex gap-1 ml-auto">
                         {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(s => agg.severityCounts[s] > 0 && (
-                          <span key={s} className="text-xs font-mono px-1 rounded" style={{ backgroundColor: `${SEV_COLORS[s]}1f`, color: SEV_COLORS[s] }}>{agg.severityCounts[s]}{s[0]}</span>
+                          <span data-ui="badge" key={s} className="text-xs font-mono px-1 rounded" style={{ backgroundColor: `${SEV_COLORS[s]}1f`, color: SEV_COLORS[s] }}>{agg.severityCounts[s]}{s[0]}</span>
                         ))}
                       </div>
                     </div>
@@ -617,7 +634,7 @@ export default function DecisionDetail() {
                         </div>
                       )}
                       <p>
-                        <span className="font-mono font-bold px-1.5 py-0.5 rounded mr-1.5" style={{ backgroundColor: `${ACCEPT[a.meets_acceptance_criteria] || ACCEPT.UNKNOWN}1f`, color: ACCEPT[a.meets_acceptance_criteria] || ACCEPT.UNKNOWN }}>
+                        <span data-ui="badge" className="font-mono font-bold px-1.5 py-0.5 rounded mr-1.5" style={{ backgroundColor: `${ACCEPT[a.meets_acceptance_criteria] || ACCEPT.UNKNOWN}1f`, color: ACCEPT[a.meets_acceptance_criteria] || ACCEPT.UNKNOWN }}>
                           ACCEPTANCE {a.meets_acceptance_criteria || 'UNKNOWN'}
                         </span>
                         <span style={{ color: 'var(--wr-text-muted)' }}>{a.acceptance_note}</span>
@@ -634,7 +651,7 @@ export default function DecisionDetail() {
                   <div className="mt-auto pt-2 flex items-center justify-between text-xs font-mono" style={{ color: 'var(--wr-text-muted)', borderTop: '1px solid var(--wr-border)' }}>
                     <span>{sessionCount ? `${sessionCount} session${sessionCount !== 1 ? 's' : ''}` : 'no sessions'}</span>
                     {(session || anySession) && (
-                      <Link to={`/sessions/${(session || anySession).id}`} className="inline-flex items-center gap-1" style={{ color: 'var(--wr-amber)', textDecoration: 'none' }}>
+                      <Link data-ui="action" to={`/sessions/${(session || anySession).id}`} className="inline-flex items-center gap-1" style={{ color: 'var(--wr-amber)', textDecoration: 'none' }}>
                         Open session <ExternalLink className="w-3 h-3" />
                       </Link>
                     )}
@@ -653,16 +670,16 @@ export default function DecisionDetail() {
             {assumptions.length === 0 && <p className="text-xs italic" style={{ color: 'var(--wr-text-muted)' }}>No assumptions tracked yet.</p>}
             {assumptions.map(a => (
               <div key={a.id} className="flex items-center gap-2">
-                <button onClick={() => cycleCriticality(a)} className="text-xs font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0" title="Criticality — click to cycle"
+                <button data-ui="action" onClick={() => cycleCriticality(a)} className="text-xs font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0" title="Criticality — click to cycle"
                   style={{ backgroundColor: `${CRIT_COLOR[a.criticality]}1f`, color: CRIT_COLOR[a.criticality], border: `1px solid ${CRIT_COLOR[a.criticality]}55`, width: 62 }}>
                   {a.criticality}
                 </button>
-                <button onClick={() => cycleAssumption(a)} className="text-xs font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0 flex items-center gap-1" title="Status — click to cycle"
+                <button data-ui="action" onClick={() => cycleAssumption(a)} className="text-xs font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0 flex items-center gap-1" title="Status — click to cycle"
                   style={{ backgroundColor: `${ASSUMPTION_STATUS[a.status]}1f`, color: ASSUMPTION_STATUS[a.status], border: `1px solid ${ASSUMPTION_STATUS[a.status]}55`, width: 104 }}>
                   {a.status === 'invalidated' && <AlertTriangle className="w-3 h-3" />}{a.status}
                 </button>
                 <span className="text-sm flex-1" style={{ color: 'var(--wr-text-secondary)', textDecoration: a.status === 'invalidated' ? 'line-through' : 'none' }}>{a.text}</span>
-                <button onClick={() => removeAssumption(a.id)}><X className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>
+                <button aria-label="Close" data-ui="icon" onClick={() => removeAssumption(a.id)}><X className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>
               </div>
             ))}
           </div>
@@ -680,16 +697,17 @@ export default function DecisionDetail() {
           <div className="w-[560px] rounded-lg p-6" style={card}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>RECORD DECISION</h2>
-              <button onClick={() => setRecordOpen(false)}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+              <button aria-label="Close" data-ui="icon" onClick={() => setRecordOpen(false)}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
             </div>
             <p className="text-xs mb-3" style={{ color: 'var(--wr-text-muted)' }}>Which option are you choosing? This creates the durable decision record, including any risk you're knowingly accepting.{assessment ? ' The rationale is pre-filled from the panel’s assessment; edit it freely.' : ''}</p>
+            {assessment && !recommendedId && <p className="text-sm mb-3" style={{ color: '#D68910' }}>The panel has not recommended an option. If you choose one anyway, explain why the available evidence supports your choice.</p>}
             <div className="space-y-2 mb-4">
               {options.map((o, i) => {
                 const agg = optionData[o.id]?.agg;
                 const a = assessment?.options?.find(x => x.option_id === o.id);
                 const v = a ? VERDICT[a.verdict] : null;
                 return (
-                  <button key={o.id} onClick={() => recordDecision(o.id)} className="w-full flex items-center gap-3 p-3 rounded text-left hover:bg-white/5"
+                  <button data-ui="action" key={o.id} onClick={() => recordDecision(o.id)} className="w-full flex items-center gap-3 p-3 rounded text-left hover:bg-white/5"
                     style={{ backgroundColor: 'var(--wr-bg-secondary)', border: `1px solid ${recommendedId === o.id ? 'rgba(39,174,96,0.5)' : 'var(--wr-border)'}` }}>
                     <span className="text-xs font-mono font-bold" style={{ color: 'var(--wr-amber)' }}>{letter(i)}</span>
                     <span className="text-sm flex-1" style={{ color: 'var(--wr-text-primary)' }}>{o.name}</span>

@@ -43,10 +43,10 @@ export default function DrillDownPanel({ selection, onClose }) {
           </div>
           <p className="text-xs mt-0.5" style={{ color: 'var(--wr-text-muted)' }}>
             {category ? `Category: ${category}` : axis === 'domain' ? 'Domain slice' : 'Discipline slice'}
-            {' · '}{threats.length} threat{threats.length !== 1 ? 's' : ''} · {group.agents.length} agent{group.agents.length !== 1 ? 's' : ''}
+            {' · '}{threats.length} threat{threats.length !== 1 ? 's' : ''} · {group.agents.length} SME{group.agents.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button onClick={onClose} className="flex-shrink-0 ml-2"><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+        <button aria-label="Close" data-ui="icon" onClick={onClose} className="flex-shrink-0 ml-2"><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
@@ -56,7 +56,7 @@ export default function DrillDownPanel({ selection, onClose }) {
             <p className="text-xs font-bold tracking-widest font-mono flex items-center gap-1.5" style={{ color: 'var(--wr-text-muted)' }}>
               <AlertTriangle className="w-3.5 h-3.5" /> THREATS ({threats.length})
             </p>
-            <button onClick={openThreats} className="text-xs flex items-center gap-1 underline" style={{ color: 'var(--wr-amber)' }}>
+            <button data-ui="action" onClick={openThreats} className="text-xs flex items-center gap-1 underline" style={{ color: 'var(--wr-amber)' }}>
               Open in Threats <ExternalLink className="w-3 h-3" />
             </button>
           </div>
@@ -65,9 +65,9 @@ export default function DrillDownPanel({ selection, onClose }) {
           ) : (
             <div className="space-y-1.5">
               {sevSorted.map(t => (
-                <div key={t.id} className="rounded p-2.5" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" key={t.id} className="rounded p-2.5" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                   <div className="flex items-start gap-2">
-                    <span
+                    <span data-ui="badge"
                       className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-mono font-bold"
                       style={{ backgroundColor: `${SEV_COLORS[t.severity || 'MEDIUM']}22`, color: SEV_COLORS[t.severity || 'MEDIUM'] }}
                     >
@@ -88,30 +88,30 @@ export default function DrillDownPanel({ selection, onClose }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold tracking-widest font-mono flex items-center gap-1.5" style={{ color: 'var(--wr-text-muted)' }}>
-              <Bot className="w-3.5 h-3.5" /> AGENTS ({group.agents.length})
+              <Bot className="w-3.5 h-3.5" /> SMEs ({group.agents.length})
             </p>
             {group.agents.length > 0 && (
-              <button onClick={openAgents} className="text-xs flex items-center gap-1 underline" style={{ color: 'var(--wr-amber)' }}>
-                Open in Agents <ExternalLink className="w-3 h-3" />
+              <button data-ui="action" onClick={openAgents} className="text-xs flex items-center gap-1 underline" style={{ color: 'var(--wr-amber)' }}>
+                Open in SMEs <ExternalLink className="w-3 h-3" />
               </button>
             )}
           </div>
           {group.agents.length === 0 ? (
-            <div className="rounded p-3 text-xs" style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', color: '#C0392B' }}>
-              No agents cover this slice — this is a coverage gap.
+            <div data-ui="surface" className="rounded p-3 text-xs" style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', color: '#C0392B' }}>
+              No SMEs cover this slice — this is a coverage gap.
             </div>
           ) : (
             <div className="space-y-1.5">
               {group.agents.map(a => (
-                <div key={a.id} className="rounded p-2.5 flex items-center gap-2" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" key={a.id} className="rounded p-2.5 flex items-center gap-2" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium truncate" style={{ color: 'var(--wr-text-primary)' }}>{a.name}</p>
                     <p className="text-xs truncate" style={{ color: 'var(--wr-text-muted)' }}>{a.discipline}</p>
                   </div>
-                  <span
+                  <span data-ui="badge"
                     className="flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-mono font-bold"
                     style={{ backgroundColor: `${SEV_COLORS[a.severity_default || 'MEDIUM']}22`, color: SEV_COLORS[a.severity_default || 'MEDIUM'] }}
-                    title="Agent default severity (baseline risk posture)"
+                    title="SME default severity (baseline risk posture)"
                   >
                     {(a.severity_default || 'MED').slice(0, 4)}
                   </span>

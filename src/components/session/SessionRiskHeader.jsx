@@ -34,7 +34,7 @@ export default function SessionRiskHeader({ sessionAgents = [], threats = [], ch
   const netReduction = inherentTot - residualTot;
 
   return (
-    <div className="mb-4 rounded-2xl px-5 py-3 flex items-center gap-1 flex-wrap divide-x" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', borderColor: 'var(--wr-border)' }}>
+    <div data-ui="surface" className="mb-4 rounded-2xl px-5 py-3 flex items-center gap-1 flex-wrap divide-x" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', borderColor: 'var(--wr-border)' }}>
       <Stat
         label="PEAK RISK"
         value={peak != null ? <>{peak}<span className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>/25</span></> : '—'}

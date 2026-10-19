@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { Swords, Plus, Trash2, Radio, CheckCircle2, Circle, RotateCcw, AlertTriangle, X, Pencil } from 'lucide-react';
 import PageHeader from '@/components/ui/PageHeader';
-import ConvenePanelButton from '@/components/session/ConvenePanelButton';
+import {WorkflowCheck} from '@/components/ui/WorkflowControls';
 import EmptyState from '@/components/ui/EmptyState';
 import WrButton from '@/components/ui/WrButton';
 import { SESSION_AGENT_RESET } from '@/lib/sessionReset';
@@ -39,7 +39,8 @@ function ProgressStep({ done, active, label, color }) {
 }
 
 export default function Sessions() {
-  const { db } = useWorkspace();
+  const { db, workspace } = useWorkspace();
+  const [maintenance,setMaintenance] = useState(false);
   const [sessions,      setSessions]      = useState([]);
   const [sessionAgents, setSessionAgents] = useState([]);
   const [syntheses,     setSyntheses]     = useState([]);
@@ -162,18 +163,17 @@ export default function Sessions() {
     <div style={{ backgroundColor: 'var(--wr-bg-primary)', minHeight: '100vh' }}>
       <PageHeader
         icon={Swords}
-        title="SESSIONS"
+        title="SESSION HISTORY"
         subtitle={`${sessions.length} session${sessions.length !== 1 ? 's' : ''}`}
         actions={
           <div className="flex gap-2">
-            <ConvenePanelButton size="md" />
-            <Link to="/sessions/new">
-              <WrButton><Plus className="w-4 h-4" /> New Session</WrButton>
-            </Link>
+            <WrButton asChild variant="secondary"><Link data-ui="action" to="/session-tracker">Session Tracker</Link></WrButton>
+            <WrButton asChild><Link data-ui="action" to="/analysis"><Plus className="w-4 h-4" /> Start session</Link></WrButton>
           </div>
         }
       />
 
+      <div className="px-6 py-3 space-y-3 text-sm text-[var(--wr-text-secondary)]"><p>Select a session to manage it in Session Tracker. This history is a browser for saved sessions.</p>{workspace.role==='admin'&&<WorkflowCheck checked={maintenance} onChange={e=>setMaintenance(e.target.checked)}>Show advanced maintenance for manual sessions (edit, reset, delete)</WorkflowCheck>}</div>
       {loading ? (
         <div className="p-6 space-y-3">
           {[1,2,3].map(i => <div key={i} className="h-28 rounded animate-pulse" style={{ backgroundColor: 'var(--wr-bg-card)' }} />)}
@@ -217,10 +217,10 @@ export default function Sessions() {
               : total > 0 ? Math.round(((r1Done + r2Done) / (total * 2)) * 80 + (hasSynth ? 20 : 0))
               : 0;
 
-            const dest = `/sessions/${session.id}`;
+            const dest = `/session-tracker?session=${session.id}`;
 
             return (
-              <Link
+              <Link data-ui="card"
                 key={session.id}
                 to={dest}
                 className="block rounded transition-all duration-150 hover:shadow-[0_0_16px_rgba(240,165,0,0.12)]"
@@ -252,7 +252,7 @@ export default function Sessions() {
                         <h3 className="font-semibold text-sm" style={{ color: isDraft ? 'var(--wr-text-secondary)' : 'var(--wr-text-primary)' }}>
                           {session.name}
                         </h3>
-                        <span className="text-xs px-2 py-0.5 rounded font-bold font-mono"
+                        <span data-ui="badge" className="text-xs px-2 py-0.5 rounded font-bold font-mono"
                           style={{
                             backgroundColor: `${status.color}22`,
                             color: status.color,
@@ -261,20 +261,20 @@ export default function Sessions() {
                           {status.label}
                         </span>
                         {isLive && (
-                          <span className="text-xs px-1.5 py-0.5 rounded font-mono flex items-center gap-1"
+                          <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded font-mono flex items-center gap-1"
                             style={{ backgroundColor: 'rgba(46,134,171,0.12)', color: '#2E86AB', border: '1px solid rgba(46,134,171,0.3)' }}>
                             {!isDraft && <Radio style={{ width: 8, height: 8 }} />}
                             LIVE
                           </span>
                         )}
                         {isPanel && (
-                          <span className="text-xs px-1.5 py-0.5 rounded font-mono"
+                          <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded font-mono"
                             style={{ backgroundColor: 'rgba(155,89,182,0.12)', color: '#9B59B6', border: '1px solid rgba(155,89,182,0.3)' }}>
                             PANEL
                           </span>
                         )}
                         {topSev && (
-                          <span className="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
+                          <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
                             style={{ backgroundColor: `${SEV_COLOR[topSev]}22`, color: SEV_COLOR[topSev] }}>
                             {topSev}
                           </span>
@@ -285,7 +285,7 @@ export default function Sessions() {
                       <div className="flex items-center gap-3 text-xs flex-wrap" style={{ color: 'var(--wr-text-muted)' }}>
                         {sc && <span>{sc.name}</span>}
                         {dom && (
-                          <span className="px-1.5 py-0.5 rounded"
+                          <span data-ui="badge" className="px-1.5 py-0.5 rounded"
                             style={{ backgroundColor: `${dom.color}22`, color: dom.color }}>
                             {dom.name}
                           </span>
@@ -337,7 +337,7 @@ export default function Sessions() {
                       {totalFindings > 0 && (
                         <div className="flex items-center gap-1">
                           {SEV_KEYS.filter(k => sevCounts[k] > 0).map(k => (
-                            <span key={k} className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
+                            <span data-ui="badge" key={k} className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
                               style={{ backgroundColor: `${SEV_COLOR[k]}22`, color: SEV_COLOR[k] }}>
                               {sevCounts[k]}{k[0]}
                             </span>
@@ -349,10 +349,10 @@ export default function Sessions() {
                 </div>
 
                 {/* Action buttons */}
-                <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4 }}>
+                {maintenance&&!session.analysis_job_id&&<div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4 }}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      <button aria-label="Edit" data-ui="icon"
                         onClick={(e) => openEdit(e, session)}
                         style={{ padding: 6, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--wr-amber)', opacity: 0.5 }}
                         onMouseEnter={e => e.currentTarget.style.opacity = 1}
@@ -365,7 +365,7 @@ export default function Sessions() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      <button aria-label="Reset" data-ui="icon"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setResetConfirmId(session.id); }}
                         style={{ padding: 6, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: '#D68910', opacity: 0.5 }}
                         onMouseEnter={e => e.currentTarget.style.opacity = 1}
@@ -378,7 +378,7 @@ export default function Sessions() {
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      <button aria-label="Delete" data-ui="icon"
                         onClick={(e) => handleDelete(e, session)}
                         style={{ padding: 6, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: '#C0392B', opacity: 0.5 }}
                         onMouseEnter={e => e.currentTarget.style.opacity = 1}
@@ -389,7 +389,7 @@ export default function Sessions() {
                     </TooltipTrigger>
                     <TooltipContent side="top">Delete this session permanently</TooltipContent>
                   </Tooltip>
-                </div>
+                </div>}
 
                 {/* Inline edit overlay */}
                 {editSessionId === session.id && (
@@ -406,7 +406,7 @@ export default function Sessions() {
                       <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace', color: 'var(--wr-amber)', letterSpacing: '0.1em' }}>
                         EDIT SESSION
                       </span>
-                      <button
+                      <button aria-label="Close" data-ui="icon"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditSessionId(null); }}
                         style={{ padding: 4, border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--wr-text-muted)' }}
                       >
@@ -461,7 +461,7 @@ export default function Sessions() {
 
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button
+                      <button data-ui="action"
                         onClick={(e) => handleEditSave(e, session)}
                         disabled={editSaving || !editForm.name.trim()}
                         style={{
@@ -474,7 +474,7 @@ export default function Sessions() {
                       >
                         {editSaving ? 'SAVING…' : 'SAVE'}
                       </button>
-                      <button
+                      <button data-ui="action"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditSessionId(null); }}
                         style={{
                           padding: '7px 18px', borderRadius: 5, border: '1px solid var(--wr-border)',
@@ -510,7 +510,7 @@ export default function Sessions() {
                       This will clear Round 1 and Round 2 assessments, likelihood and impact ratings, confidence scores, briefings, and synthesis for <strong style={{ color: 'var(--wr-text-secondary)' }}>{session.name}</strong>. The session, agents, transcript, sources, saved chains, and mitigations will remain.
                     </p>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button
+                      <button data-ui="action"
                         onClick={(e) => handleReset(e, session)}
                         disabled={resetting}
                         style={{
@@ -523,7 +523,7 @@ export default function Sessions() {
                       >
                         {resetting ? 'RESETTING...' : 'YES, RESET'}
                       </button>
-                      <button
+                      <button data-ui="action"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setResetConfirmId(null); }}
                         style={{
                           padding: '7px 18px', borderRadius: 5, border: '1px solid var(--wr-border)',

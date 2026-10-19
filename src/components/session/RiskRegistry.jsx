@@ -10,7 +10,7 @@ function SevPill({ severity }) {
   if (!severity) return null;
   const c = SEV_COLOR[severity] || SEV_COLOR.HIGH;
   return (
-    <span
+    <span data-ui="badge"
       className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full whitespace-nowrap"
       style={{ color: c.text, backgroundColor: c.bg, border: `1px solid ${c.border}` }}
     >
@@ -44,7 +44,7 @@ function ThreatRow({ threat, index }) {
       </td>
       <td className="px-4 py-3.5 w-28">
         {threat.category && (
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ color: 'var(--wr-amber)', backgroundColor: 'rgba(240,165,0,0.07)', border: '1px solid rgba(240,165,0,0.18)' }}>
+          <span data-ui="badge" className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ color: 'var(--wr-amber)', backgroundColor: 'rgba(240,165,0,0.07)', border: '1px solid rgba(240,165,0,0.18)' }}>
             {threat.category}
           </span>
         )}
@@ -67,7 +67,7 @@ export default function RiskRegistry({ threats = [] }) {
   });
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
       {/* Header */}
       <div
         className="flex items-center justify-between px-5 py-3 border-b"

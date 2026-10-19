@@ -21,10 +21,10 @@ function NewDecisionModal({ onCreate, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-      <div className="w-[560px] max-h-[90vh] overflow-y-auto rounded-lg p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="w-[560px] max-h-[90vh] overflow-y-auto rounded-lg p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>NEW DECISION</h2>
-          <button onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+          <button aria-label="Close" data-ui="icon" onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
         </div>
         <div className="space-y-4">
           <WrInput label="DECISION" value={title} onChange={setTitle} placeholder="e.g. Which authentication architecture for the new platform?" />
@@ -38,12 +38,12 @@ function NewDecisionModal({ onCreate, onClose }) {
                   <span className="text-xs font-mono font-bold w-5 flex-shrink-0" style={{ color: 'var(--wr-amber)' }}>{String.fromCharCode(65 + i)}</span>
                   <input value={o} onChange={e => setOpt(i, e.target.value)} placeholder={`Option ${String.fromCharCode(65 + i)}`}
                     className="flex-1 text-sm px-3 py-2 rounded outline-none" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }} />
-                  {options.length > 2 && <button onClick={() => setOptions(o2 => o2.filter((_, j) => j !== i))}><X className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>}
+                  {options.length > 2 && <button aria-label="Close" data-ui="icon" onClick={() => setOptions(o2 => o2.filter((_, j) => j !== i))}><X className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>}
                 </div>
               ))}
             </div>
             {options.length < 4 && (
-              <button onClick={() => setOptions(o => [...o, ''])} className="mt-2 text-xs font-mono flex items-center gap-1" style={{ color: 'var(--wr-amber)' }}>
+              <button data-ui="action" onClick={() => setOptions(o => [...o, ''])} className="mt-2 text-xs font-mono flex items-center gap-1" style={{ color: 'var(--wr-amber)' }}>
                 <Plus className="w-3 h-3" /> Add option
               </button>
             )}
@@ -109,10 +109,10 @@ export default function Decisions() {
         <div className="p-6 grid grid-cols-2 gap-4">
           {decisions.map(d => (
             <div key={d.id} className="relative group">
-              <Link to={`/decisions/${d.id}`} className="block rounded-lg p-5 transition-colors hover:bg-white/5"
+              <Link data-ui="card" to={`/decisions/${d.id}`} className="block rounded-lg p-5 transition-colors hover:bg-white/5"
                 style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', textDecoration: 'none' }}>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${STATUS_COLOR[d.status]}1f`, color: STATUS_COLOR[d.status] }}>
+                  <span data-ui="badge" className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${STATUS_COLOR[d.status]}1f`, color: STATUS_COLOR[d.status] }}>
                     {d.status.toUpperCase()}
                   </span>
                   <ChevronRight className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} />
@@ -121,7 +121,7 @@ export default function Decisions() {
                 {d.description && <p className="text-xs line-clamp-2 mb-2" style={{ color: 'var(--wr-text-muted)' }}>{d.description}</p>}
                 <p className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>{optionCounts[d.id] || 0} options</p>
               </Link>
-              <button
+              <button data-ui="icon"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(d); }}
                 title="Delete decision"
                 aria-label={`Delete decision ${d.title}`}

@@ -24,7 +24,7 @@ export default function SeverityBadge({ severity, size = 'sm', title }) {
   const c = config[severity] || config.MEDIUM;
   const padding = size === 'xs' ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-0.5 text-xs';
   return (
-    <span
+    <span data-ui="badge"
       className={`${padding} rounded font-bold tracking-wider font-mono inline-block ${title ? 'cursor-help' : ''}`}
       style={{ backgroundColor: c.bg, color: c.text }}
       title={title}

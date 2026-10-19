@@ -84,7 +84,7 @@ export default function RiskMatrix({ sessionAgents, agents, round }) {
 
   if (!points.length) {
     return (
-      <div className="rounded-lg px-3 py-2 text-xs" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}>
+      <div data-ui="surface" className="rounded-lg px-3 py-2 text-xs" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}>
         No quantified likelihood × impact yet for this round.
       </div>
     );
@@ -109,7 +109,7 @@ export default function RiskMatrix({ sessionAgents, agents, round }) {
   const cols = [1, 2, 3, 4, 5];
 
   return (
-    <div className="rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
       {/* Compact strip */}
       <div className="flex items-center gap-4 px-3 py-2 flex-wrap">
         <WithPopover
@@ -192,7 +192,7 @@ export default function RiskMatrix({ sessionAgents, agents, round }) {
         </WithPopover>
 
         <div className="flex items-center gap-1.5 self-start">
-          <button
+          <button data-ui="action"
             onClick={() => setShowCalc(true)}
             className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded transition-colors"
             style={{ color: 'var(--wr-text-secondary)', backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}
@@ -200,7 +200,7 @@ export default function RiskMatrix({ sessionAgents, agents, round }) {
           >
             <Calculator className="w-3 h-3" /> Exposure math
           </button>
-          <button
+          <button data-ui="action"
             onClick={() => setShowGrid(v => !v)}
             className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded transition-colors"
             style={{ color: 'var(--wr-text-secondary)', backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}
@@ -243,7 +243,7 @@ export default function RiskMatrix({ sessionAgents, agents, round }) {
                       const bg = matrixCellColor(l, i);
                       const isHover = hover === key;
                       return (
-                        <div
+                        <div data-ui="surface"
                           key={key}
                           onMouseEnter={() => pts.length && setHover(key)}
                           onMouseLeave={() => setHover(null)}

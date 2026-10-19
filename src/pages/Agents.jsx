@@ -84,7 +84,7 @@ export default function Agents() {
   };
 
   const handleDelete = async (agent) => {
-    if (!confirm(`Delete agent "${agent.name}"?`)) return;
+    if (!confirm(`Delete SME "${agent.name}"?`)) return;
     await db.Agent.delete(agent.id);
     load();
   };
@@ -164,28 +164,28 @@ export default function Agents() {
     <div style={{ backgroundColor: 'var(--wr-bg-primary)', minHeight: '100vh' }}>
       <PageHeader
         icon={Bot}
-        title="AGENTS"
-        subtitle={`${agents.length} agents in workspace`}
+        title="SME"
+        subtitle={`${agents.length} SMEs in your library`}
         actions={
           <div className="flex gap-2">
-            <WrButton variant="outline" onClick={() => setShowAssign(true)}><Wand2 className="w-4 h-4" /> Assign Domains</WrButton>
+            <WrButton variant="outline" onClick={() => setShowAssign(true)}><Wand2 className="w-4 h-4" /> Organize domains</WrButton>
             <WrButton variant="outline" onClick={() => setShowImport(true)}><Upload className="w-4 h-4" /> Import</WrButton>
             <WrButton variant="outline" onClick={handleExport} disabled={!agents.length}
               title={filtered.length < agents.length
-                ? `Export the ${filtered.length} filtered agents as JSON`
-                : 'Export all agent personas as JSON'}>
+                ? `Export the ${filtered.length} filtered SMEs as JSON`
+                : 'Export all SME personas as JSON'}>
               <Download className="w-4 h-4" /> Export
             </WrButton>
             <WrButton variant="outline" onClick={() => handleExportPdf()} disabled={!agents.length || pdfState.busy}
               title={selected.size
-                ? `Export the ${selected.size} selected agents as a PDF`
+                ? `Export the ${selected.size} selected SMEs as a PDF`
                 : filtered.length < agents.length
-                  ? `Export the ${filtered.length} filtered agents as a PDF`
-                  : 'Export all agent personas as a PDF'}>
+                  ? `Export the ${filtered.length} filtered SMEs as a PDF`
+                  : 'Export all SME personas as a PDF'}>
               <FileText className="w-4 h-4" /> {pdfState.busy ? 'Building PDF…' : 'Export PDF'}
             </WrButton>
             <WrButton variant="outline" onClick={() => setModal('ai')}><Sparkles className="w-4 h-4" /> AI Generate</WrButton>
-            <WrButton onClick={() => setModal('new')}><Plus className="w-4 h-4" /> New Agent</WrButton>
+            <WrButton onClick={() => setModal('new')}><Plus className="w-4 h-4" /> New SME</WrButton>
           </div>
         }
       />
@@ -193,7 +193,7 @@ export default function Agents() {
       <div className="flex">
         {/* Filter Sidebar */}
         <div className="w-52 flex-shrink-0 border-r p-4 sticky top-0 h-screen flex flex-col" style={{ borderColor: 'var(--wr-border)' }}>
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded flex-shrink-0 mb-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="flex items-center gap-2 px-2 py-1.5 rounded flex-shrink-0 mb-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
             <Search className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }} />
             <input
               value={search}
@@ -207,7 +207,7 @@ export default function Agents() {
           <div className="flex-1 min-h-0 flex flex-col">
             <p className="text-xs font-bold tracking-widest mb-2 font-mono flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }}>DOMAIN</p>
             <div className="space-y-1 flex-1 min-h-0 overflow-y-auto pr-1">
-              <button
+              <button data-ui="action"
                 onClick={() => setFilterDomain('')}
                 className="w-full text-left text-xs px-2 py-1 rounded transition-colors"
                 style={{ color: !filterDomain ? 'var(--wr-amber)' : 'var(--wr-text-secondary)', backgroundColor: !filterDomain ? 'rgba(240,165,0,0.08)' : 'transparent' }}
@@ -215,7 +215,7 @@ export default function Agents() {
                 All Domains <span style={{ color: 'var(--wr-text-muted)' }}>({agents.filter(a => a.domain_id).length})</span>
               </button>
               {filterDomains.map(d => (
-                <button
+                <button data-ui="action"
                   key={d.id}
                   onClick={() => setFilterDomain(d.id)}
                   className="w-full text-left text-xs px-2 py-1 rounded transition-colors flex items-center gap-2"
@@ -232,25 +232,25 @@ export default function Agents() {
         {/* Agent Grid */}
         <div className="flex-1 p-4">
           {pdfState.error && (
-            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded text-sm" role="alert" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)', color: '#C0392B' }}>
+            <div data-ui="surface" className="mb-4 flex items-center gap-3 px-4 py-3 rounded text-sm" role="alert" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)', color: '#C0392B' }}>
               <span className="flex-1">{pdfState.error}</span>
-              <button onClick={() => setPdfState({ busy: false, error: null })} className="text-xs px-3 py-1 rounded" style={{ backgroundColor: 'var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
+              <button data-ui="action" onClick={() => setPdfState({ busy: false, error: null })} className="text-xs px-3 py-1 rounded" style={{ backgroundColor: 'var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
                 Dismiss
               </button>
             </div>
           )}
           {selected.size > 0 && (
-            <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)' }}>
-              <span className="text-sm font-medium" style={{ color: '#C0392B' }}>{selected.size} agent{selected.size !== 1 ? 's' : ''} selected</span>
+            <div data-ui="surface" className="mb-4 flex items-center gap-3 px-4 py-3 rounded" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)' }}>
+              <span className="text-sm font-medium" style={{ color: '#C0392B' }}>{selected.size} SME{selected.size !== 1 ? 's' : ''} selected</span>
               {selected.size < filtered.length && (
-                <button onClick={() => setSelected(new Set(filtered.map(a => a.id)))} className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(240,165,0,0.2)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)' }}>
+                <button data-ui="action" onClick={() => setSelected(new Set(filtered.map(a => a.id)))} className="text-xs px-2 py-1 rounded" style={{ backgroundColor: 'rgba(240,165,0,0.2)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)' }}>
                   Select all {filtered.length}
                 </button>
               )}
-              <button onClick={() => setShowBulkDelete(true)} className="ml-auto flex items-center gap-2 text-xs px-3 py-1 rounded" style={{ backgroundColor: 'rgba(192,57,43,0.2)', color: '#C0392B' }}>
+              <button data-ui="action" onClick={() => setShowBulkDelete(true)} className="ml-auto flex items-center gap-2 text-xs px-3 py-1 rounded" style={{ backgroundColor: 'rgba(192,57,43,0.2)', color: '#C0392B' }}>
                 <Trash className="w-3 h-3" /> Delete Selected
               </button>
-              <button onClick={() => setSelected(new Set())} className="text-xs px-3 py-1 rounded" style={{ backgroundColor: 'var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
+              <button data-ui="action" onClick={() => setSelected(new Set())} className="text-xs px-3 py-1 rounded" style={{ backgroundColor: 'var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
                 Cancel
               </button>
             </div>
@@ -264,12 +264,12 @@ export default function Agents() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Bot}
-              title="No agents found"
+              title="No SMEs found"
               description={agents.length === 0
-                ? "Agents are the expert archetypes that power every AgentDebate session. Build them manually or let AI generate a profile."
-                : "No agents match your current filters."}
+                ? "SMEs are the expert archetypes that power every AgentDebate session. Build them manually or let AI generate a profile."
+                : "No SMEs match your current filters."}
               action={agents.length === 0 ? () => setModal('new') : null}
-              actionLabel="Create First Agent"
+              actionLabel="Create First SME"
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -278,7 +278,7 @@ export default function Agents() {
                 const color = domain?.color || '#F0A500';
                 const isSelected = selected.has(agent.id);
                 return (
-                  <div
+                  <div data-ui="surface"
                     key={agent.id}
                     className="rounded overflow-hidden cursor-pointer transition-all"
                     style={{ 
@@ -311,7 +311,7 @@ export default function Agents() {
                       {agent.tags?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-3">
                           {agent.tags.slice(0, 3).map(t => (
-                            <span key={t} className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)' }}>
+                            <span data-ui="badge" key={t} className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)' }}>
                               {t}
                             </span>
                           ))}
@@ -319,21 +319,21 @@ export default function Agents() {
                       )}
 
                       <div className="flex items-center gap-1 mt-3 pt-3 border-t" style={{ borderColor: 'var(--wr-border)' }}>
-                        <button
+                        <button data-ui="action"
                           onClick={() => setModal(agent)}
                           className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/5"
                           style={{ color: 'var(--wr-text-muted)' }}
                         >
                           <Edit2 className="w-3 h-3" /> Edit
                         </button>
-                        <button
+                        <button data-ui="action"
                           onClick={() => handleClone(agent)}
                           className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/5"
                           style={{ color: 'var(--wr-text-muted)' }}
                         >
                           <Copy className="w-3 h-3" /> Clone
                         </button>
-                        <button
+                        <button data-ui="action"
                           onClick={(e) => { e.stopPropagation(); handleExportPdf([agent]); }}
                           disabled={pdfState.busy}
                           title="Export this persona as a PDF"
@@ -342,7 +342,7 @@ export default function Agents() {
                         >
                           <FileText className="w-3 h-3" /> PDF
                         </button>
-                        <button
+                        <button data-ui="action"
                           onClick={() => handleDelete(agent)}
                           className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-red-900/20 ml-auto"
                           style={{ color: '#C0392B' }}
@@ -350,7 +350,7 @@ export default function Agents() {
                           <Trash2 className="w-3 h-3" /> Delete
                         </button>
                         {agent.is_ai_generated && (
-                          <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(123,45,139,0.2)', color: '#9B59B6' }}>
+                          <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(123,45,139,0.2)', color: '#9B59B6' }}>
                             AI
                           </span>
                         )}

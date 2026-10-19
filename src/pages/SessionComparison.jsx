@@ -197,7 +197,7 @@ function DeltaStatCard({ label, valueA, valueB, unit = '', invert = false }) {
   const isUp = invert ? delta < 0 : delta > 0;
   const isDown = invert ? delta > 0 : delta < 0;
   return (
-    <div className="rounded p-3 text-center" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded p-3 text-center" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
       <p className="text-xs font-mono font-bold mb-1" style={{ color: 'var(--wr-text-muted)' }}>{label}</p>
       <div className="flex items-center justify-center gap-2">
         <span className="font-mono text-sm font-bold" style={{ color: '#F0A500' }}>{valueA}{unit}</span>
@@ -274,7 +274,7 @@ export default function SessionComparison() {
       <div className="p-6 space-y-6">
 
         {/* Session Pickers */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <p className="text-xs font-bold tracking-widest font-mono mb-4" style={{ color: 'var(--wr-text-muted)' }}>SELECT SESSIONS TO COMPARE</p>
           <div className="flex items-end gap-4">
             <SessionPicker label="SESSION A" value={sessionAId} onChange={setSessionAId} sessions={sessions} color="#F0A500" />
@@ -303,11 +303,11 @@ export default function SessionComparison() {
               {[{ session: sessionA, color: '#F0A500', label: 'SESSION A', sa: saA, counts: countsA, esc: escalA },
                 { session: sessionB, color: '#2E86AB', label: 'SESSION B', sa: saB, counts: countsB, esc: escalB }]
                 .map(({ session, color, label, sa, counts, esc }) => (
-                <div key={label} className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: `1px solid ${color}50` }}>
+                <div data-ui="surface" key={label} className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: `1px solid ${color}50` }}>
                   <p className="text-xs font-bold tracking-widest font-mono mb-1" style={{ color }}>{label}</p>
                   <p className="text-base font-semibold" style={{ color: 'var(--wr-text-primary)' }}>{session?.name}</p>
                   <div className="flex items-center gap-3 mt-2">
-                    <span className="text-xs px-2 py-0.5 rounded font-bold font-mono"
+                    <span data-ui="badge" className="text-xs px-2 py-0.5 rounded font-bold font-mono"
                       style={{ backgroundColor: `${STATUS_COLOR[session?.status]}22`, color: STATUS_COLOR[session?.status] }}>
                       {session?.status?.toUpperCase()}
                     </span>
@@ -335,11 +335,11 @@ export default function SessionComparison() {
 
             {/* Severity Donuts + Radar */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="rounded p-5 flex flex-col items-center" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-5 flex flex-col items-center" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold tracking-widest font-mono mb-4 self-start" style={{ color: 'var(--wr-text-muted)' }}>SEVERITY DISTRIBUTION</p>
                 <SeverityDonut counts={countsA} color="#F0A500" label="SESSION A" />
               </div>
-              <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold tracking-widest font-mono mb-2" style={{ color: 'var(--wr-text-muted)' }}>RISK PROFILE BY DISCIPLINE</p>
                 <RadarComparison sa1={saA} sa2={saB} agentMap={agentMap} />
                 <div className="flex items-center justify-center gap-4 mt-2">
@@ -347,26 +347,26 @@ export default function SessionComparison() {
                   <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#2E86AB' }} /><span className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>Session B</span></div>
                 </div>
               </div>
-              <div className="rounded p-5 flex flex-col items-center" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-5 flex flex-col items-center" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold tracking-widest font-mono mb-4 self-start" style={{ color: 'var(--wr-text-muted)' }}>SEVERITY DISTRIBUTION</p>
                 <SeverityDonut counts={countsB} color="#2E86AB" label="SESSION B" />
               </div>
             </div>
 
             {/* Agent Overlap */}
-            <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+            <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
               <p className="text-xs font-bold tracking-widest font-mono mb-4" style={{ color: 'var(--wr-text-muted)' }}>AGENT PARTICIPATION</p>
               <div className="flex gap-4 mb-4 flex-wrap">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
+                <div data-ui="surface" className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
                   style={{ backgroundColor: 'rgba(240,165,0,0.1)', border: '1px solid rgba(240,165,0,0.2)', color: 'var(--wr-text-secondary)' }}>
                   <Users className="w-3 h-3" style={{ color: '#F0A500' }} />
                   <strong style={{ color: '#F0A500' }}>{overlap.shared.length}</strong> shared agents
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
+                <div data-ui="surface" className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
                   style={{ backgroundColor: 'rgba(240,165,0,0.05)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}>
                   {overlap.onlyA.length} only in A
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
+                <div data-ui="surface" className="flex items-center gap-2 px-3 py-1.5 rounded text-xs"
                   style={{ backgroundColor: 'rgba(46,134,171,0.05)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)' }}>
                   {overlap.onlyB.length} only in B
                 </div>

@@ -7,7 +7,7 @@ const SEV_COLOR = { CRITICAL: '#C0392B', HIGH: '#D68910', MEDIUM: '#2E86AB', LOW
 // A numbered derivation step with its running result on the right.
 function Step({ n, title, subtitle, result, resultColor, children }) {
   return (
-    <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded-lg p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <p className="text-xs font-bold tracking-wide" style={{ color: 'var(--wr-text-primary)' }}>
@@ -37,7 +37,7 @@ export default function ScrsCalculationModal({ breakdown = {}, scrs = 0, onClose
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }} onClick={onClose}>
-      <div className="w-[640px] max-w-full max-h-[88vh] flex flex-col rounded-lg overflow-hidden"
+      <div data-ui="surface" className="w-[640px] max-w-full max-h-[88vh] flex flex-col rounded-lg overflow-hidden"
         style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -50,7 +50,7 @@ export default function ScrsCalculationModal({ breakdown = {}, scrs = 0, onClose
           </div>
           <div className="flex items-center gap-3">
             <span className="text-2xl font-bold font-mono" style={{ color: posture.color }}>{scrs}</span>
-            <button onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+            <button aria-label="Close" data-ui="icon" onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
           </div>
         </div>
 
@@ -73,7 +73,7 @@ export default function ScrsCalculationModal({ breakdown = {}, scrs = 0, onClose
               <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>No rated findings yet — base score is 0.</p>
             ) : (
               <>
-                <div className="rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
                   <table className="w-full text-[11px]" style={{ borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ backgroundColor: 'var(--wr-bg-card)', color: 'var(--wr-text-muted)' }}>
@@ -163,7 +163,7 @@ export default function ScrsCalculationModal({ breakdown = {}, scrs = 0, onClose
                 {Math.round(baseScore)} {resilienceModifier < 0 ? '−' : '+'} {Math.abs(resilienceModifier)} {countermeasureModifier < 0 ? '−' : '+'} {Math.abs(countermeasureModifier)}
                 {' = '}<strong style={{ color: 'var(--wr-text-primary)' }}>{rawScrs}</strong>{rawScrs !== scrs && <> → clamp</>}
               </p>
-              <span className="text-xs font-bold font-mono px-2 py-0.5 rounded" style={{ color: posture.color, backgroundColor: posture.bg, border: `1px solid ${posture.border}` }}>
+              <span data-ui="badge" className="text-xs font-bold font-mono px-2 py-0.5 rounded" style={{ color: posture.color, backgroundColor: posture.bg, border: `1px solid ${posture.border}` }}>
                 {scrs} · {posture.label}
               </span>
             </div>

@@ -369,7 +369,7 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
     reader.onload = (e) => {
       const { categoryName, agents } = parseMultiAgentMarkdown(e.target.result);
       if (agents.length === 0) {
-        setErrors(['No agents found. Make sure each agent starts with a ## heading.']);
+        setErrors(['No SMEs found. Make sure each SME starts with a ## heading.']);
       } else {
         setParsed({ categoryName, agents });
       }
@@ -413,19 +413,19 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-      <div className="w-[620px] max-h-[90vh] overflow-y-auto rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="w-[620px] max-h-[90vh] overflow-y-auto rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
 
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b" style={{ backgroundColor: 'var(--wr-bg-card)', borderColor: 'var(--wr-border)' }}>
-          <h2 className="text-sm font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>IMPORT AGENTS</h2>
-          <button onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+          <h2 className="text-sm font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>IMPORT SMEs</h2>
+          <button aria-label="Close" data-ui="icon" onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
         </div>
 
         <div className="p-6 space-y-5">
 
           {/* Format Guide */}
-          <div className="rounded" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-secondary)' }}>
-            <button
+          <div data-ui="surface" className="rounded" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-secondary)' }}>
+            <button data-ui="disclosure"
               onClick={() => setShowFormat(v => !v)}
               className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold tracking-widest font-mono"
               style={{ color: 'var(--wr-text-secondary)' }}
@@ -439,17 +439,17 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
             {showFormat && (
               <div className="px-4 pb-4 border-t space-y-4" style={{ borderColor: 'var(--wr-border)' }}>
                 <div className="mt-3 space-y-2 text-xs" style={{ color: 'var(--wr-text-secondary)' }}>
-                  <p>A single <code className="px-1 rounded" style={{ backgroundColor: 'var(--wr-bg-card)', color: 'var(--wr-amber)' }}>.md</code> file can contain <strong>one or many agents</strong>.</p>
+                  <p>A single <code className="px-1 rounded" style={{ backgroundColor: 'var(--wr-bg-card)', color: 'var(--wr-amber)' }}>.md</code> file can contain <strong>one or many SMEs</strong>.</p>
                   <p><strong style={{ color: 'var(--wr-text-primary)' }}>File structure:</strong></p>
                   <ul className="space-y-1.5 ml-2">
-                    <li><span style={{ color: 'var(--wr-amber)' }}>## Agent Name</span> — H2 heading starts each agent and becomes the agent's display name <span style={{ color: '#C0392B' }}>(required)</span></li>
+                    <li><span style={{ color: 'var(--wr-amber)' }}>## SME Name</span> — H2 heading starts each SME and becomes the SME's display name <span style={{ color: '#C0392B' }}>(required)</span></li>
                     <li><span style={{ color: 'var(--wr-amber)' }}>**Persona:**</span> — who this expert is and how they think</li>
                     <li><span style={{ color: 'var(--wr-amber)' }}>**Cognitive Bias:**</span> — what they systematically underweight</li>
                     <li><span style={{ color: 'var(--wr-amber)' }}>**Primary Focus:**</span> — what they hunt for (maps to Red Team Focus)</li>
                     <li><span style={{ color: 'var(--wr-amber)' }}>**Severity:**</span> — CRITICAL / HIGH / MEDIUM / LOW (default: HIGH)</li>
                     <li><span style={{ color: 'var(--wr-amber)' }}>**Vectors:**</span> — Human / Technical / Physical / Futures (0–100 each)</li>
                     <li><span style={{ color: 'var(--wr-amber)' }}>**Tags:**</span> — comma-separated keyword tags</li>
-                    <li><span style={{ color: 'var(--wr-amber)' }}>**Domain Tags:**</span> — comma-separated domain names to assign agents <span style={{ color: '#C0392B' }}>(required)</span></li>
+                    <li><span style={{ color: 'var(--wr-amber)' }}>**Domain Tags:**</span> — comma-separated domain names to assign SMEs <span style={{ color: '#C0392B' }}>(required)</span></li>
                   </ul>
                   <p className="text-xs pt-1" style={{ color: 'var(--wr-text-primary)' }}><strong>Optimal-SME blocks (optional, all improve reasoning quality):</strong></p>
                   <ul className="space-y-1.5 ml-2">
@@ -462,7 +462,7 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
                     <li>Plus flat fields: <span style={{ color: 'var(--wr-amber)' }}>Professional Background, Expertise Level, Reasoning Style, Source Preferences</span></li>
                   </ul>
                   <p className="text-xs pt-1" style={{ color: 'var(--wr-text-muted)' }}>
-                   Domains are matched by name (case-insensitive) or auto-created if they don't exist. If an agent has multiple domain tags, the first one will be used. Fields not recognized are safely ignored.
+                   Domains are matched by name (case-insensitive) or auto-created if they don't exist. If an SME has multiple domain tags, the first one will be used. Fields not recognized are safely ignored.
                   </p>
                 </div>
                 <pre className="text-xs rounded p-3 overflow-x-auto" style={{ backgroundColor: 'var(--wr-bg-primary)', color: 'var(--wr-text-secondary)', border: '1px solid var(--wr-border)', fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'pre-wrap' }}>
@@ -487,7 +487,7 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
               ) : (
                 <>
                   <p className="text-sm font-medium" style={{ color: 'var(--wr-text-secondary)' }}>Drop a .md file here or click to browse</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>Single file containing one or more agents</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>Single file containing one or more SMEs</p>
                 </>
               )}
               <input ref={fileRef} type="file" accept=".md,.txt" className="hidden" onChange={e => handleFiles(e.target.files)} />
@@ -496,7 +496,7 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
 
           {/* Errors */}
           {errors.map((e, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded" style={{ backgroundColor: 'rgba(192,57,43,0.1)', color: '#C0392B', border: '1px solid rgba(192,57,43,0.2)' }}>
+            <div data-ui="surface" key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded" style={{ backgroundColor: 'rgba(192,57,43,0.1)', color: '#C0392B', border: '1px solid rgba(192,57,43,0.2)' }}>
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" /> {e}
             </div>
           ))}
@@ -506,17 +506,17 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
-                  READY TO IMPORT — {parsed.agents.length} AGENT{parsed.agents.length !== 1 ? 'S' : ''}
+                  READY TO IMPORT — {parsed.agents.length} SME{parsed.agents.length !== 1 ? 'S' : ''}
                 </p>
               </div>
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
                 {parsed.agents.map((agent, i) => (
-                  <div key={i} className="flex items-center justify-between px-3 py-2 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+                  <div data-ui="surface" key={i} className="flex items-center justify-between px-3 py-2 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate" style={{ color: 'var(--wr-text-primary)' }}>{agent.name}</p>
                       <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{agent.discipline}</p>
                     </div>
-                    <span className="ml-3 text-xs px-2 py-0.5 rounded font-bold font-mono flex-shrink-0"
+                    <span data-ui="badge" className="ml-3 text-xs px-2 py-0.5 rounded font-bold font-mono flex-shrink-0"
                       style={{
                         backgroundColor: `${{'CRITICAL':'#C0392B','HIGH':'#D68910','MEDIUM':'#2E86AB','LOW':'#27AE60'}[agent.severity_default]}22`,
                         color: {'CRITICAL':'#C0392B','HIGH':'#D68910','MEDIUM':'#2E86AB','LOW':'#27AE60'}[agent.severity_default]
@@ -528,7 +528,7 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
               </div>
               {parsed.agents.some(a => !a.domain_tags.length) && (
                <p className="text-xs" style={{ color: '#C0392B' }}>
-                 ⚠ Some agents are missing Domain Tags. All agents must have at least one domain tag to be imported.
+                 ⚠ Some SMEs are missing Domain Tags. All SMEs must have at least one domain tag to be imported.
                </p>
               )}
             </div>
@@ -539,7 +539,7 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
             <div className="flex flex-col items-center py-8 gap-3">
               <CheckCircle2 className="w-10 h-10" style={{ color: '#27AE60' }} />
               <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>
-                {importCount} agent{importCount !== 1 ? 's' : ''} imported successfully
+                {importCount} SME{importCount !== 1 ? 's' : ''} imported successfully
               </p>
 
               <WrButton onClick={onClose}>Done</WrButton>
@@ -552,7 +552,7 @@ export default function AgentImportModal({ existingDomains, onClose, onDone }) {
           <div className="sticky bottom-0 flex justify-end gap-2 px-6 py-4 border-t" style={{ backgroundColor: 'var(--wr-bg-card)', borderColor: 'var(--wr-border)' }}>
             <WrButton variant="secondary" onClick={onClose}>Cancel</WrButton>
             <WrButton onClick={handleImport} disabled={importing}>
-              {importing ? 'Importing...' : `Import ${parsed.agents.length} Agent${parsed.agents.length !== 1 ? 'S' : ''}`}
+              {importing ? 'Importing...' : `Import ${parsed.agents.length} SME${parsed.agents.length !== 1 ? 'S' : ''}`}
             </WrButton>
           </div>
         )}

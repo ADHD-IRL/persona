@@ -29,10 +29,10 @@ function AddDocModal({ onAdd, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-      <div className="w-[600px] max-h-[90vh] overflow-y-auto rounded-lg p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="w-[600px] max-h-[90vh] overflow-y-auto rounded-lg p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-sm font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>ADD KNOWLEDGE DOCUMENT</h2>
-          <button onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+          <button aria-label="Close" data-ui="icon" onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
         </div>
         <div className="space-y-4">
           <WrInput label="TITLE" value={title} onChange={setTitle} placeholder="e.g. Platform Auth Design v3, 2023 Vendor Breach Postmortem" />
@@ -40,7 +40,7 @@ function AddDocModal({ onAdd, onClose }) {
             <label className="block text-xs font-medium mb-2 tracking-wide" style={{ color: 'var(--wr-text-secondary)' }}>SOURCE TYPE</label>
             <div className="flex gap-2 flex-wrap">
               {SOURCE_TYPES.map(t => (
-                <button key={t} onClick={() => setSource(t)} className="text-xs font-mono px-2.5 py-1 rounded"
+                <button data-ui="action" key={t} onClick={() => setSource(t)} className="text-xs font-mono px-2.5 py-1 rounded"
                   style={{ backgroundColor: source === t ? 'var(--wr-amber)' : 'var(--wr-bg-secondary)', color: source === t ? '#0D1B2A' : 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
                   {t}
                 </button>
@@ -117,7 +117,7 @@ export default function KnowledgeBase() {
         actions={<WrButton onClick={() => setModal(true)}><Plus className="w-4 h-4" /> Add Document</WrButton>} />
 
       <div className="p-6 space-y-4">
-        <div className="rounded px-4 py-3 text-xs" style={{ backgroundColor: 'rgba(46,134,171,0.08)', border: '1px solid rgba(46,134,171,0.3)', color: 'var(--wr-text-secondary)' }}>
+        <div data-ui="surface" className="rounded px-4 py-3 text-xs" style={{ backgroundColor: 'rgba(46,134,171,0.08)', border: '1px solid rgba(46,134,171,0.3)', color: 'var(--wr-text-secondary)' }}>
           Documents added here are chunked and retrieved automatically at analysis time — the most relevant passages are injected into every agent's prompt so their assessments are grounded in your material and cite it in the evidence ledger. {docs.length > 0 && <span className="font-mono" style={{ color: '#2E86AB' }}>{docs.length} docs · {totalChunks} chunks indexed.</span>}
         </div>
 
@@ -130,7 +130,7 @@ export default function KnowledgeBase() {
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {docs.map(d => (
-              <div key={d.id} className="rounded-lg p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" key={d.id} className="rounded-lg p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2 min-w-0">
                     <FileText className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--wr-amber)' }} />
@@ -141,7 +141,7 @@ export default function KnowledgeBase() {
                       </p>
                     </div>
                   </div>
-                  <button onClick={() => remove(d)}><Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>
+                  <button aria-label="Delete" data-ui="icon" onClick={() => remove(d)}><Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>
                 </div>
                 {d.content && <p className="text-xs mt-2 line-clamp-2" style={{ color: 'var(--wr-text-muted)' }}>{d.content.slice(0, 160)}</p>}
               </div>

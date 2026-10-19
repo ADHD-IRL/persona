@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import {
-  ArrowLeft, Send, Loader2, Play, Pause, StepForward, Users, Hand, Bot, UserPlus, X, Cpu,
+  ArrowLeft, Send, Loader2, Play, Pause, StepForward, Users, Hand, Bot, X, Cpu,
   Ear, MessageSquare, ClipboardPaste, FileText,
 } from 'lucide-react';
 import WrButton from '@/components/ui/WrButton';
@@ -27,7 +27,7 @@ function SmeBubble({ msg, color }) {
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <span className="text-xs font-bold" style={{ color }}>{msg.agentName}</span>
           {msg.discipline && <span className="text-[11px]" style={{ color: 'var(--wr-text-muted)' }}>{msg.discipline}</span>}
-          <span className="text-[9px] font-mono px-1 py-0.5 rounded inline-flex items-center gap-0.5"
+          <span data-ui="badge" className="text-[9px] font-mono px-1 py-0.5 rounded inline-flex items-center gap-0.5"
             style={{ backgroundColor: 'rgba(155,89,182,0.14)', color: '#9B59B6', border: '1px solid rgba(155,89,182,0.3)' }}
             title="Simulated subject-matter expert — AI generated, not a real person">
             <Cpu className="w-2 h-2" /> AI SME
@@ -77,7 +77,7 @@ function SystemLine({ text }) {
 function RosterRow({ agent, color, status, urge, onAddress }) {
   const wantsFloor = urge != null && urge >= SPEAK_THRESHOLD && status === 'idle';
   return (
-    <button onClick={onAddress}
+    <button data-ui="card" onClick={onAddress}
       className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors hover:bg-white/5">
       <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold"
         style={{ backgroundColor: `${color}22`, color, border: `1.5px solid ${color}66` }}>
@@ -109,15 +109,13 @@ export default function PanelRoom() {
   const [colors, setColors] = useState({});
   const [messages, setMessages] = useState([]);
   const [agentStatus, setAgentStatus] = useState({});
-  const [participants, setParticipants] = useState([]);
 
   const [input, setInput] = useState('');
   const [speaking, setSpeaking] = useState(false);
   const [autoRunning, setAutoRunning] = useState(false);
   const [turnsLeft, setTurnsLeft] = useState(0);
   const [addressedId, setAddressedId] = useState(null);
-  const [me, setMe] = useState({ name: '', role: '' });
-  const [showAddPerson, setShowAddPerson] = useState(false);
+  const [me, setMe] = useState({ name: 'Analyst', role: '' });
 
   // Ambient event controls
   const [listenMode, setListenMode] = useState(false);   // panel tracks silently
@@ -136,15 +134,13 @@ export default function PanelRoom() {
   useEffect(() => {
     if (!db || !id) return;
     (async () => {
-      const [sess, saList, msgs, people] = await Promise.all([
+      const [sess, saList, msgs] = await Promise.all([
         db.Session.get(id),
         db.SessionAgent.filter({ session_id: id }),
         db.SessionMessage.filter({ session_id: id }),
-        db.SessionParticipant ? db.SessionParticipant.filter({ session_id: id }).catch(() => []) : [],
       ]);
       setSession(sess);
       setSessionAgents(saList);
-      setParticipants(people || []);
 
       const p = {}, c = {}, st = {};
       for (let i = 0; i < saList.length; i++) {
@@ -239,12 +235,11 @@ export default function PanelRoom() {
 
     const roster = [
       ...list.filter(a => a.id !== agent.id).map(a => ({ name: a.name, discipline: a.discipline })),
-      ...participants.map(p => ({ name: p.name, discipline: p.role, isHuman: true })),
       ...(me.name ? [{ name: me.name, discipline: me.role, isHuman: true }] : []),
     ];
 
     const transcript = messages.filter(m => m.role !== 'system').slice(-10).map(m => ({
-      speaker: m.role === 'agent' ? `${m.agentName} (${m.discipline || 'SME'})` : (m.authorName || 'Team'),
+      speaker: m.role === 'agent' ? `${m.agentName} (${m.discipline || 'SME'})` : (m.authorName || 'Analyst'),
       content: m.content,
     }));
 
@@ -266,9 +261,9 @@ export default function PanelRoom() {
         shouldDefer: pick.defer,
         deferTo: pick.deferTo || [],
         wasListening: silentSince.current,
-        onToken: token => {
+        onToken: (_token, full) => {
           setAgentStatus(s => ({ ...s, [agent.id]: 'speaking' }));
-          streamBuf.current[tempId] = (streamBuf.current[tempId] || '') + token;
+          streamBuf.current[tempId] = full;
           const text = streamBuf.current[tempId];
           setMessages(prev => prev.map(m => m.id === tempId ? { ...m, content: text } : m));
         },
@@ -297,7 +292,7 @@ export default function PanelRoom() {
     } finally {
       setSpeaking(false);
     }
-  }, [speaking, sessionAgents, profiles, currentTopic, messages, participants, me, scenarioCtx, db, id, push]);
+  }, [speaking, sessionAgents, profiles, currentTopic, messages, me, scenarioCtx, db, id, push]);
 
   // ── Auto-run loop ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -379,17 +374,6 @@ export default function PanelRoom() {
     navigate(`/sessions/${id}?autoSynth=1`);
   };
 
-  const addPerson = async (name, role) => {
-    if (!name.trim()) return;
-    try {
-      const row = await db.SessionParticipant.create({ session_id: id, name: name.trim(), role: role.trim() || null, cell: 'white' });
-      setParticipants(p => [...p, row]);
-    } catch {
-      setParticipants(p => [...p, { id: `local_${Date.now()}`, name: name.trim(), role: role.trim() || null }]);
-    }
-    setShowAddPerson(false);
-  };
-
   if (!session) return (
     <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--wr-bg-primary)' }}>
       <div className="w-8 h-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full animate-spin" />
@@ -400,8 +384,8 @@ export default function PanelRoom() {
     <div className="flex flex-col h-screen overflow-hidden" style={{ backgroundColor: 'var(--wr-bg-primary)' }}>
       {/* Header */}
       <div className="flex items-center gap-4 px-5 py-3 flex-shrink-0" style={{ backgroundColor: 'var(--wr-bg-card)', borderBottom: '1px solid var(--wr-border)' }}>
-        <button onClick={() => navigate(`/sessions/${id}`)} className="flex items-center gap-1.5 text-xs hover:opacity-70" style={{ color: 'var(--wr-text-muted)' }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> Back
+        <button data-ui="action" onClick={() => navigate(`/session-tracker?session=${id}`)} className="flex items-center gap-1.5 text-xs hover:opacity-70" style={{ color: 'var(--wr-text-muted)' }}>
+          <ArrowLeft className="w-3.5 h-3.5" /> Return to Session Tracker
         </button>
         <div className="min-w-0">
           <h1 className="text-sm font-bold truncate" style={{ color: 'var(--wr-text-primary)' }}>{session.name}</h1>
@@ -411,7 +395,7 @@ export default function PanelRoom() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           {/* Listen mode — the panel sits in and tracks without speaking */}
-          <button
+          <button data-ui="action"
             onClick={() => { setListenMode(v => !v); if (!listenMode) { pauseAuto(); silentSince.current = true; } }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
             style={{
@@ -472,10 +456,10 @@ export default function PanelRoom() {
           <div className="px-6 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-card)' }}>
             {addressedId && profiles[addressedId] && (
               <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded inline-flex items-center gap-1"
+                <span data-ui="badge" className="text-[10px] font-mono px-1.5 py-0.5 rounded inline-flex items-center gap-1"
                   style={{ backgroundColor: 'rgba(240,165,0,0.12)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)' }}>
                   to {profiles[addressedId].name}
-                  <button onClick={() => setAddressedId(null)}><X className="w-2.5 h-2.5" /></button>
+                  <button aria-label="Close" data-ui="icon" onClick={() => setAddressedId(null)}><X className="w-2.5 h-2.5" /></button>
                 </span>
               </div>
             )}
@@ -556,42 +540,22 @@ export default function PanelRoom() {
 
           <div className="py-1" style={{ borderTop: '1px solid var(--wr-border)' }}>
             <p className="px-3 py-1 text-[9px] font-mono tracking-wider flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}>
-              <Users className="w-2.5 h-2.5" /> YOUR TEAM
+              <Users className="w-2.5 h-2.5" /> YOUR ANALYST CONTEXT
             </p>
             <div className="px-3 py-1.5 space-y-1.5">
-              <input value={me.name} onChange={e => setMe(v => ({ ...v, name: e.target.value }))} placeholder="Your name"
+              <input value={me.name} onChange={e => setMe(v => ({ ...v, name: e.target.value }))} aria-label="Transcript name" placeholder="Transcript name"
                 className="w-full px-2 py-1 rounded text-xs outline-none"
                 style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }} />
-              <input value={me.role} onChange={e => setMe(v => ({ ...v, role: e.target.value }))} placeholder="Your role (optional)"
+              <input value={me.role} onChange={e => setMe(v => ({ ...v, role: e.target.value }))} aria-label="Analytical focus" placeholder="Analytical focus (optional)"
                 className="w-full px-2 py-1 rounded text-xs outline-none"
                 style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }} />
             </div>
-            {participants.map(p => (
-              <div key={p.id} className="px-3 py-1.5 flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: 'rgba(240,165,0,0.12)', border: '1px solid rgba(240,165,0,0.35)' }}>
-                  <Users className="w-3 h-3" style={{ color: 'var(--wr-amber)' }} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs truncate" style={{ color: 'var(--wr-text-primary)' }}>{p.name}</p>
-                  {p.role && <p className="text-[10px] truncate" style={{ color: 'var(--wr-text-muted)' }}>{p.role}</p>}
-                </div>
-              </div>
-            ))}
-            {showAddPerson ? (
-              <AddPersonForm onAdd={addPerson} onCancel={() => setShowAddPerson(false)} />
-            ) : (
-              <button onClick={() => setShowAddPerson(true)}
-                className="mx-3 my-1.5 flex items-center gap-1 text-[10px] font-mono" style={{ color: 'var(--wr-amber)' }}>
-                <UserPlus className="w-3 h-3" /> Add teammate
-              </button>
-            )}
           </div>
 
           <div className="px-3 py-3 mt-1" style={{ borderTop: '1px solid var(--wr-border)' }}>
             <p className="text-[10px] leading-relaxed" style={{ color: 'var(--wr-text-muted)' }}>
               <Cpu className="w-2.5 h-2.5 inline mr-1" style={{ color: '#9B59B6' }} />
-              Panel members are <strong style={{ color: 'var(--wr-text-secondary)' }}>AI-simulated experts</strong>, not real
+              Panel SMEs are <strong style={{ color: 'var(--wr-text-secondary)' }}>AI-simulated experts</strong>, not real
               people. They speak when a topic is in their lane and defer when it isn’t. Treat their output as analysis to
               test, not as a credentialed professional opinion.
             </p>
@@ -602,23 +566,3 @@ export default function PanelRoom() {
   );
 }
 
-function AddPersonForm({ onAdd, onCancel }) {
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  return (
-    <div className="px-3 py-2 space-y-1.5">
-      <input value={name} onChange={e => setName(e.target.value)} placeholder="Name" autoFocus
-        className="w-full px-2 py-1 rounded text-xs outline-none"
-        style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }} />
-      <input value={role} onChange={e => setRole(e.target.value)} placeholder="Role (optional)"
-        onKeyDown={e => e.key === 'Enter' && onAdd(name, role)}
-        className="w-full px-2 py-1 rounded text-xs outline-none"
-        style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }} />
-      <div className="flex gap-1.5">
-        <button onClick={() => onAdd(name, role)} className="text-[10px] font-mono font-bold px-2 py-1 rounded"
-          style={{ backgroundColor: 'rgba(240,165,0,0.15)', color: 'var(--wr-amber)' }}>Add</button>
-        <button onClick={onCancel} className="text-[10px] font-mono px-2 py-1" style={{ color: 'var(--wr-text-muted)' }}>Cancel</button>
-      </div>
-    </div>
-  );
-}

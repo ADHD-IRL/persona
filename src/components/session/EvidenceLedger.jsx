@@ -63,9 +63,9 @@ export default function EvidenceLedger({ sources, agents }) {
         const isOpen = open[row.agentId] ?? true;
         const total = row.sources.length;
         return (
-          <div key={row.agentId} className="rounded overflow-hidden" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" key={row.agentId} className="rounded overflow-hidden" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             {/* Header */}
-            <button
+            <button data-ui="card"
               onClick={() => setOpen(o => ({ ...o, [row.agentId]: !isOpen }))}
               className="w-full flex items-center gap-3 px-4 py-3 text-left"
             >
@@ -90,7 +90,7 @@ export default function EvidenceLedger({ sources, agents }) {
                 </div>
               </div>
 
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded flex-shrink-0"
+              <span data-ui="badge" className="text-xs font-mono font-bold px-2 py-0.5 rounded flex-shrink-0"
                 style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-secondary)' }}>
                 {total} ref{total !== 1 ? 's' : ''}
               </span>
@@ -106,14 +106,14 @@ export default function EvidenceLedger({ sources, agents }) {
                     <div key={s.id} className="px-4 py-3" style={{ borderTop: '1px solid var(--wr-border)' }}>
                       <div className="flex items-start gap-2 flex-wrap">
                         {s.url ? (
-                          <a href={s.url} target="_blank" rel="noopener noreferrer"
+                          <a data-ui="reference" href={s.url} target="_blank" rel="noopener noreferrer"
                             className="text-sm font-medium hover:underline inline-flex items-center gap-1" style={{ color: 'var(--wr-text-primary)' }}>
                             {label} <ExternalLink className="w-3 h-3 flex-shrink-0" style={{ opacity: 0.6 }} />
                           </a>
                         ) : (
                           <span className="text-sm font-medium" style={{ color: 'var(--wr-text-primary)' }}>{label}</span>
                         )}
-                        <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
+                        <span data-ui="badge" className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
                           {TIER_LABELS[s.credibility_tier || 'unverified']}
                         </span>
                         <span className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>
@@ -136,7 +136,7 @@ export default function EvidenceLedger({ sources, agents }) {
 
       {/* Unsupported SMEs */}
       {silentAgents.length > 0 && (
-        <div className="rounded px-4 py-3" style={{ backgroundColor: 'rgba(230,126,34,0.08)', border: '1px solid rgba(230,126,34,0.3)' }}>
+        <div data-ui="surface" className="rounded px-4 py-3" style={{ backgroundColor: 'rgba(230,126,34,0.08)', border: '1px solid rgba(230,126,34,0.3)' }}>
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#E67E22' }} />
             <span className="text-xs font-bold font-mono" style={{ color: '#E67E22' }}>UNSUPPORTED ASSESSMENTS</span>

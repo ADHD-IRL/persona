@@ -58,13 +58,13 @@ export default function DangerZone() {
   };
 
   return (
-    <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(192,57,43,0.35)' }}>
+    <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(192,57,43,0.35)' }}>
       <div className="flex items-center gap-2 mb-1">
         <ShieldAlert className="w-4 h-4" style={{ color: '#C0392B' }} />
         <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: '#C0392B' }}>DANGER ZONE</h2>
       </div>
       <p className="text-xs mb-4" style={{ color: 'var(--wr-text-muted)' }}>
-        Export everything to a markdown file, or wipe the workspace back to just its domains and agents.
+        Export everything to a markdown file, or reset your analysis library to just its domains and SMEs.
       </p>
 
       {/* Archive */}
@@ -89,38 +89,38 @@ export default function DangerZone() {
             Permanently delete all analysis data. <strong style={{ color: 'var(--wr-text-secondary)' }}>Keeps domains and agents.</strong> Cannot be undone.
           </p>
         </div>
-        <button
+        <button data-ui="action"
           onClick={() => { setDone(null); setShowConfirm(true); }}
           className="flex items-center gap-1.5 px-3 py-2 rounded text-xs font-bold font-mono whitespace-nowrap transition-colors"
           style={{ backgroundColor: 'rgba(192,57,43,0.12)', color: '#C0392B', border: '1px solid rgba(192,57,43,0.4)' }}
         >
-          <Trash2 className="w-3.5 h-3.5" /> Reset workspace
+          <Trash2 className="w-3.5 h-3.5" /> Reset analysis library
         </button>
       </div>
 
       {/* Confirmation modal */}
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-          <div className="w-[520px] max-w-full max-h-[90vh] overflow-y-auto rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(192,57,43,0.5)' }}>
+          <div data-ui="surface" className="w-[520px] max-w-full max-h-[90vh] overflow-y-auto rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(192,57,43,0.5)' }}>
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--wr-border)' }}>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" style={{ color: '#C0392B' }} />
                 <h3 className="text-xs font-bold tracking-widest font-mono" style={{ color: '#C0392B' }}>DANGER-CLOSE RESET</h3>
               </div>
-              <button onClick={closeConfirm} disabled={resetting}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+              <button aria-label="Close" data-ui="icon" onClick={closeConfirm} disabled={resetting}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
             </div>
 
             <div className="p-5 space-y-4">
               {done == null ? (
                 <>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded p-3" style={{ backgroundColor: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.25)' }}>
+                    <div data-ui="surface" className="rounded p-3" style={{ backgroundColor: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.25)' }}>
                       <p className="text-xs font-bold font-mono mb-1.5" style={{ color: '#C0392B' }}>WILL DELETE</p>
                       <ul className="space-y-0.5">
                         {RESET_CLEARS.map(x => <li key={x} className="text-xs" style={{ color: 'var(--wr-text-secondary)' }}>• {x}</li>)}
                       </ul>
                     </div>
-                    <div className="rounded p-3" style={{ backgroundColor: 'rgba(39,174,96,0.06)', border: '1px solid rgba(39,174,96,0.25)' }}>
+                    <div data-ui="surface" className="rounded p-3" style={{ backgroundColor: 'rgba(39,174,96,0.06)', border: '1px solid rgba(39,174,96,0.25)' }}>
                       <p className="text-xs font-bold font-mono mb-1.5" style={{ color: '#27AE60' }}>WILL KEEP</p>
                       <ul className="space-y-0.5">
                         {RESET_KEEPS.map(x => <li key={x} className="text-xs" style={{ color: 'var(--wr-text-secondary)' }}>• {x}</li>)}
@@ -128,7 +128,7 @@ export default function DangerZone() {
                     </div>
                   </div>
 
-                  <div className="rounded p-3 flex items-center justify-between gap-3" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+                  <div data-ui="surface" className="rounded p-3 flex items-center justify-between gap-3" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                     <p className="text-xs" style={{ color: 'var(--wr-text-secondary)' }}>
                       Download a full archive first — strongly recommended.
                     </p>
@@ -157,7 +157,7 @@ export default function DangerZone() {
 
                   <div className="flex justify-end gap-2">
                     <WrButton variant="secondary" onClick={closeConfirm} disabled={resetting}>Cancel</WrButton>
-                    <button
+                    <button data-ui="action"
                       onClick={runReset}
                       disabled={phrase !== CONFIRM_PHRASE || resetting}
                       className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold font-mono transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -170,7 +170,7 @@ export default function DangerZone() {
               ) : (
                 <div className="flex flex-col items-center py-6 gap-3 text-center">
                   <CheckCircle2 className="w-10 h-10" style={{ color: '#27AE60' }} />
-                  <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>Workspace reset.</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>Analysis library reset.</p>
                   <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>
                     Deleted {done} record{done !== 1 ? 's' : ''}. Domains and agents were kept.
                   </p>

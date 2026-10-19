@@ -18,7 +18,7 @@ function RegenField({ label, fieldKey, value, onChange, onRegen, regenning, rows
           {label}{optional && <span className="ml-1 opacity-50">(optional)</span>}
         </label>
         {onRegen && (
-          <button
+          <button data-ui="action"
             type="button"
             onClick={onRegen}
             disabled={regenning}
@@ -147,19 +147,19 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-      <div className="w-[700px] max-h-[92vh] overflow-y-auto rounded-2xl" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="w-[700px] max-h-[92vh] overflow-y-auto rounded-2xl" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
 
         {/* Header */}
         <div className="sticky top-0 z-10 border-b" style={{ backgroundColor: 'var(--wr-bg-card)', borderColor: 'var(--wr-border)' }}>
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
               <h2 className="text-sm font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>
-                {agent?.id ? 'EDIT AGENT' : 'NEW AGENT'}
+                {agent?.id ? 'EDIT SME' : 'NEW SME'}
               </h2>
               {!agent?.id && (
-                <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
                   {['manual', 'ai'].map(m => (
-                    <button key={m} onClick={() => setMode(m)} className="px-3 py-1 text-xs font-medium transition-colors"
+                    <button data-ui="action" key={m} onClick={() => setMode(m)} className="px-3 py-1 text-xs font-medium transition-colors"
                       style={{ backgroundColor: mode === m ? 'var(--wr-amber)' : 'transparent', color: mode === m ? '#0D1B2A' : 'var(--wr-text-secondary)' }}>
                       {m === 'manual' ? 'Manual' : 'AI Generate'}
                     </button>
@@ -168,7 +168,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
               )}
               {/* Regen button for existing agents */}
               {agent?.id && (
-                <button
+                <button data-ui="action"
                   onClick={() => setShowRegenPanel(v => !v)}
                   className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all"
                   style={{ color: 'var(--wr-amber)', backgroundColor: showRegenPanel ? 'rgba(240,165,0,0.12)' : 'rgba(240,165,0,0.07)', border: '1px solid rgba(240,165,0,0.2)' }}
@@ -179,13 +179,13 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                 </button>
               )}
             </div>
-            <button onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+            <button aria-label="Close" data-ui="icon" onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
           </div>
 
           {/* Full-profile regen panel (existing agents only) */}
           {agent?.id && showRegenPanel && (
             <div className="px-6 pb-4">
-              <div className="rounded-xl p-4 space-y-3" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid rgba(240,165,0,0.2)' }}>
+              <div data-ui="surface" className="rounded-xl p-4 space-y-3" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid rgba(240,165,0,0.2)' }}>
                 <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>
                   Claude will regenerate all text profile fields for <strong style={{ color: 'var(--wr-text-primary)' }}>{form.name}</strong> using the existing name and discipline as context. Optional hints below guide the output.
                 </p>
@@ -214,7 +214,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
             /* ── AI Generate (new agent) ───────────────────────────────── */
             <div className="space-y-4">
               <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>Describe the expert you want and Claude will generate a full profile including all analytical and institutional fields.</p>
-              <WrInput label="AGENT NAME" value={aiForm.name || ''} onChange={v => setAi('name', v)} placeholder="e.g. Maritime Security Specialist, Supply Chain Economist..." />
+              <WrInput label="SME NAME" value={aiForm.name || ''} onChange={v => setAi('name', v)} placeholder="e.g. Maritime Security Specialist, Supply Chain Economist..." />
               <WrSelect label="DOMAIN" value={aiForm.domain_id} onChange={v => setAi('domain_id', v)}>
                 <option value="">Select domain...</option>
                 {domains.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -228,7 +228,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                 <WrInput label="ADVERSARY LENS (optional)" value={aiForm.adversary_hint} onChange={v => setAi('adversary_hint', v)} placeholder="Assumed adversary sophistication or lens..." />
               </div>
               <WrButton onClick={generateAgent} disabled={!aiForm.expert_type || generating} className="w-full justify-center" size="lg">
-                {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating Agent…</> : <><Sparkles className="w-4 h-4" /> Generate Agent</>}
+                {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating SME…</> : <><Sparkles className="w-4 h-4" /> Generate SME</>}
               </WrButton>
               {generating && (
                 <ProcessingBar label="Building the full expert profile…" elapsedMs={genElapsed}
@@ -241,9 +241,9 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
 
               {/* AGENT IDENTITY */}
               <div>
-                <p className="text-xs font-bold tracking-widest mb-3 font-mono" style={{ color: 'var(--wr-text-muted)' }}>AGENT IDENTITY</p>
+                <p className="text-xs font-bold tracking-widest mb-3 font-mono" style={{ color: 'var(--wr-text-muted)' }}>SME IDENTITY</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <WrInput label="NAME" value={form.name} onChange={v => set('name', v)} placeholder="Agent name" className="col-span-2" />
+                  <WrInput label="NAME" value={form.name} onChange={v => set('name', v)} placeholder="SME name" className="col-span-2" />
                   <WrInput label="DISCIPLINE" value={form.discipline} onChange={v => set('discipline', v)} placeholder="e.g. Counterintelligence" />
                   <WrSelect label="DOMAIN" value={form.domain_id} onChange={v => set('domain_id', v)}>
                     <option value="">Select domain...</option>
@@ -254,9 +254,9 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                   <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: 'var(--wr-text-secondary)' }}>TAGS</label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {form.tags?.map(t => (
-                      <span key={t} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
+                      <span data-ui="badge" key={t} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
                         {t}
-                        <button onClick={() => set('tags', form.tags.filter(x => x !== t))} className="text-red-400 ml-1">×</button>
+                        <button data-ui="action" onClick={() => set('tags', form.tags.filter(x => x !== t))} className="text-red-400 ml-1">×</button>
                       </span>
                     ))}
                   </div>
@@ -284,7 +284,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                     placeholder="The self-correction habit that counters the bias above (paired with it in every prompt)..." />
                   <RegenField label="RED-TEAM FOCUS" fieldKey="red_team_focus" value={form.red_team_focus} onChange={v => set('red_team_focus', v)}
                     onRegen={() => regenField('red_team_focus')} regenning={!!regenning.red_team_focus} rows={2}
-                    placeholder="What this agent hunts for in any scenario..." />
+                    placeholder="What this SME hunts for in any scenario..." />
                 </div>
               </div>
 
@@ -329,8 +329,8 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
               </div>
 
               {/* OPTIMAL SME — competence map, tradecraft, risk posture, debate behavior */}
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(240,165,0,0.2)' }}>
-                <button type="button" onClick={() => setShowAdvanced(v => !v)}
+              <div data-ui="surface" className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(240,165,0,0.2)' }}>
+                <button data-ui="disclosure" type="button" onClick={() => setShowAdvanced(v => !v)}
                   className="w-full flex items-center justify-between px-4 py-3"
                   style={{ backgroundColor: 'rgba(240,165,0,0.06)' }}>
                   <span className="flex items-center gap-2 text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>
@@ -378,7 +378,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                             <label className="block text-[10px] font-medium mb-1 tracking-wide" style={{ color: 'var(--wr-text-secondary)' }}>{label}</label>
                             <div className="flex gap-1">
                               {['low','medium','high'].map(opt => (
-                                <button key={opt} type="button" onClick={() => setNested('risk_posture', key, form.risk_posture?.[key] === opt ? '' : opt)}
+                                <button data-ui="action" key={opt} type="button" onClick={() => setNested('risk_posture', key, form.risk_posture?.[key] === opt ? '' : opt)}
                                   className="flex-1 px-1 py-1 rounded text-[10px] font-medium capitalize transition-all"
                                   style={{
                                     backgroundColor: form.risk_posture?.[key] === opt ? 'var(--wr-amber)' : 'var(--wr-bg-primary)',
@@ -415,7 +415,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                       <label className="block text-[11px] font-bold tracking-widest mb-2 font-mono" style={{ color: 'var(--wr-text-secondary)' }}>ROLE TYPE</label>
                       <div className="flex flex-wrap gap-1.5">
                         {['sme','red-team',"devil's-advocate",'facilitator'].map(rt => (
-                          <button key={rt} type="button" onClick={() => set('role_type', rt)}
+                          <button data-ui="action" key={rt} type="button" onClick={() => set('role_type', rt)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all capitalize"
                             style={{
                               backgroundColor: (form.role_type || 'sme') === rt ? '#2E86AB' : 'var(--wr-bg-primary)',
@@ -432,14 +432,14 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
               </div>
 
               {/* PERSONA TUNING */}
-              <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded-xl p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                 <div className="flex items-center gap-2 mb-3">
                   <SlidersHorizontal className="w-3.5 h-3.5" style={{ color: 'var(--wr-amber)' }} />
                   <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>PERSONA TUNING</p>
-                  <span className="text-xs px-1.5 py-0.5 rounded-full font-mono" style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.2)' }}>influences LLM output</span>
+                  <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded-full font-mono" style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.2)' }}>influences LLM output</span>
                 </div>
                 <p className="text-xs mb-4" style={{ color: 'var(--wr-text-muted)' }}>
-                  These fields shape how this agent reasons and writes during session assessments.
+                  These fields shape how this SME reasons and writes during session assessments.
                 </p>
                 <div className="space-y-3">
                   <RegenField label="PROFESSIONAL BACKGROUND" fieldKey="professional_background" value={form.professional_background} onChange={v => set('professional_background', v)}
@@ -450,7 +450,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                       <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: 'var(--wr-text-secondary)' }}>EXPERTISE LEVEL</label>
                       <div className="flex flex-wrap gap-1.5">
                         {['Junior', 'Mid-Level', 'Senior', 'Principal', 'World-Class'].map(lvl => (
-                          <button key={lvl} onClick={() => set('expertise_level', lvl)}
+                          <button data-ui="action" key={lvl} onClick={() => set('expertise_level', lvl)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
                             style={{
                               backgroundColor: form.expertise_level === lvl ? 'var(--wr-amber)' : 'var(--wr-bg-primary)',
@@ -466,7 +466,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                       <label className="block text-xs font-medium mb-1.5 tracking-wide" style={{ color: 'var(--wr-text-secondary)' }}>REASONING STYLE</label>
                       <div className="flex flex-wrap gap-1.5">
                         {['Analytical', 'Intuitive', 'Contrarian', 'Systematic', 'Probabilistic'].map(style => (
-                          <button key={style} onClick={() => set('reasoning_style', style)}
+                          <button data-ui="action" key={style} onClick={() => set('reasoning_style', style)}
                             className="px-2.5 py-1 rounded-lg text-xs font-medium transition-all"
                             style={{
                               backgroundColor: form.reasoning_style === style ? '#2E86AB' : 'var(--wr-bg-primary)',
@@ -506,7 +506,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
                 <p className="text-xs font-bold tracking-widest mb-3 font-mono" style={{ color: 'var(--wr-text-muted)' }}>DEFAULT SEVERITY</p>
                 <div className="flex gap-2">
                   {SEVERITIES.map(s => (
-                    <button key={s} onClick={() => set('severity_default', s)}
+                    <button data-ui="action" key={s} onClick={() => set('severity_default', s)}
                       className="px-4 py-2 rounded-lg text-xs font-bold font-mono transition-all"
                       style={{ backgroundColor: form.severity_default === s ? SEV_COLORS[s] : `${SEV_COLORS[s]}22`, color: form.severity_default === s ? (s === 'HIGH' ? '#0D1B2A' : '#fff') : SEV_COLORS[s] }}>
                       {s}
@@ -523,7 +523,7 @@ export default function AgentFormModal({ agent, mode: initialMode, aiSeed, domai
         {mode === 'manual' && (
           <div className="sticky bottom-0 flex justify-end gap-2 px-6 py-4 border-t" style={{ backgroundColor: 'var(--wr-bg-card)', borderColor: 'var(--wr-border)' }}>
             <WrButton variant="secondary" onClick={onClose}>Cancel</WrButton>
-            <WrButton onClick={() => onSave(form)}>Save Agent</WrButton>
+            <WrButton onClick={() => onSave(form)}>Save SME</WrButton>
           </div>
         )}
       </div>

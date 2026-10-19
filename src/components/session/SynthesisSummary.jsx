@@ -12,7 +12,7 @@ const SEV_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
 function TileCard({ icon: Icon, iconColor, label, children }) {
   return (
-    <div
+    <div data-ui="surface"
       className="flex-1 min-w-[140px] rounded-2xl p-4"
       style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}
     >
@@ -61,7 +61,7 @@ export default function SynthesisSummary({ synthesis, sessionAgents, agents, thr
   const sourceTypeList = Object.entries(sourceTypes).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
   return (
-    <div
+    <div data-ui="surface"
       className="mb-6 rounded-2xl overflow-hidden"
       style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-secondary)' }}
     >
@@ -85,7 +85,7 @@ export default function SynthesisSummary({ synthesis, sessionAgents, agents, thr
         <TileCard icon={Users} iconColor="#9B59B6" label="CONTRIBUTORS">
           <div className="flex flex-wrap gap-1.5">
             {contributors.map(agent => (
-              <span
+              <span data-ui="badge"
                 key={agent.id}
                 className="text-xs px-1.5 py-0.5 rounded-full font-mono"
                 style={{
@@ -141,7 +141,7 @@ export default function SynthesisSummary({ synthesis, sessionAgents, agents, thr
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {SEV_ORDER.filter(s => sevCounts[s] > 0).map(sev => (
-                <span
+                <span data-ui="badge"
                   key={sev}
                   className="text-xs px-2 py-0.5 rounded-full font-mono font-bold"
                   style={{
@@ -156,7 +156,7 @@ export default function SynthesisSummary({ synthesis, sessionAgents, agents, thr
             </div>
           )}
           {totalThreats === 0 && onGoToThreats ? (
-            <button onClick={onGoToThreats} className="text-xs mt-2 font-mono font-bold" style={{ color: 'var(--wr-amber)' }}>
+            <button data-ui="action" onClick={onGoToThreats} className="text-xs mt-2 font-mono font-bold" style={{ color: 'var(--wr-amber)' }}>
               Extract from synthesis →
             </button>
           ) : (

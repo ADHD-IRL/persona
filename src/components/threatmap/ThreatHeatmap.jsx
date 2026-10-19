@@ -127,7 +127,7 @@ export default function ThreatHeatmap({ groups, axisLabel, onSelect }) {
       </div>
 
       {/* Heatmap Table */}
-      <div className="rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-card)' }}>
+      <div data-ui="surface" className="rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-card)' }}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
@@ -273,7 +273,7 @@ export default function ThreatHeatmap({ groups, axisLabel, onSelect }) {
 
       {/* Floating tooltip — fixed position, follows cursor, never clipped by table overflow */}
       {hoveredCell && hoveredCell.count > 0 && (
-        <div
+        <div data-ui="surface"
           className="rounded p-3 pointer-events-none"
           style={{
             position: 'fixed',

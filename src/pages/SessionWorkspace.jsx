@@ -47,12 +47,12 @@ class SynthesisErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div className="rounded-2xl p-5 mt-4" style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)' }}>
+        <div data-ui="surface" className="rounded-2xl p-5 mt-4" style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)' }}>
           <p className="text-xs font-bold font-mono mb-2" style={{ color: '#C0392B' }}>SYNTHESIS RENDER ERROR</p>
           <p className="text-xs font-mono" style={{ color: '#C0392B', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
             {this.state.error?.message || String(this.state.error)}
           </p>
-          <button
+          <button data-ui="action"
             className="mt-3 text-xs underline"
             style={{ color: '#C0392B' }}
             onClick={() => this.setState({ error: null })}
@@ -86,7 +86,7 @@ function AgentAssessmentCard({ sa, agent, round, onGenerate, onUpdate, onReset }
   const sevColor = SEV_COLORS[severity] || 'var(--wr-text-muted)';
 
   return (
-    <div
+    <div data-ui="surface"
       className="rounded-2xl overflow-hidden flex"
       style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}
     >
@@ -102,7 +102,7 @@ function AgentAssessmentCard({ sa, agent, round, onGenerate, onUpdate, onReset }
           </div>
           <div className="flex items-center gap-2">
             {rScore != null && (
-              <span
+              <span data-ui="badge"
                 className="text-xs font-mono tabular-nums px-2 py-0.5 rounded-full"
                 title={`Likelihood ${likelihood}/5 (${likelihoodLabel(likelihood)}) × Impact ${impact}/5 (${impactLabel(impact)}) = risk ${rScore}/25`}
                 style={{ backgroundColor: `${rBand.color}18`, color: rBand.color, border: `1px solid ${rBand.color}40` }}
@@ -111,7 +111,7 @@ function AgentAssessmentCard({ sa, agent, round, onGenerate, onUpdate, onReset }
               </span>
             )}
             {confidence != null && (
-              <span
+              <span data-ui="badge"
                 className="text-xs font-mono tabular-nums px-2 py-0.5 rounded-full"
                 style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.2)' }}
               >
@@ -119,7 +119,7 @@ function AgentAssessmentCard({ sa, agent, round, onGenerate, onUpdate, onReset }
               </span>
             )}
             {severity && (
-              <span
+              <span data-ui="badge"
                 className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full"
                 style={{ backgroundColor: `${sevColor}18`, color: sevColor, border: `1px solid ${sevColor}40` }}
               >
@@ -131,8 +131,8 @@ function AgentAssessmentCard({ sa, agent, round, onGenerate, onUpdate, onReset }
 
         {/* Round 0 pre-brief collapsible */}
         {sa.round0_briefing && (
-          <div className="mb-3 rounded-xl" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
-            <button
+          <div data-ui="surface" className="mb-3 rounded-xl" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+            <button data-ui="disclosure"
               onClick={() => setBriefExpanded(!briefExpanded)}
               className="w-full flex items-center justify-between px-3 py-2 text-xs"
               style={{ color: 'var(--wr-text-muted)' }}
@@ -177,7 +177,7 @@ function AgentAssessmentCard({ sa, agent, round, onGenerate, onUpdate, onReset }
                 <div className={expanded ? '' : 'line-clamp-4'}>
                   <p className="text-xs leading-relaxed whitespace-pre-wrap break-words" style={{ color: 'var(--wr-text-secondary)' }}>{text}</p>
                 </div>
-                <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs mt-2 transition-colors hover:opacity-80" style={{ color: 'var(--wr-amber)' }}>
+                <button data-ui="action" onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs mt-2 transition-colors hover:opacity-80" style={{ color: 'var(--wr-amber)' }}>
                   {expanded ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show more</>}
                 </button>
               </div>
@@ -222,7 +222,7 @@ const SYNTHESIS_SECTION_ICONS = {
 function SynthSectionCard({ title, children }) {
   const meta = SYNTHESIS_SECTION_ICONS[title] || { color: 'hsl(215 10% 48%)', icon: '•' };
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
       <div
         className="flex items-center gap-2.5 px-5 py-3"
         style={{ borderBottom: '1px solid var(--wr-border)', backgroundColor: 'rgba(138,155,181,0.04)' }}
@@ -329,7 +329,7 @@ function SynthesisPanel({ synthesis, sessionId, onGenerate, generating, synthSta
         <Sparkles className="w-10 h-10 mb-4" style={{ color: 'var(--wr-amber)' }} />
         <h3 className="text-base font-semibold mb-2" style={{ color: 'var(--wr-text-primary)' }}>Generate Synthesis</h3>
         {synthError ? (
-          <div className="mb-6 rounded p-3 max-w-md w-full flex items-start gap-2" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)' }}>
+          <div data-ui="surface" className="mb-6 rounded p-3 max-w-md w-full flex items-start gap-2" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)' }}>
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C0392B' }} />
             <p className="text-xs" style={{ color: '#C0392B' }}>{synthError}</p>
           </div>
@@ -360,13 +360,13 @@ function SynthesisPanel({ synthesis, sessionId, onGenerate, generating, synthSta
           />
         </div>
         {streamText ? (
-          <div className="rounded p-4 text-xs leading-relaxed whitespace-pre-wrap break-words font-mono overflow-y-auto max-h-[60vh]"
+          <div data-ui="surface" className="rounded p-4 text-xs leading-relaxed whitespace-pre-wrap break-words font-mono overflow-y-auto max-h-[60vh]"
             style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
             {streamText}
             <span className="inline-block w-1.5 h-3 ml-0.5 animate-pulse" style={{ backgroundColor: 'var(--wr-amber)' }} />
           </div>
         ) : (
-          <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <div className="h-2 rounded w-3/4 mb-2 animate-pulse" style={{ backgroundColor: 'var(--wr-border)' }} />
             <div className="h-2 rounded w-1/2 mb-2 animate-pulse" style={{ backgroundColor: 'var(--wr-border)' }} />
             <div className="h-2 rounded w-2/3 animate-pulse" style={{ backgroundColor: 'var(--wr-border)' }} />
@@ -765,7 +765,7 @@ function SynthesisPanel({ synthesis, sessionId, onGenerate, generating, synthSta
             </SynthSectionCard>
           )}
           {!consensusText && !contestedText && !blindText && !mitigationText && !insightsText && (
-            <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+            <div data-ui="surface" className="rounded-2xl p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
               <ReactMarkdown
                 components={{
                   h2: ({ children }) => <h2 style={{ fontWeight: 700, color: 'var(--wr-amber)', marginBottom: 8, marginTop: 24, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}>{children}</h2>,
@@ -839,10 +839,10 @@ function SourcesPanel({ sources, agents, session, db, sessionId, onSourceAdded }
   if (sources.length === 0) {
     return (
       <div className="p-6 space-y-4">
-        <div className="rounded p-8 text-center" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-8 text-center" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <p className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>NO SOURCES CAPTURED YET</p>
           <p className="text-xs mt-2" style={{ color: 'var(--wr-text-muted)' }}>Sources appear automatically when agents use tools or cite publications. You can also add sources manually below.</p>
-          <button onClick={() => setShowAddForm(v => !v)} className="mt-4 text-xs font-mono font-bold px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)' }}>
+          <button data-ui="action" onClick={() => setShowAddForm(v => !v)} className="mt-4 text-xs font-mono font-bold px-3 py-1.5 rounded" style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)' }}>
             + Add Source
           </button>
         </div>
@@ -863,9 +863,9 @@ function SourcesPanel({ sources, agents, session, db, sessionId, onSourceAdded }
         </div>
         <div className="flex gap-2 items-center">
           {/* View toggle */}
-          <div className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
             {[{ id: 'sme', label: 'By SME' }, { id: 'tier', label: 'By Tier' }].map(v => (
-              <button key={v.id} onClick={() => setView(v.id)}
+              <button data-ui="action" key={v.id} onClick={() => setView(v.id)}
                 className="text-xs font-mono font-bold px-3 py-1.5 transition-colors"
                 style={{
                   backgroundColor: view === v.id ? 'var(--wr-amber)' : 'transparent',
@@ -875,10 +875,10 @@ function SourcesPanel({ sources, agents, session, db, sessionId, onSourceAdded }
               </button>
             ))}
           </div>
-          <button onClick={() => setShowAddForm(v => !v)} className="text-xs font-mono font-bold px-3 py-1.5 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
+          <button data-ui="action" onClick={() => setShowAddForm(v => !v)} className="text-xs font-mono font-bold px-3 py-1.5 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
             + Add
           </button>
-          <button onClick={handleValidate} disabled={validating} className="text-xs font-mono font-bold px-3 py-1.5 rounded flex items-center gap-1.5" style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)', opacity: validating ? 0.6 : 1 }}>
+          <button data-ui="action" onClick={handleValidate} disabled={validating} className="text-xs font-mono font-bold px-3 py-1.5 rounded flex items-center gap-1.5" style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)', opacity: validating ? 0.6 : 1 }}>
             {validating ? '…' : '⚡'} {validating ? 'Analysing…' : 'Run Validity Analysis'}
           </button>
         </div>
@@ -899,7 +899,7 @@ function SourcesPanel({ sources, agents, session, db, sessionId, onSourceAdded }
         if (!list.length) return null;
         const c = TIER_COLORS[tier];
         return (
-          <div key={tier} className="rounded overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
+          <div data-ui="surface" key={tier} className="rounded overflow-hidden" style={{ border: `1px solid ${c.border}` }}>
             <div className="px-4 py-2 flex items-center justify-between" style={{ backgroundColor: c.bg }}>
               <span className="text-xs font-bold font-mono tracking-widest" style={{ color: c.text }}>{TIER_LABELS[tier].toUpperCase()}</span>
               <span className="text-xs font-mono" style={{ color: c.text }}>{list.length}</span>
@@ -916,11 +916,11 @@ function SourcesPanel({ sources, agents, session, db, sessionId, onSourceAdded }
 
 function AddSourceForm({ url, title, setUrl, setTitle, onAdd, adding }) {
   return (
-    <div className="rounded p-4 space-y-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded p-4 space-y-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
       <p className="text-xs font-bold font-mono tracking-widest" style={{ color: 'var(--wr-text-muted)' }}>ADD FACILITATOR SOURCE</p>
       <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." className="w-full px-3 py-2 rounded text-sm font-mono" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)', outline: 'none' }} />
       <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title or description (optional)" className="w-full px-3 py-2 rounded text-sm" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)', outline: 'none' }} />
-      <button onClick={onAdd} disabled={adding || !url.trim()} className="px-4 py-1.5 rounded text-xs font-bold font-mono" style={{ backgroundColor: 'rgba(240,165,0,0.15)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)', opacity: adding || !url.trim() ? 0.5 : 1 }}>
+      <button data-ui="action" onClick={onAdd} disabled={adding || !url.trim()} className="px-4 py-1.5 rounded text-xs font-bold font-mono" style={{ backgroundColor: 'rgba(240,165,0,0.15)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)', opacity: adding || !url.trim() ? 0.5 : 1 }}>
         {adding ? 'Adding…' : 'Add Source'}
       </button>
     </div>
@@ -937,13 +937,13 @@ function SourceRow({ source, agent, tierColor }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {source.url ? (
-              <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium truncate hover:underline" style={{ color: 'var(--wr-text-primary)', maxWidth: 380 }}>
+              <a data-ui="reference" href={source.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium truncate hover:underline" style={{ color: 'var(--wr-text-primary)', maxWidth: 380 }}>
                 {label}
               </a>
             ) : (
               <span className="text-sm font-medium" style={{ color: 'var(--wr-text-primary)' }}>{label}</span>
             )}
-            <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: tierColor.bg, color: tierColor.text, border: `1px solid ${tierColor.border}` }}>{TIER_LABELS[source.credibility_tier || 'unverified']}</span>
+            <span data-ui="badge" className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: tierColor.bg, color: tierColor.text, border: `1px solid ${tierColor.border}` }}>{TIER_LABELS[source.credibility_tier || 'unverified']}</span>
             <span className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>{typeLabel}</span>
             {agent && <span className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>via {agent.name}</span>}
           </div>
@@ -953,7 +953,7 @@ function SourceRow({ source, agent, tierColor }) {
             </p>
           )}
           {source.content_snippet && (
-            <button onClick={() => setExpanded(v => !v)} className="text-xs mt-1" style={{ color: 'var(--wr-amber)' }}>
+            <button data-ui="action" onClick={() => setExpanded(v => !v)} className="text-xs mt-1" style={{ color: 'var(--wr-amber)' }}>
               {expanded ? 'Hide snippet ▲' : 'Show snippet ▼'}
             </button>
           )}
@@ -975,10 +975,10 @@ function ValidityReport({ report }) {
   const confColors = { HIGH: '#27AE60', MEDIUM: '#F0A500', LOW: '#C0392B' };
   const c = confColors[report.overall_confidence] || 'var(--wr-text-muted)';
   return (
-    <div className="rounded p-4 space-y-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded p-4 space-y-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>VALIDITY ANALYSIS</h3>
-        <span className="text-xs font-bold font-mono px-2 py-0.5 rounded" style={{ backgroundColor: `${c}22`, color: c, border: `1px solid ${c}44` }}>
+        <span data-ui="badge" className="text-xs font-bold font-mono px-2 py-0.5 rounded" style={{ backgroundColor: `${c}22`, color: c, border: `1px solid ${c}44` }}>
           {report.overall_confidence} CONFIDENCE
         </span>
       </div>
@@ -987,7 +987,7 @@ function ValidityReport({ report }) {
         <div>
           <p className="text-xs font-bold font-mono mb-2" style={{ color: '#C0392B' }}>CONTRADICTIONS ({report.contradictions.length})</p>
           {report.contradictions.map((c, i) => (
-            <div key={i} className="rounded p-3 mb-2" style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.2)' }}>
+            <div data-ui="surface" key={i} className="rounded p-3 mb-2" style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.2)' }}>
               <p className="text-xs font-medium" style={{ color: '#C0392B' }}>{c.source_a} vs {c.source_b}</p>
               <p className="text-xs mt-1" style={{ color: 'var(--wr-text-secondary)' }}>{c.explanation}</p>
             </div>
@@ -1041,7 +1041,7 @@ function SessionSettingsPanel({ session, sessionAgents, getAgent, onSaved }) {
 
   return (
     <div className="max-w-lg space-y-4">
-      <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <h3 className="text-xs font-bold tracking-widest mb-4 font-mono" style={{ color: 'var(--wr-text-muted)' }}>SESSION DETAILS</h3>
         <div className="space-y-4">
           <WrInput label="NAME" value={form.name} onChange={v => set('name', v)} placeholder="Session name" />
@@ -1056,7 +1056,7 @@ function SessionSettingsPanel({ session, sessionAgents, getAgent, onSaved }) {
         </div>
       </div>
 
-      <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <h3 className="text-xs font-bold tracking-widest mb-3 font-mono" style={{ color: 'var(--wr-text-muted)' }}>AGENTS ({sessionAgents.length})</h3>
         <div className="space-y-1">
           {sessionAgents.map(sa => {
@@ -1321,6 +1321,7 @@ const briefAllAgents = async () => {
           agent: { ...agent },
           scenarioContext: decisionFraming + (scenario?.context_document || ''),
           phaseFocus: session?.phase_focus || '',
+          ownAssessment: round === 2 ? sa.round1_assessment : '',
           othersAssessments: othersText,
           threatCatalog: threats,
           chainContext,
@@ -1432,6 +1433,7 @@ const briefAllAgents = async () => {
         agent: { ...agent },
         scenarioContext: decisionFraming + (scenario?.context_document || ''),
         phaseFocus: session?.phase_focus || '',
+        ownAssessment: round === 2 ? sa.round1_assessment : '',
         othersAssessments: othersText,
         threatCatalog: threats,
         chainContext,
@@ -1571,6 +1573,7 @@ const briefAllAgents = async () => {
         session: sess,
         sessionAgents: synthAgents,
         scenarioContext: synthContext,
+        decisionContext: decisionFraming,
         onToken: (_tok, full) => setSynthStreamText(full),
       });
 
@@ -1756,7 +1759,7 @@ const briefAllAgents = async () => {
             <p className="text-xs font-bold tracking-widest font-mono">CRITICAL ESCALATION</p>
             <p className="text-xs mt-0.5">{criticalToast} has assessed CRITICAL severity</p>
           </div>
-          <button onClick={() => setCriticalToast(null)} className="opacity-70 hover:opacity-100 flex-shrink-0">
+          <button aria-label="Close" data-ui="icon" onClick={() => setCriticalToast(null)} className="opacity-70 hover:opacity-100 flex-shrink-0">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -1764,22 +1767,22 @@ const briefAllAgents = async () => {
 
       {/* Top Bar */}
       <div className="border-b px-6 py-4 flex items-center gap-4" style={{ borderColor: 'var(--wr-border)', backgroundColor: 'var(--wr-bg-secondary)' }}>
-        <Link to="/sessions" className="text-xs flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> Sessions
+        <Link data-ui="action" to={`/session-tracker?session=${id}`} className="text-xs flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}>
+          <ArrowLeft className="w-3.5 h-3.5" /> Return to Session Tracker
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="font-bold" style={{ color: 'var(--wr-text-primary)' }}>{session.name}</h1>
-            <span className="text-xs px-2 py-0.5 rounded font-bold font-mono" style={{ backgroundColor: `${statusColor}22`, color: statusColor }}>
+            <span data-ui="badge" className="text-xs px-2 py-0.5 rounded font-bold font-mono" style={{ backgroundColor: `${statusColor}22`, color: statusColor }}>
               {session.status?.toUpperCase()}
             </span>
             {pinnedChains.length > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded font-mono" style={{ backgroundColor: 'rgba(46,134,171,0.15)', color: '#2E86AB' }}>
+              <span data-ui="badge" className="text-xs px-2 py-0.5 rounded font-mono" style={{ backgroundColor: 'rgba(46,134,171,0.15)', color: '#2E86AB' }}>
                 {pinnedChains.length} chain{pinnedChains.length !== 1 ? 's' : ''} pinned
               </span>
             )}
             {decisionMeta && (
-              <Link to={`/decisions/${decisionMeta.decision.id}`} className="text-xs px-2 py-0.5 rounded font-mono" style={{ backgroundColor: 'rgba(39,174,96,0.15)', color: '#27AE60', textDecoration: 'none' }}>
+              <Link data-ui="action" to={`/decisions/${decisionMeta.decision.id}`} className="text-xs px-2 py-0.5 rounded font-mono" style={{ backgroundColor: 'rgba(39,174,96,0.15)', color: '#27AE60', textDecoration: 'none' }}>
                 Decision Focus · {decisionMeta.option.name}
               </Link>
             )}
@@ -1788,19 +1791,15 @@ const briefAllAgents = async () => {
         </div>
         <div className="flex items-center gap-2">
           {session.mode === 'live' && (
-            <Link to={`/sessions/${id}/live`}>
-              <WrButton size="sm" style={{ backgroundColor: 'rgba(46,134,171,0.15)', borderColor: 'rgba(46,134,171,0.4)', color: '#2E86AB' }}>
+            <WrButton asChild size="sm" style={{ backgroundColor: 'rgba(46,134,171,0.15)', borderColor: 'rgba(46,134,171,0.4)', color: '#2E86AB' }}><Link data-ui="action" to={`/sessions/${id}/live`}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#2E86AB', display: 'inline-block', marginRight: 4 }} />
                 Enter Debate Room
-              </WrButton>
-            </Link>
+              </Link></WrButton>
           )}
           {session.mode === 'panel' && (
-            <Link to={`/sessions/${id}/panel`}>
-              <WrButton size="sm" style={{ backgroundColor: 'rgba(155,89,182,0.15)', borderColor: 'rgba(155,89,182,0.4)', color: '#9B59B6' }}>
+            <WrButton asChild size="sm" style={{ backgroundColor: 'rgba(155,89,182,0.15)', borderColor: 'rgba(155,89,182,0.4)', color: '#9B59B6' }}><Link data-ui="action" to={`/sessions/${id}/panel`}>
                 <Users className="w-3.5 h-3.5" /> Enter Panel Room
-              </WrButton>
-            </Link>
+              </Link></WrButton>
           )}
           {(tab === 'ROUND 1' || tab === 'ROUND 2') && (
             <>
@@ -1926,23 +1925,20 @@ const briefAllAgents = async () => {
             return { label: r2Done ? `Generate Round 2 for ${total - r2Done} remaining` : 'Generate Round 2', hint: 'Agents cross-examine each other’s Round 1 findings.', onClick: () => { setTab('ROUND 2'); generateRound(2); }, busy: generatingAll };
           if (!synthDone)
             return { label: 'Generate Synthesis', hint: 'Consensus, contested findings, blind spots and priority mitigations.', onClick: () => { setTab('SYNTHESIS'); generateSynthesis(); }, busy: generatingSynthesis };
-          if (threats.length === 0)
-            return { label: 'Extract threats', hint: 'Catalog what the panel surfaced.', onClick: () => setTab('THREATS') };
-          if (sessionChains.length > 0 && sessionMitigations.length === 0)
-            return { label: 'Break the kill chains', hint: 'Find the highest-leverage steps and generate mitigations.', onClick: () => setTab('KILL CHAINS') };
-          return { label: 'Simulate countermeasures', hint: 'Toggle mitigations and watch the risk score move.', to: `/simulator/${id}`, alt: { label: 'Generate report', to: `/reports?session=${id}` } };
+          return { label: 'Review in Session Tracker', hint: 'Review findings, follow-up, evidence and your conclusion in one dashboard.', to: '/session-tracker?session='+id };
+
         })();
 
         const NextButton = ({ action, primary = true }) => {
           const cls = 'inline-flex items-center gap-1.5';
           const content = <>{action.busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}{action.label}<ArrowRight className="w-3.5 h-3.5" /></>;
-          if (action.to) return <Link to={action.to}><WrButton size="sm" variant={primary ? undefined : 'secondary'} className={cls}>{content}</WrButton></Link>;
+          if (action.to) return <WrButton asChild size="sm" variant={primary ? undefined : 'secondary'} className={cls}><Link data-ui="action" to={action.to}>{content}</Link></WrButton>;
           return <WrButton size="sm" variant={primary ? undefined : 'secondary'} className={cls} onClick={action.onClick} disabled={action.busy}>{content}</WrButton>;
         };
 
         const SecondaryBtn = ({ icon: Icon, label, active, onClick, to, badge }) => {
           const inner = (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-mono transition-colors"
+            <span data-ui="badge" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-mono transition-colors"
               style={{
                 color: active ? 'var(--wr-amber)' : 'var(--wr-text-muted)',
                 backgroundColor: active ? 'rgba(240,165,0,0.12)' : 'transparent',
@@ -1953,8 +1949,8 @@ const briefAllAgents = async () => {
             </span>
           );
           return to
-            ? <Link to={to} style={{ textDecoration: 'none' }}>{inner}</Link>
-            : <button onClick={onClick}>{inner}</button>;
+            ? <Link data-ui="action" to={to} style={{ textDecoration: 'none' }}>{inner}</Link>
+            : <button data-ui="action" onClick={onClick}>{inner}</button>;
         };
 
         return (
@@ -1963,6 +1959,7 @@ const briefAllAgents = async () => {
               <AnalysisStages size="lg" current={current} done={done} badges={badges}
                 onNavigate={stage => setTab(STAGE_TAB[stage])} />
               <div className="flex items-center gap-1 flex-shrink-0">
+                <SecondaryBtn icon={BarChart2} label="Session tracker" to={`/session-tracker?session=${id}`} />
                 <SecondaryBtn icon={BookOpen} label="Sources" active={tab === 'SOURCES'} onClick={() => setTab('SOURCES')}
                   badge={sessionSources.length > 0 ? String(sessionSources.length) : null} />
                 <SecondaryBtn icon={BarChart2} label="Results" to={`/sessions/${id}/results`} />
@@ -1974,7 +1971,7 @@ const briefAllAgents = async () => {
             {current === 'findings' && (
               <div className="flex items-center gap-1 px-6 pt-4">
                 {[['KILL CHAINS', 'Kill chains', sessionChains.length, Link2], ['THREATS', 'Threats', threats.length, ShieldAlert]].map(([t, label, n, Icon]) => (
-                  <button key={t} onClick={() => setTab(t)}
+                  <button data-ui="action" key={t} onClick={() => setTab(t)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono font-bold tracking-wider transition-colors"
                     style={{
                       color: tab === t ? '#0D1B2A' : 'var(--wr-text-muted)',
@@ -1988,7 +1985,7 @@ const briefAllAgents = async () => {
             )}
 
             {/* Next step — the one thing to do now, for every stage of the lifecycle */}
-            <div className="mx-6 mt-4 flex items-center justify-between gap-4 rounded-lg px-4 py-3"
+            <div data-ui="surface" className="mx-6 mt-4 flex items-center justify-between gap-4 rounded-lg px-4 py-3"
               style={{ backgroundColor: 'rgba(240,165,0,0.06)', border: '1px solid rgba(240,165,0,0.3)' }}>
               <div className="min-w-0">
                 <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>
@@ -2009,7 +2006,7 @@ const briefAllAgents = async () => {
       <div className="p-6">
         {/* R-N10: durable run state — running elsewhere, or interrupted */}
         {run.status === 'alive' && run.record && !generatingAll && !generatingSynthesis && (
-          <div className="mb-5 rounded p-4 flex items-start gap-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(46,134,171,0.4)' }}>
+          <div data-ui="surface" className="mb-5 rounded p-4 flex items-start gap-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(46,134,171,0.4)' }}>
             <RefreshCw className="w-4 h-4 flex-shrink-0 mt-0.5 animate-spin" style={{ color: '#2E86AB' }} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#2E86AB' }}>RUNNING IN ANOTHER TAB</p>
@@ -2021,7 +2018,7 @@ const briefAllAgents = async () => {
           </div>
         )}
         {showInterrupted && (
-          <div className="mb-5 rounded p-4 flex items-start gap-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(214,137,16,0.45)' }}>
+          <div data-ui="surface" className="mb-5 rounded p-4 flex items-start gap-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid rgba(214,137,16,0.45)' }}>
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#D68910' }} />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#D68910' }}>INTERRUPTED RUN</p>
@@ -2044,9 +2041,9 @@ const briefAllAgents = async () => {
           </div>
         )}
         {run.warning && (
-          <div className="mb-5 rounded p-3 flex items-start gap-2 text-xs" style={{ backgroundColor: 'rgba(214,137,16,0.08)', border: '1px solid rgba(214,137,16,0.3)', color: '#D68910' }}>
+          <div data-ui="surface" className="mb-5 rounded p-3 flex items-start gap-2 text-xs" style={{ backgroundColor: 'rgba(214,137,16,0.08)', border: '1px solid rgba(214,137,16,0.3)', color: '#D68910' }}>
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" /><span className="flex-1">{run.warning}</span>
-            <button onClick={run.clearWarning}><X className="w-3.5 h-3.5" /></button>
+            <button aria-label="Close" data-ui="icon" onClick={run.clearWarning}><X className="w-3.5 h-3.5" /></button>
           </div>
         )}
 
@@ -2054,7 +2051,7 @@ const briefAllAgents = async () => {
           <>
             {/* Facilitator note — shown in Round 2 tab */}
             {tab === 'ROUND 2' && (
-              <div className="mb-4 rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="mb-4 rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold tracking-widest font-mono mb-2" style={{ color: 'var(--wr-text-muted)' }}>FACILITATOR NOTE</p>
                 <textarea
                   value={facilitatorNote}
@@ -2068,13 +2065,13 @@ const briefAllAgents = async () => {
             )}
 
             {genError && (
-              <div className="mb-4 rounded p-3 flex items-start gap-2" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)', color: '#C0392B' }}>
+              <div data-ui="surface" className="mb-4 rounded p-3 flex items-start gap-2" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)', color: '#C0392B' }}>
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs font-bold mb-0.5">Generation Failed</p>
                   <p className="text-xs">{genError}</p>
                 </div>
-                <button onClick={() => setGenError(null)} className="ml-auto text-xs opacity-60 hover:opacity-100">✕</button>
+                <button data-ui="action" onClick={() => setGenError(null)} className="ml-auto text-xs opacity-60 hover:opacity-100">✕</button>
               </div>
             )}
 
@@ -2086,7 +2083,7 @@ const briefAllAgents = async () => {
               const etaMs = avgMs != null ? avgMs * remaining : null;
               const activeAgent = getAgent(sessionAgents[progress.current - 1]?.agent_id);
               return (
-              <div className="mb-4 rounded p-3.5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="mb-4 rounded p-3.5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <ProcessingBar
                   label={`Generating ${tab} — agent ${progress.current} of ${progress.total}${activeAgent ? `: ${activeAgent.name}` : ''}`}
                   value={completed / progress.total}
@@ -2139,7 +2136,7 @@ const briefAllAgents = async () => {
                 <div className="flex items-center gap-3 mb-3">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
+                      <button data-ui="action"
                         onClick={() => { setShowReactions(!showReactions); if (!showReactions && reactions.length === 0) generateReactions(); }}
                         className="flex items-center gap-2 text-xs font-mono tracking-wider"
                         style={{ color: showReactions ? 'var(--wr-amber)' : 'var(--wr-text-muted)' }}
@@ -2153,7 +2150,7 @@ const briefAllAgents = async () => {
                   {showReactions && reactions.length > 0 && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button onClick={generateReactions} className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>
+                        <button data-ui="action" onClick={generateReactions} className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>
                           <RefreshCw className="w-3 h-3 inline mr-1" />refresh
                         </button>
                       </TooltipTrigger>
@@ -2162,7 +2159,7 @@ const briefAllAgents = async () => {
                   )}
                 </div>
                 {showReactions && (
-                  <div className="rounded p-4 space-y-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+                  <div data-ui="surface" className="rounded p-4 space-y-3" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                     {loadingReactions ? (
                       <div className="flex items-center gap-2 py-2">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: 'var(--wr-amber)' }} />
@@ -2264,7 +2261,7 @@ const briefAllAgents = async () => {
               ].map(a => {
                 const Icon = a.icon;
                 return (
-                  <Link key={a.title} to={a.to} className="flex items-start gap-3 rounded-lg p-4 transition-all hover:brightness-110"
+                  <Link data-ui="card" key={a.title} to={a.to} className="flex items-start gap-3 rounded-lg p-4 transition-all hover:brightness-110"
                     style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', textDecoration: 'none' }}>
                     <div className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: `${a.color}18`, border: `1px solid ${a.color}44` }}>
@@ -2287,7 +2284,7 @@ const briefAllAgents = async () => {
           <div className="space-y-6 max-w-4xl">
             <div>
               {threats.length === 0 ? (
-                <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="rounded-2xl p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                   <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>
                     No threats assigned to this scenario. Extract threats from session assessments below.
                   </p>
@@ -2297,7 +2294,7 @@ const briefAllAgents = async () => {
               )}
             </div>
 
-            <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+            <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
@@ -2339,7 +2336,7 @@ const briefAllAgents = async () => {
                       </p>
                       <div className="space-y-2 mb-4">
                         {extractedThreats.map((t, i) => (
-                          <div key={i}
+                          <div data-ui="surface" key={i}
                             className="flex items-start gap-3 rounded p-3 cursor-pointer transition-all"
                             style={{
                               backgroundColor: selectedThreats.has(i) ? 'rgba(240,165,0,0.08)' : 'var(--wr-bg-secondary)',

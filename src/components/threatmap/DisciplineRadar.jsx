@@ -154,7 +154,7 @@ export default function DisciplineRadar({ groups, axisLabel }) {
       <div className="grid gap-4" style={{ gridTemplateColumns: '3fr 2fr' }}>
 
         {/* ── Left: Radar chart ──────────────────────────────────────────── */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <p className="text-xs mb-1 font-mono" style={{ color: 'var(--wr-text-muted)' }}>
             {hasOverflow ? `TOP ${MAX_RADAR} BY SCORE` : `ALL ${axisLabel.toUpperCase()}S`}
           </p>
@@ -222,7 +222,7 @@ export default function DisciplineRadar({ groups, axisLabel }) {
         </div>
 
         {/* ── Right: Risk ranking ────────────────────────────────────────── */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }} />
             <span className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>RISK RANKING</span>
@@ -245,7 +245,7 @@ export default function DisciplineRadar({ groups, axisLabel }) {
               const total = SEV_ORDER.reduce((s, k) => s + d[k], 0);
               const pct   = v => total ? (v / total) * 100 : 0;
               return (
-                <div key={d.fullDiscipline} className="rounded p-2.5"
+                <div data-ui="surface" key={d.fullDiscipline} className="rounded p-2.5"
                   style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
 
                   {/* Rank · name · badge · score */}
@@ -259,7 +259,7 @@ export default function DisciplineRadar({ groups, axisLabel }) {
                       title={d.fullDiscipline}>
                       {d.fullDiscipline}
                     </span>
-                    <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+                    <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
                       style={{ backgroundColor: risk.bg, color: risk.color }}>
                       {risk.label}
                     </span>

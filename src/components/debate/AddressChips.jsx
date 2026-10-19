@@ -70,7 +70,7 @@ export default function AddressChips({ agents = [], colors = {}, targetAgentId, 
 
 function Chip({ active, color, activeBg, activeBorder, onClick, children }) {
   return (
-    <button
+    <button data-ui="action"
       onClick={onClick}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,

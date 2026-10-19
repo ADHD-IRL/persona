@@ -18,7 +18,7 @@ export default function ExposureCalculationModal({ points = [], avgExposure = 0,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }} onClick={onClose}>
-      <div className="w-[600px] max-w-full max-h-[88vh] flex flex-col rounded-lg overflow-hidden"
+      <div data-ui="surface" className="w-[600px] max-w-full max-h-[88vh] flex flex-col rounded-lg overflow-hidden"
         style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
@@ -31,20 +31,20 @@ export default function ExposureCalculationModal({ points = [], avgExposure = 0,
           </div>
           <div className="flex items-center gap-3">
             <span className="text-2xl font-bold font-mono" style={{ color: 'var(--wr-text-primary)' }}>{avgExposure}</span>
-            <button onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
+            <button aria-label="Close" data-ui="icon" onClick={onClose}><X className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} /></button>
           </div>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded-lg p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
             <p className="text-xs font-bold tracking-wide mb-1" style={{ color: 'var(--wr-text-primary)' }}>
               <span className="font-mono" style={{ color: 'var(--wr-amber)' }}>1. </span>Each SME's exposure
             </p>
             <p className="text-[11px] mb-2 leading-relaxed" style={{ color: 'var(--wr-text-muted)' }}>
               Multiply the SME's likelihood × impact (1–25), then shrink by their confidence. A hedged call barely counts; a confident one counts fully. Missing confidence counts as {Math.round(DEFAULT_CONF * 100)}%.
             </p>
-            <div className="rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+            <div data-ui="surface" className="rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
               <table className="w-full text-[11px]" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'var(--wr-bg-card)', color: 'var(--wr-text-muted)' }}>
@@ -72,7 +72,7 @@ export default function ExposureCalculationModal({ points = [], avgExposure = 0,
             </div>
           </div>
 
-          <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded-lg p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-bold tracking-wide" style={{ color: 'var(--wr-text-primary)' }}>

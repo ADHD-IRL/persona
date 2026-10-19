@@ -1,92 +1,36 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createContext, useState, useContext, useEffect } from 'react';
+import { apiRequest } from './apiClient.js';
 import { clearApiCredentials } from './apiCredentials.js';
-
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]           = useState(null);
-  const [session, setSession]     = useState(null);
+  const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  const acceptUser = next => { clearApiCredentials(); setUser(next); setError(null); };
   useEffect(() => {
-    let activeUserId = null;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const nextUserId = session?.user?.id ?? null;
-      if (nextUserId !== activeUserId || !nextUserId) clearApiCredentials();
-      activeUserId = nextUserId;
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const nextUserId = session?.user?.id ?? null;
-      if (nextUserId !== activeUserId || !nextUserId) clearApiCredentials();
-      activeUserId = nextUserId;
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
+    const controller = new AbortController();
+    setIsLoading(true);
+    apiRequest('/api/auth/session', { signal: controller.signal })
+      .then(data => { if (!controller.signal.aborted) { clearApiCredentials(); setUser(data.user); setError(null); } })
+      .catch(err => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setIsLoading(false); });
+    return () => controller.abort();
+  }, [attempt]);
   const signUp = async ({ email, password, displayName }) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: displayName } },
-    });
-    if (error) throw error;
-    return data;
+    const data = await apiRequest('/api/auth/signup', { method: 'POST', body: { email, password, displayName } });
+    acceptUser(data.user); return data;
   };
-
   const signIn = async ({ email, password }) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+    const data = await apiRequest('/api/auth/login', { method: 'POST', body: { email, password } });
+    acceptUser(data.user); return data;
   };
-
-  const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) throw error;
-  };
-
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    clearApiCredentials();
-  };
-
-  const resetPassword = async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) throw error;
-  };
-
-  return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      isLoading,
-      isAuthenticated: !!user,
-      signUp,
-      signIn,
-      signInWithGoogle,
-      signOut,
-      resetPassword,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const signOut = async () => { await apiRequest('/api/auth/logout', { method: 'POST' }); acceptUser(null); };
+  return <AuthContext.Provider value={{ user, session: user ? { user } : null, isLoading, isAuthenticated: !!user, error, retryAuth: () => setAttempt(value => value + 1), signUp, signIn, signOut }}>{children}</AuthContext.Provider>;
 };
-
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used inside AuthProvider');
+  return context;
 };

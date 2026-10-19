@@ -38,14 +38,14 @@ export default function LoginPage() {
           </span>
         </div>
 
-        <div className="rounded-lg p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded-lg p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <h1 className="text-base font-bold mb-1" style={{ color: 'var(--wr-text-primary)' }}>Sign in</h1>
           <p className="text-xs mb-5" style={{ color: 'var(--wr-text-muted)' }}>
-            Access your workspace and assessments.
+            Access your local analysis and assessments.
           </p>
 
           {error && (
-            <div className="flex items-start gap-2 mb-4 p-3 rounded text-xs" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)', color: '#C0392B' }}>
+            <div data-ui="surface" className="flex items-start gap-2 mb-4 p-3 rounded text-xs" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.3)', color: '#C0392B' }}>
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
               {error}
             </div>
@@ -70,7 +70,7 @@ export default function LoginPage() {
                 style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)', outline: 'none' }}
               />
             </div>
-            <button
+            <button data-ui="action"
               type="submit" disabled={loading}
               className="w-full py-2 rounded text-sm font-bold transition-opacity disabled:opacity-50"
               style={{ backgroundColor: 'var(--wr-amber)', color: '#0D1B2A' }}>
@@ -80,7 +80,7 @@ export default function LoginPage() {
 
           <p className="text-center text-xs mt-5" style={{ color: 'var(--wr-text-muted)' }}>
             No account?{' '}
-            <Link to="/signup" className="font-medium" style={{ color: 'var(--wr-amber)' }}>
+            <Link data-ui="action" to="/signup" className="font-medium" style={{ color: 'var(--wr-amber)' }}>
               Create one
             </Link>
           </p>

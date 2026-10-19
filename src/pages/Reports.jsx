@@ -931,7 +931,7 @@ export default function Reports() {
 
       {sessionParam && (
         <div className="px-6 pt-4">
-          <Link to={`/sessions/${sessionParam}`} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
+          <Link data-ui="action" to={`/sessions/${sessionParam}`} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
             style={{ color: 'var(--wr-amber)', backgroundColor: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.25)', textDecoration: 'none' }}>
             ← Back to session · pre-selected below
           </Link>
@@ -941,7 +941,7 @@ export default function Reports() {
       <div className="p-6 max-w-3xl space-y-6">
 
         {/* ── Executive Report ──────────────────────────────────────── */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', boxShadow: '0 0 20px rgba(240,165,0,0.08)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', boxShadow: '0 0 20px rgba(240,165,0,0.08)' }}>
           <div className="flex items-center gap-2 mb-1">
             <FileText className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
             <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-amber)' }}>EXECUTIVE REPORT</h2>
@@ -958,7 +958,7 @@ export default function Reports() {
           {selectedExecSession && (
             <div className="mt-4">
               {execSession && (
-                <div className="rounded p-3 mb-4 grid grid-cols-3 gap-3" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="rounded p-3 mb-4 grid grid-cols-3 gap-3" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                   <div>
                     <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>Scenario</p>
                     <p className="text-xs font-semibold" style={{ color: 'var(--wr-text-secondary)' }}>{execScenario?.name || '—'}</p>
@@ -981,7 +981,7 @@ export default function Reports() {
         </div>
 
         {/* ── Agent Roster Report ───────────────────────────────────── */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <div className="flex items-center gap-2 mb-1">
             <Bot className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
             <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>AGENT ROSTER REPORT</h2>
@@ -1029,12 +1029,12 @@ export default function Reports() {
                   SELECT AGENTS <span style={{ color: 'var(--wr-text-muted)' }}>({selectedAgentIds.size > 0 ? `${selectedAgentIds.size} selected` : `all ${agentFiltered.length} filtered`})</span>
                 </p>
                 <div className="flex gap-2">
-                  <button onClick={selectAllAgents} className="text-xs" style={{ color: 'var(--wr-amber)' }}>Select All</button>
+                  <button data-ui="action" onClick={selectAllAgents} className="text-xs" style={{ color: 'var(--wr-amber)' }}>Select All</button>
                   <span style={{ color: 'var(--wr-border)' }}>|</span>
-                  <button onClick={clearAgentSelection} className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>Clear</button>
+                  <button data-ui="action" onClick={clearAgentSelection} className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>Clear</button>
                 </div>
               </div>
-              <div className="rounded p-2 max-h-48 overflow-y-auto" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-2 max-h-48 overflow-y-auto" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                 {agentFiltered.map(a => {
                   const dom = domains.find(d => d.id === a.domain_id);
                   const checked = selectedAgentIds.size === 0 || selectedAgentIds.has(a.id);
@@ -1054,7 +1054,7 @@ export default function Reports() {
                         className="accent-amber-500" />
                       <span className="text-xs font-medium flex-1" style={{ color: 'var(--wr-text-primary)' }}>{a.name}</span>
                       <span className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{a.discipline}</span>
-                      {dom && <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: `${dom.color}22`, color: dom.color }}>{dom.name}</span>}
+                      {dom && <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: `${dom.color}22`, color: dom.color }}>{dom.name}</span>}
                     </label>
                   );
                 })}
@@ -1072,7 +1072,7 @@ export default function Reports() {
         </div>
 
         {/* ── Scenario Brief Export ─────────────────────────────────── */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <div className="flex items-center gap-2 mb-4">
             <Target className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
             <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>SCENARIO BRIEF EXPORT</h2>
@@ -1087,7 +1087,7 @@ export default function Reports() {
 
           {scenarioForExport && (
             <div className="mt-4">
-              <div className="rounded p-3 mb-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-3 mb-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold mb-1" style={{ color: 'var(--wr-text-secondary)' }}>{scenarioForExport.name}</p>
                 {scenarioForExport.description && <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{scenarioForExport.description}</p>}
                 <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
@@ -1107,7 +1107,7 @@ export default function Reports() {
         </div>
 
         {/* ── Chain Report Export ───────────────────────────────────── */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <div className="flex items-center gap-2 mb-4">
             <Link2 className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
             <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>CHAIN REPORT EXPORT</h2>
@@ -1122,7 +1122,7 @@ export default function Reports() {
 
           {chainForExport && (
             <div className="mt-4">
-              <div className="rounded p-3 mb-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-3 mb-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold mb-1" style={{ color: 'var(--wr-text-secondary)' }}>{chainForExport.name}</p>
                 {chainForExport.description && <p className="text-xs mb-1" style={{ color: 'var(--wr-text-muted)' }}>{chainForExport.description}</p>}
                 <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{chainForExport.steps?.length || 0} steps · {chainForExport.is_ai_generated ? 'AI Generated' : 'Manual'}</p>
@@ -1135,7 +1135,7 @@ export default function Reports() {
         </div>
 
         {/* ── Session Report Builder ────────────────────────────────── */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
             <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>SESSION REPORT BUILDER</h2>

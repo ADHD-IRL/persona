@@ -48,7 +48,7 @@ export default function CoverageGapPanel({ groups, axisLabel, onSelect }) {
     const band = riskBand(g.score);
     return (
       <div className="flex items-center justify-between gap-2">
-        <button
+        <button data-ui="action"
           className="text-xs truncate flex-1 text-left hover:underline"
           title={g.name}
           style={{ color: 'var(--wr-text-secondary)' }}
@@ -58,7 +58,7 @@ export default function CoverageGapPanel({ groups, axisLabel, onSelect }) {
         </button>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {g.counts.CRITICAL > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
+            <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded font-mono font-bold"
               style={{ backgroundColor: hexToRgba(SEV_COLORS.CRITICAL, 0.2), color: SEV_COLORS.CRITICAL }}>
               {g.counts.CRITICAL} CRIT
             </span>
@@ -68,7 +68,7 @@ export default function CoverageGapPanel({ groups, axisLabel, onSelect }) {
             <Users className="w-3 h-3" /> {g.agents.length}
           </span>
           {showGenerate && (
-            <button
+            <button data-ui="action"
               onClick={() => generateSme(g)}
               className="text-xs px-1.5 py-0.5 rounded flex items-center gap-1 font-mono font-bold"
               style={{ backgroundColor: 'rgba(240,165,0,0.12)', color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)' }}
@@ -83,14 +83,14 @@ export default function CoverageGapPanel({ groups, axisLabel, onSelect }) {
   };
 
   return (
-    <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
       <div className="flex items-center gap-2 mb-1">
         <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
           PANEL COVERAGE — THREAT LOAD vs AGENT BENCH
         </h2>
         <div className="relative group">
           <Info className="w-3.5 h-3.5 cursor-help" style={{ color: 'var(--wr-text-muted)' }} />
-          <div
+          <div data-ui="surface"
             className="absolute left-5 top-0 z-20 rounded px-3 py-2 text-xs font-mono hidden group-hover:block pointer-events-none"
             style={{
               backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)',
@@ -111,7 +111,7 @@ export default function CoverageGapPanel({ groups, axisLabel, onSelect }) {
 
       <div className="grid grid-cols-3 gap-4">
         {/* Coverage gaps */}
-        <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid rgba(192,57,43,0.3)' }}>
+        <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid rgba(192,57,43,0.3)' }}>
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: SEV_COLORS.CRITICAL }} />
             <span className="text-xs font-bold font-mono" style={{ color: SEV_COLORS.CRITICAL }}>COVERAGE GAPS</span>
@@ -129,7 +129,7 @@ export default function CoverageGapPanel({ groups, axisLabel, onSelect }) {
         </div>
 
         {/* Stretched */}
-        <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid rgba(214,137,16,0.3)' }}>
+        <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid rgba(214,137,16,0.3)' }}>
           <div className="flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 flex-shrink-0" style={{ color: SEV_COLORS.HIGH }} />
             <span className="text-xs font-bold font-mono" style={{ color: SEV_COLORS.HIGH }}>STRETCHED BENCH</span>
@@ -147,7 +147,7 @@ export default function CoverageGapPanel({ groups, axisLabel, onSelect }) {
         </div>
 
         {/* Covered + idle */}
-        <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid rgba(39,174,96,0.3)' }}>
+        <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid rgba(39,174,96,0.3)' }}>
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle className="w-4 h-4 flex-shrink-0" style={{ color: SEV_COLORS.LOW }} />
             <span className="text-xs font-bold font-mono" style={{ color: SEV_COLORS.LOW }}>COVERED</span>

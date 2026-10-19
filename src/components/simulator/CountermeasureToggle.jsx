@@ -28,11 +28,11 @@ export default function CountermeasureToggle({ cm, applied, onToggle, totalHighS
           {cm.text}
         </p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <span className="text-xs font-bold font-mono px-1.5 py-0.5 rounded"
+          <span data-ui="badge" className="text-xs font-bold font-mono px-1.5 py-0.5 rounded"
             style={{ color: levColor, backgroundColor: `${levColor}15`, border: `1px solid ${levColor}30` }}>
             {cm.leverage}
           </span>
-          <span className="text-xs font-mono px-1.5 py-0.5 rounded"
+          <span data-ui="badge" className="text-xs font-mono px-1.5 py-0.5 rounded"
             style={{ color: difColor, backgroundColor: `${difColor}10` }}>
             {cm.difficulty}
           </span>

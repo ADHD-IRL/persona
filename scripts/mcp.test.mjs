@@ -8,7 +8,7 @@ import http from 'node:http';
 
 import { KEY_PREFIX, hashKey, generateKey, parseKeyRing, resolveBearer } from '../api/_mcp/auth.js';
 import { createRateLimiter } from '../api/_mcp/ratelimit.js';
-import { createRepo, buildSearchOr } from '../api/_mcp/repo.js';
+import { createRepo, buildSearchOr } from './fixtures/mcpLegacyRepo.js';
 import { buildTools } from '../api/_mcp/tools.js';
 import { createHttpHandler } from '../api/_mcp/server.js';
 import { EXPORT_FORMAT, EXPORT_VERSION } from '../src/lib/agentExport.js';

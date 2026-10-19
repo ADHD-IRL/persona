@@ -1,0 +1,64 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PGlite} from '@electric-sql/pglite';
+import {migrate} from '../server/migrate.js';
+import {workspaceDb} from '../server/analysisService.js';
+import {createVerificationService} from '../server/verificationService.js';
+import {sourcePassages,validateVerification,validateAnalystReview,verificationSignature,exportReviewExamples} from '../src/lib/verification.js';
+import {approvedSourceUrl,publicAddress} from '../server/verificationSources.js';
+const finding={name:'Recovery',description:'Recovery took 90 minutes.'};
+const source={id:'report',passage_id:'report@0',title:'Test results',text:'Recovery took 90 minutes in the test.',kind:'document',quality:'primary',origin:'test-run-1',published_at:'2026-10-16',version:'version1'};
+const claim={text:'Recovery took 90 minutes.',finding_quote:'Recovery took 90 minutes.',type:'fact',rationale:'Direct test result.',next_check:'Repeat the test and record measured recovery duration.',evidence:[{passage_id:'report@0',quote:'Recovery took 90 minutes',relationship:'supports',explanation:'Directly reports duration.'}]};
+const raw=claims=>({coverage_complete:true,claims});
+const now=Date.parse('2026-10-17');
+test('verification derives evidence strength without model confidence',()=>{const result=validateVerification(raw([{...claim,confidence:100}]),finding,[source],now);assert.equal(result.rating,'Strong support');assert.equal(result.claims[0].verdict,'supports');});
+test('unknown provenance and old dates cannot produce strong support',()=>{for(const patch of [{quality:'unknown'},{published_at:null},{published_at:'2020-01-01'},{origin:'unknown'}])assert.equal(validateVerification(raw([claim]),finding,[{...source,...patch}],now).rating,'Partial support');});
+test('model and scenario text never constitute independent support',()=>{for(const kind of ['model','scenario'])assert.equal(validateVerification(raw([claim]),finding,[{...source,kind}],now).rating,'Unverified');});
+test('predictions remain inference even with a supporting quote',()=>assert.equal(validateVerification(raw([{...claim,type:'prediction'}]),finding,[source],now).rating,'Inference'));
+test('opposing evidence produces contested rather than an averaged score',()=>{const opposing={...source,id:'other',passage_id:'other@0',text:'Recovery took 120 minutes.'};const c={...claim,evidence:[...claim.evidence,{passage_id:'other@0',quote:'Recovery took 120 minutes',relationship:'contradicts',explanation:'Contradicts the claimed duration.'}]};assert.equal(validateVerification(raw([c]),finding,[source,opposing],now).rating,'Contested');});
+test('fabricated quotes, references and finding spans fail closed',()=>{for(const patch of [{finding_quote:'invented'},{evidence:[{...claim.evidence[0],quote:'fabricated quote'}]},{evidence:[{...claim.evidence[0],passage_id:'unknown'}]}])assert.throws(()=>validateVerification(raw([{...claim,...patch}]),finding,[source],now));assert.throws(()=>validateVerification({coverage_complete:false,claims:[claim]},finding,[source]));});
+test('retrieval retains offsets, deduplicates copied passages and exposes its limits',()=>{const sources=[source,{...source,id:'copy'},...Array.from({length:30},(_,i)=>({...source,id:'s'+i,text:'Recovery result '+i}))];const result=sourcePassages(sources,'Recovery');assert.equal(result.selected.length,24);assert.equal(result.limited,true);assert.equal(result.selected.filter(s=>s.text===source.text).length,1);for(const p of result.selected)assert.equal(p.text,sources.find(s=>s.id===p.id).text.slice(p.offset,p.offset+2200));});
+test('freshness signature reacts to finding, source version, and model',()=>{const first=verificationSignature(finding,[source],'m');assert.notEqual(first,verificationSignature({...finding,description:'Changed'},[source],'m'));assert.notEqual(first,verificationSignature(finding,[{...source,version:'v2'}],'m'));assert.notEqual(first,verificationSignature(finding,[source],'other'));});
+test('reviewed examples require analyst labels, rationale and exact evidence',()=>{const run={...validateVerification(raw([claim]),finding,[source],now),sources:[source],id:'run',session_id:'session',scenario_id:'scenario'};const input={judgments:[{claim_id:'claim-1',label:'supports',rationale:'I checked the test record.',evidence:[{passage_id:source.passage_id,quote:'Recovery took 90 minutes'}]}]};const judgments=validateAnalystReview(input,run);assert.equal(exportReviewExamples(run,{id:'review',judgments})[0].review_status,'single_analyst_review');assert.throws(()=>validateAnalystReview({judgments:[]},run));assert.throws(()=>validateAnalystReview({judgments:[{...input.judgments[0],evidence:[]}]},run));});
+test('public retrieval rejects private addresses, credentials, other hosts and ports',()=>{for(const url of ['http://www.cisa.gov','https://localhost','https://127.0.0.1','https://www.cisa.gov.evil.example','https://user@www.cisa.gov','https://www.cisa.gov:444'])assert.throws(()=>approvedSourceUrl(url));assert.equal(approvedSourceUrl('https://www.cisa.gov/news').hostname,'www.cisa.gov');for(const ip of ['127.0.0.1','10.0.0.1','169.254.169.254','192.168.1.2','::1','::ffff:127.0.0.1','fc00::1'])assert.equal(publicAddress(ip),false);assert.equal(publicAddress('8.8.8.8'),true);});
+function poolFor(engine){let queue=Promise.resolve();return {async connect(){const previous=queue;let release;queue=new Promise(r=>{release=r;});await previous;return {query:(sql,args)=>args===undefined&&sql.includes(';')?engine.exec(sql).then(r=>r.at(-1)):engine.query(sql,args),release};},async query(sql,args){const c=await this.connect();try{return await c.query(sql,args);}finally{c.release();}}};}
+test('verification API enforces session/workspace/role scope, caching, history, reviews and changed evidence',{timeout:60000},async()=>{
+ const engine=new PGlite(),pool=poolFor(engine);
+ try{
+  await migrate(pool);
+  const user=(await pool.query("INSERT INTO local_users(email,password_hash) VALUES ('review@test','unused') RETURNING id")).rows[0];
+  const viewer=(await pool.query("INSERT INTO local_users(email,password_hash) VALUES ('viewer@test','unused') RETURNING id")).rows[0];
+  await pool.query("INSERT INTO profiles(id,display_name) VALUES ($1,'Analyst'),($2,'Viewer')",[user.id,viewer.id]);
+  const ws=(await pool.query("INSERT INTO workspaces(name,owner_id) VALUES ('Review',$1) RETURNING id",[user.id])).rows[0];
+  await pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES ($1,$2,'admin'),($1,$3,'viewer')",[ws.id,user.id,viewer.id]);
+  const db=await workspaceDb(pool,user.id,ws.id),scenario=await db.Scenario.create({name:'Recovery',context_document:'Exercise'}),session=await db.Session.create({name:'Review',scenario_id:scenario.id,status:'complete'}),other=await db.Session.create({name:'Other',scenario_id:scenario.id,status:'complete'});
+  const threat=await db.Threat.create({...finding,session_id:session.id,scenario_id:scenario.id}),foreign=await db.Threat.create({...finding,session_id:other.id,scenario_id:scenario.id});
+  let calls=0;const provider={config:{defaultModel:'test-model'},complete:async input=>{calls++;const passages=JSON.parse(input.messages[0].content.split('SOURCE PASSAGES:\n')[1]);const p=passages.find(p=>p.kind==='document');return {content:[{type:'text',text:JSON.stringify(raw([{...claim,evidence:[{...claim.evidence[0],passage_id:p.passage_id}]}]))}]};}};
+  const route=createVerificationService(pool,provider);
+  const call=(op='',input=null,actor=user,sessionId=session.id)=>route({method:input?'POST':'GET'},actor,new URL('http://local/api/verification/'+sessionId+(op?'/'+op:'')+'?workspace_id='+ws.id),async()=>input);
+  const sourceInput={title:'Test report',text:source.text,quality:'primary',origin:'test-run',published_at:new Date().toISOString().slice(0,10)};
+  await assert.rejects(call('sources',sourceInput,viewer),e=>e.status===403);
+  await call('sources',sourceInput);
+  await assert.rejects(call('check',{kind:'Threat',id:foreign.id}),e=>e.status===404);
+  const first=(await call('check',{kind:'Threat',id:threat.id})).data;assert.equal(first.status,'complete');assert.equal(first.rating,'Strong support');
+  await call('check',{kind:'Threat',id:threat.id});assert.equal(calls,1);
+  const reviewInput={kind:'Threat',id:threat.id,run_id:first.id,judgments:[{claim_id:'claim-1',label:'supports',rationale:'Confirmed against test report.',evidence:[{passage_id:first.sources.find(s=>s.kind==='document').passage_id,quote:'Recovery took 90 minutes'}]}]};
+  await call('review',reviewInput);assert.equal((await call('export')).data.examples.length,1);
+  assert.equal((await call('',null,viewer)).data.findings.length,1);
+  await assert.rejects(call('check',{kind:'Threat',id:threat.id},viewer),e=>e.status===403);
+  await db.Threat.update(threat.id,{description:'Recovery took 90 minutes. More evidence needed.'});
+  assert.equal((await call()).data.findings[0].stale,true);
+  await assert.rejects(call('review',reviewInput),e=>e.status===409);
+  await call('check',{kind:'Threat',id:threat.id});assert.equal(calls,2);assert.equal((await call()).data.findings[0].history.length,2);
+  await assert.rejects(route({method:'GET'},user,new URL('http://local/api/verification/'+other.id+'/history?'+new URLSearchParams({workspace_id:ws.id,kind:'Threat',id:threat.id,run_id:first.id})),async()=>({})),e=>e.status===404);
+  const ws2=(await pool.query("INSERT INTO workspaces(name,owner_id) VALUES ('Other workspace',$1) RETURNING id",[user.id])).rows[0];
+  await assert.rejects(route({method:'GET'},user,new URL('http://local/api/verification/'+session.id+'?workspace_id='+ws2.id),async()=>({})),e=>e.status===403);
+ }finally{await engine.close();}
+});
+
+import {evaluateExamples} from './evaluate-verification.mjs';
+test('evaluation counts missing predictions and false support without a truth score',()=>{
+ const result=evaluateExamples([{id:'a',label:'supports'},{id:'b',label:'contradicts'},{id:'c',label:'insufficient'}],[{id:'a',label:'supports'},{id:'b',label:'supports'}]);
+ assert.equal(result.prediction_coverage,2/3);assert.equal(result.accuracy,1/3);assert.equal(result.false_support_fraction,0.5);assert.equal(result.per_label.insufficient.fn,1);
+ assert.throws(()=>evaluateExamples([{id:'a',label:'supports'}],[{id:'foreign',label:'supports'}]));
+});

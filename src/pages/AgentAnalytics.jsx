@@ -55,7 +55,7 @@ function getBias(counts) {
 }
 
 const BIAS_RISK_NOTES = {
-  'Doom-Sayer':  'Risk model impact: This agent\'s critical findings should be cross-checked — over-flagging can desensitize the team to genuine emergencies.',
+  'Doom-Sayer':  'Risk model impact: This agent\'s critical findings should be cross-checked — over-flagging can desensitize the analyst to genuine emergencies.',
   'Optimist':    'Risk model impact: Threats rated LOW by this agent may deserve a second look — systematic under-rating can create false confidence.',
   'Pessimist':   'Risk model impact: HIGH/CRITICAL findings from this agent carry less discriminating power — use absolute counts alongside percentages.',
   'Minimizer':   'Risk model impact: LOW/MEDIUM findings dominate this agent\'s output. Verify that genuine high-risk threats aren\'t being downgraded.',
@@ -75,7 +75,7 @@ function AgentBiasCard({ agentStats, rank }) {
   }));
 
   return (
-    <div className="rounded overflow-hidden" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded overflow-hidden" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
       <div className="h-1.5" style={{ backgroundColor: domain?.color || '#F0A500' }} />
       <div className="p-4">
 
@@ -94,7 +94,7 @@ function AgentBiasCard({ agentStats, rank }) {
             )}
           </div>
           {total > 0 && bias && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded flex-shrink-0"
+            <div data-ui="surface" className="flex items-center gap-1 px-2 py-1 rounded flex-shrink-0"
               style={{ backgroundColor: `${bias.color}18`, color: bias.color, border: `1px solid ${bias.color}40` }}>
               <BiasIcon className="w-3 h-3" />
               <span className="text-xs font-bold font-mono">{bias.label}</span>
@@ -148,7 +148,7 @@ function AgentBiasCard({ agentStats, rank }) {
             )}
 
             {/* Expand toggle */}
-            <button
+            <button data-ui="action"
               onClick={() => setExpanded(v => !v)}
               className="w-full flex items-center justify-center gap-1.5 mt-3 py-1.5 rounded text-xs font-mono"
               style={{ border: '1px solid var(--wr-border)', color: 'var(--wr-text-muted)', backgroundColor: 'transparent' }}
@@ -159,7 +159,7 @@ function AgentBiasCard({ agentStats, rank }) {
 
             {/* Expanded: risk notes */}
             {expanded && bias && (
-              <div className="mt-3 p-2.5 rounded text-xs leading-snug" style={{ backgroundColor: `${bias.color}0d`, border: `1px solid ${bias.color}30` }}>
+              <div data-ui="surface" className="mt-3 p-2.5 rounded text-xs leading-snug" style={{ backgroundColor: `${bias.color}0d`, border: `1px solid ${bias.color}30` }}>
                 <p style={{ color: 'var(--wr-text-secondary)' }}>{BIAS_RISK_NOTES[bias.label]}</p>
                 <div className="mt-2 pt-2 border-t" style={{ borderColor: `${bias.color}25` }}>
                   <p className="font-bold font-mono mb-1" style={{ color: 'var(--wr-text-muted)' }}>CALIBRATION GUIDANCE</p>
@@ -363,7 +363,7 @@ export default function AgentAnalytics() {
       <div className="flex items-center justify-between border-b" style={{ borderColor: 'var(--wr-border)', backgroundColor: 'var(--wr-bg-secondary)' }}>
         <div className="flex">
           {TABS.map(t => (
-            <button key={t} onClick={() => handleTabChange(t)}
+            <button data-ui="action" key={t} onClick={() => handleTabChange(t)}
               className="px-6 py-3 text-xs font-bold tracking-widest font-mono transition-colors"
               style={{
                 color: tab === t ? 'var(--wr-amber)' : 'var(--wr-text-muted)',
@@ -398,7 +398,7 @@ export default function AgentAnalytics() {
             )}
 
             {/* Roster header: domain filter + sort columns */}
-            <div className="rounded-t overflow-hidden" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-secondary)' }}>
+            <div data-ui="surface" className="rounded-t overflow-hidden" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-secondary)' }}>
               {/* Filter bar */}
               <div className="flex items-center gap-3 px-3 py-2 border-b" style={{ borderColor: 'var(--wr-border)' }}>
                 <span className="text-xs font-mono font-bold" style={{ color: 'var(--wr-text-muted)' }}>
@@ -424,13 +424,13 @@ export default function AgentAnalytics() {
                 <div style={{ width: 4, flexShrink: 0 }} />
                 {/* identity */}
                 <div style={{ flex: '1 1 210px', minWidth: 0, paddingLeft: 18 }}>
-                  <button onClick={() => setSort('name')}
+                  <button data-ui="action" onClick={() => setSort('name')}
                     style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: sort === 'name' ? 'var(--wr-amber)' : 'var(--wr-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                     AGENT / DISCIPLINE {sort === 'name' ? '↓' : ''}
                   </button>
                 </div>
                 {/* Score */}
-                <button onClick={() => setSort('score')}
+                <button data-ui="action" onClick={() => setSort('score')}
                   style={{ width: 62, flexShrink: 0, textAlign: 'center', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: sort === 'score' ? 'var(--wr-amber)' : 'var(--wr-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                   SCORE {sort === 'score' ? '↓' : ''}
                 </button>
@@ -440,13 +440,13 @@ export default function AgentAnalytics() {
                   { key: 'crithigh',    label: 'CRIT/H' },
                   { key: 'consistency', label: 'STABLE' },
                 ].map(col => (
-                  <button key={col.key} onClick={() => setSort(col.key)}
+                  <button data-ui="action" key={col.key} onClick={() => setSort(col.key)}
                     style={{ width: 86, flexShrink: 0, textAlign: 'left', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: sort === col.key ? 'var(--wr-amber)' : 'var(--wr-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                     {col.label} {sort === col.key ? '↓' : ''}
                   </button>
                 ))}
                 {/* Sessions */}
-                <button onClick={() => setSort('total')} style={{ width: 44, flexShrink: 0, textAlign: 'center', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: sort === 'total' ? 'var(--wr-amber)' : 'var(--wr-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <button data-ui="action" onClick={() => setSort('total')} style={{ width: 44, flexShrink: 0, textAlign: 'center', fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: sort === 'total' ? 'var(--wr-amber)' : 'var(--wr-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                   SESS {sort === 'total' ? '↓' : ''}
                 </button>
                 {/* Signal legend */}
@@ -466,7 +466,7 @@ export default function AgentAnalytics() {
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-12 rounded" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="text-center py-12 rounded" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-sm" style={{ color: 'var(--wr-text-muted)' }}>No agents match the current filters.</p>
               </div>
             ) : (() => {
@@ -502,7 +502,7 @@ export default function AgentAnalytics() {
           <>
             {/* Summary cards */}
             <div className="grid grid-cols-4 gap-4">
-              <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <div className="flex items-center gap-1 mb-1">
                   <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>TOTAL ASSESSMENTS</p>
                 </div>
@@ -510,18 +510,18 @@ export default function AgentAnalytics() {
                 <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--wr-text-muted)' }}>{withData.length} active agents contributing</p>
               </div>
 
-              <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <div className="flex items-center gap-1 mb-1">
                   <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>AVG CRIT/HIGH RATE</p>
                   <InfoTip>Average share of assessments rated CRITICAL or HIGH across all active agents. Calibrate your risk model if this is very high or very low.</InfoTip>
                 </div>
                 <p className="text-3xl font-bold font-mono" style={{ color: avgEscalation >= 60 ? '#C0392B' : avgEscalation >= 35 ? '#D68910' : '#27AE60' }}>{avgEscalation}%</p>
                 <p className="text-xs mt-1 leading-snug" style={{ color: 'var(--wr-text-muted)' }}>
-                  {avgEscalation >= 60 ? 'Team skews pessimistic' : avgEscalation >= 35 ? 'Moderate escalation tendency' : 'Team skews optimistic'}
+                  {avgEscalation >= 60 ? 'SME panel skews pessimistic' : avgEscalation >= 35 ? 'Moderate escalation tendency' : 'SME panel skews optimistic'}
                 </p>
               </div>
 
-              <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <div className="flex items-center gap-1 mb-1">
                   <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#C0392B' }}>MOST PESSIMISTIC</p>
                   <InfoTip align="left">Agent with the highest share of CRIT/HIGH ratings. Their findings may carry a systematic upward bias.</InfoTip>
@@ -536,7 +536,7 @@ export default function AgentAnalytics() {
                 ) : <p className="text-xs mt-2" style={{ color: 'var(--wr-text-muted)' }}>No data yet</p>}
               </div>
 
-              <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <div className="flex items-center gap-1 mb-1">
                   <p className="text-xs font-bold tracking-widest font-mono" style={{ color: '#27AE60' }}>MOST OPTIMISTIC</p>
                   <InfoTip align="left">Agent with the lowest share of CRIT/HIGH ratings. Check if genuine high-risk threats are being under-rated in their assessments.</InfoTip>
@@ -553,7 +553,7 @@ export default function AgentAnalytics() {
             </div>
 
             {/* Severity breakdown chart */}
-            <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+            <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
               <div className="flex items-center gap-1 mb-0.5">
                 <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>SEVERITY BREAKDOWN BY AGENT</h2>
                 <InfoTip>Stacked bars show the raw count of each severity level per agent. Taller bars = more assessments. Red-heavy bars = pessimistic pattern. Hover an agent for full name.</InfoTip>
@@ -574,9 +574,9 @@ export default function AgentAnalytics() {
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono font-bold" style={{ color: 'var(--wr-text-muted)' }}>SORT</span>
-                <div className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
                   {BIAS_SORTS.map(o => (
-                    <button key={o.value} onClick={() => setSort(o.value)}
+                    <button data-ui="action" key={o.value} onClick={() => setSort(o.value)}
                       className="px-3 py-1.5 text-xs font-medium transition-colors"
                       style={{ backgroundColor: sort === o.value ? 'var(--wr-amber)' : 'transparent', color: sort === o.value ? '#0D1B2A' : 'var(--wr-text-secondary)' }}>
                       {o.label}
@@ -601,7 +601,7 @@ export default function AgentAnalytics() {
                 {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-52 rounded animate-pulse" style={{ backgroundColor: 'var(--wr-bg-card)' }} />)}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-16 rounded" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+              <div data-ui="surface" className="text-center py-16 rounded" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-sm" style={{ color: 'var(--wr-text-muted)' }}>No agents match the current filters.</p>
               </div>
             ) : (

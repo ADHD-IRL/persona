@@ -1,3 +1,6 @@
+import SessionEntry from '@/components/session/SessionEntry';
+import SessionTracker from './pages/SessionTracker';
+import RiskActions from './pages/RiskActions';
 import { Toaster } from "@/components/ui/toaster"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -5,7 +8,6 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import { supabaseMisconfigured } from '@/lib/supabase';
 import { WorkspaceProvider, useWorkspace } from '@/lib/WorkspaceContext';
 import AppLayout from '@/components/layout/AppLayout';
 import SignupPage from '@/pages/SignupPage';
@@ -19,6 +21,7 @@ import Sessions from '@/pages/Sessions';
 import NewSession from '@/pages/NewSession';
 import SessionWorkspace from '@/pages/SessionWorkspace';
 import Reports from '@/pages/Reports';
+import Analysis from '@/pages/Analysis';
 import UserGuide from '@/pages/UserGuide';
 import PromptLibrary from '@/pages/PromptLibrary';
 import ThreatMap from '@/pages/ThreatMap';
@@ -55,8 +58,8 @@ const WorkspaceGate = ({ children }) => {
       <div className="max-w-md space-y-4" role="alert">
         <h1 className="text-lg font-bold">Unable to open your workspace</h1>
         <p>{error || 'No active workspace is available.'}</p>
-        <button onClick={retryWorkspace} className="px-4 py-2 rounded" style={{ backgroundColor: 'var(--wr-amber)', color: '#0D1B2A' }}>Retry</button>
-        <a href="/" className="block underline">Return to sign in</a>
+        <button data-ui="action" onClick={retryWorkspace} className="px-4 py-2 rounded" style={{ backgroundColor: 'var(--wr-amber)', color: '#0D1B2A' }}>Retry</button>
+        <a data-ui="reference" href="/" className="block underline">Return to sign in</a>
       </div>
     </div>
   );
@@ -64,15 +67,17 @@ const WorkspaceGate = ({ children }) => {
 };
 
 const AppRoutes = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, error, retryAuth } = useAuth();
   if (isLoading) return <LoadingScreen />;
+  if (error) return <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6" style={{ backgroundColor: 'var(--wr-bg-primary)', color: 'var(--wr-text-primary)' }} role="alert"><h1 className="text-lg font-bold">Unable to connect to the local server</h1><p>{error}</p><button data-ui="action" onClick={retryAuth} className="underline">Retry connection</button></div>;
+
 
   return (
     <Routes>
       {/* Splash is always the entry point — shows login form or "continue" if already authed */}
       <Route path="/"      element={<SplashPage />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
-      <Route path="/signup" element={isAuthenticated ? <Navigate to="/sessions" replace /> : <SignupPage />} />
+      <Route path="/signup" element={isAuthenticated ? <Navigate to="/session-tracker" replace /> : <SignupPage />} />
 
       <Route element={
         <RequireAuth>
@@ -83,7 +88,9 @@ const AppRoutes = () => {
           </WorkspaceProvider>
         </RequireAuth>
       }>
-        <Route path="/dashboard"            element={<Navigate to="/sessions" replace />} />
+        <Route path="/analysis" element={<Analysis />} />
+        <Route path="/analysis/:id" element={<Analysis />} />
+        <Route path="/dashboard"            element={<Navigate to="/session-tracker" replace />} />
         <Route path="/domains"              element={<Domains />} />
         <Route path="/decisions"            element={<Decisions />} />
         <Route path="/decisions/:id"        element={<DecisionDetail />} />
@@ -93,16 +100,17 @@ const AppRoutes = () => {
         <Route path="/chains"               element={<Chains />} />
         <Route path="/sessions"             element={<Sessions />} />
         <Route path="/sessions/new"         element={<NewSession />} />
-        <Route path="/sessions/:id"         element={<SessionWorkspace />} />
-        <Route path="/sessions/:id/live"    element={<LiveDebateRoom />} />
-        <Route path="/sessions/:id/panel"   element={<PanelRoom />} />
+        <Route path="/sessions/:id"         element={<SessionEntry><SessionWorkspace /></SessionEntry>} />
+        <Route path="/sessions/:id/live"    element={<SessionEntry><LiveDebateRoom /></SessionEntry>} />
+        <Route path="/sessions/:id/panel"   element={<SessionEntry><PanelRoom /></SessionEntry>} />
         <Route path="/sessions/:id/results" element={<SessionResults />} />
         <Route path="/reports"              element={<Reports />} />
         <Route path="/threatmap"            element={<ThreatMap />} />
         <Route path="/agent-analytics"      element={<AgentAnalytics />} />
         <Route path="/compare"              element={<SessionComparison />} />
         <Route path="/chain-breaker"        element={<ChainBreaker />} />
-        <Route path="/mitigations"          element={<Navigate to="/sessions" replace />} />
+        <Route path="/session-tracker" element={<SessionTracker />} />
+        <Route path="/mitigations"          element={<RiskActions />} />
         <Route path="/simulator"            element={<WhatIfSimulator />} />
         <Route path="/simulator/:id"        element={<WhatIfSimulator />} />
         <Route path="/knowledge"            element={<KnowledgeBase />} />
@@ -116,24 +124,8 @@ const AppRoutes = () => {
   );
 };
 
-const SetupRequired = () => (
-  <div style={{ backgroundColor: '#0D1B2A', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
-    <div style={{ maxWidth: 540, padding: '2rem', border: '1px solid #F0A500', borderRadius: 8, color: '#E0E0E0' }}>
-      <p style={{ color: '#F0A500', fontWeight: 'bold', fontSize: 13, letterSpacing: 2, marginBottom: 16 }}>SETUP REQUIRED</p>
-      <p style={{ fontSize: 14, marginBottom: 16, lineHeight: 1.6 }}>
-        Supabase environment variables are not configured. Create a <code style={{ color: '#F0A500' }}>.env.local</code> file in the project root with your Supabase project credentials:
-      </p>
-      <pre style={{ backgroundColor: '#0a1520', padding: '1rem', borderRadius: 4, fontSize: 12, color: '#aaa', overflowX: 'auto', marginBottom: 16 }}>{`VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key`}</pre>
-      <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
-        Find these values in your Supabase dashboard under <strong>Project Settings → API</strong>. Then restart the dev server with <code style={{ color: '#F0A500' }}>npm run dev</code>.
-      </p>
-    </div>
-  </div>
-);
-
 function App() {
-  if (supabaseMisconfigured) return <SetupRequired />;
+
 
   return (
     <QueryClientProvider client={queryClientInstance}>

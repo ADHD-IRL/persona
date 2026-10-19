@@ -1,0 +1,66 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { PGlite } from '@electric-sql/pglite';
+import { migrate } from '../server/migrate.js';
+import { createRiskService } from '../server/riskService.js';
+import { buildSnapshot, workspaceDb, fingerprint } from '../server/analysisService.js';
+import { duplicateCandidates, needsReassessment, relatedActions, suggestRisks } from '../src/lib/riskWorkflow.js';
+function pgPool(engine) { let queue=Promise.resolve(); return {async connect(){const prior=queue;let release;queue=new Promise(r=>{release=r;});await prior;return {query:(sql,args)=>args===undefined&&sql.includes(';')?engine.exec(sql).then(r=>r.at(-1)):engine.query(sql,args),release};},async query(sql,args){const c=await this.connect();try{return await c.query(sql,args);}finally{c.release();}}}; }
+test('risk suggestions respect scenario, archive state and evidence review timing',()=>{
+ const a={id:'a',name:'Power supply failure',scenario_id:'s',review_status:'reviewed',last_reviewed_at:'2026-10-10',reviewed_context:'original'};
+ const duplicate={...a,id:'b'}, unrelated={...a,id:'c',scenario_id:'other'}, archived={...duplicate,id:'d',review_status:'archived'};
+ assert.deepEqual(duplicateCandidates(a,[a,duplicate,unrelated,archived]).map(x=>x.id),['b']);
+ assert.deepEqual(suggestRisks([a,unrelated,archived],{id:'s'}).map(x=>x.id),['a']);
+ assert.equal(needsReassessment(a,{context_document:'changed'}),true);
+ assert.equal(needsReassessment(a,{context_document:'original'},[{status:'implemented',updated_at:'2026-10-11'}]),true);
+ assert.equal(needsReassessment(a,{context_document:'original'},[{status:'proposed',updated_at:'2026-10-11'}]),false);
+ assert.equal(relatedActions(a,'Threat',[{chain_id:'chain'}],[{id:'chain',threat_id:'a'}]).length,1);
+});
+test('risk database workflow: scoped merge, repeat-safe actions, review, step protection and selective snapshots', {timeout:60000},async()=>{
+ const engine=new PGlite(),pool=pgPool(engine);
+ try {
+  await migrate(pool);
+  const user=(await pool.query("INSERT INTO local_users(email,password_hash) VALUES ('risk@test','unused') RETURNING id")).rows[0];
+  const viewer=(await pool.query("INSERT INTO local_users(email,password_hash) VALUES ('viewer@test','unused') RETURNING id")).rows[0];
+  await pool.query("INSERT INTO profiles(id,display_name) VALUES ($1,'Owner'),($2,'Viewer')",[user.id,viewer.id]);
+  const ws=(await pool.query("INSERT INTO workspaces(name,owner_id) VALUES ('Risk',$1) RETURNING id",[user.id])).rows[0];
+  const other=(await pool.query("INSERT INTO workspaces(name,owner_id) VALUES ('Other',$1) RETURNING id",[user.id])).rows[0];
+  await pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES ($1,$2,'admin'),($1,$3,'viewer'),($4,$2,'admin')",[ws.id,user.id,viewer.id,other.id]);
+  const db=await workspaceDb(pool,user.id,ws.id), otherDb=await workspaceDb(pool,user.id,other.id);
+  const scenario=await db.Scenario.create({name:'Power',context_document:'Original evidence'});
+  const a=await db.Threat.create({name:'Power failure',scenario_id:scenario.id,evidence:[{text:'Generator failed',kind:'supplied'}]});
+  const b=await db.Threat.create({name:'Power failure duplicate',scenario_id:scenario.id});
+  const foreign=await otherDb.Threat.create({name:'Foreign'});
+  const chain=await db.Chain.create({name:'Cascade',scenario_id:scenario.id,threat_id:a.id,steps:[{step_number:1,step_text:'Power fails'},{step_number:2,step_text:'Service stops'}]});
+  const route=createRiskService(pool);
+  const call=(kind,id,op,body={},as=user)=>route({method:'POST'},as,new URL('http://local/api/risks/'+kind+'/'+id+'/'+op+'?workspace_id='+ws.id),async()=>body);
+  await assert.rejects(call('Threat',a.id,'merge',{target_id:foreign.id}),/different, unmerged/);
+  await assert.rejects(call('Threat',a.id,'merge',{target_id:b.id},viewer),/permission/);
+  await assert.rejects(db.Chain.update(chain.id,{threat_id:foreign.id}),/workspace/);
+  const payload={step:1,action:'Test failover',completion_criteria:'Record recovery time'};
+  const action=(await call('Chain',chain.id,'action',payload)).data;
+  assert.equal(action.title,'Test failover');assert.deepEqual(action.breaks_steps,[1]);
+  assert.equal((await call('Chain',chain.id,'action',payload)).data.id,action.id);
+  assert.notEqual((await call('Chain',chain.id,'action',{...payload,action:'Install backup power'})).data.id,action.id);
+  await assert.rejects(call('Chain',chain.id,'action',{...payload,step:9}),/existing chain step/);
+  await assert.rejects(db.Chain.update(chain.id,{steps:[{step_number:1,step_text:'Different event'}]}),/linked action/);
+  await db.Threat.update(a.id,{review_status:'reviewed'});
+  const reviewed=await db.Threat.get(a.id);assert.equal(reviewed.reviewed_context,'Original evidence');assert.ok(reviewed.last_reviewed_at);
+  await db.Threat.update(a.id,{evidence:[{text:'New fact'}]});assert.equal((await db.Threat.get(a.id)).review_status,'needs_review');
+  const panel=[];for(let i=0;i<3;i++)panel.push(await db.Agent.create({name:'SME '+i,discipline:'Operations'}));
+  const input={mode:'risk',question:'Assess power loss',scenario_id:scenario.id,agent_ids:panel.map(a=>a.id),threat_ids:[a.id],chain_ids:[chain.id]};
+  const snapshot=await buildSnapshot(db,input,'test');assert.equal(snapshot.threats.length,1);assert.equal(snapshot.chains[0].id,chain.id);
+  assert.equal((await buildSnapshot(db,{...input,threat_ids:[],chain_ids:[]},'test')).threats.length,0);
+  await assert.rejects(buildSnapshot(db,{...input,threat_ids:[foreign.id]},'test'),/not found/);
+  await db.Chain.update(chain.id,{description:'New evidence'});assert.notEqual(fingerprint(snapshot),fingerprint(await buildSnapshot(db,input,'test')));
+  await call('Threat',a.id,'merge',{target_id:b.id});
+  assert.equal((await db.Threat.get(a.id)).merged_into,b.id);
+  assert.equal((await db.Chain.get(chain.id)).threat_id,b.id);
+  assert.equal((await db.Mitigation.get(action.id)).threat_id,b.id);
+  assert.ok((await db.Threat.get(b.id)).evidence.some(e=>e.text==='New fact'));
+  await assert.rejects(buildSnapshot(db,input,'test'),/archived/);
+  const different=await db.Chain.create({name:'Different',scenario_id:scenario.id,steps:[]});
+  await assert.rejects(call('Chain',chain.id,'merge',{target_id:different.id}),/identical steps/);
+  assert.equal((await db.Chain.get(chain.id)).merged_into,null);
+ } finally {await engine.close();}
+});

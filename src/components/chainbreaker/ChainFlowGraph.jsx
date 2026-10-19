@@ -228,7 +228,7 @@ function StepDetailPanel({ step, lens, accent, analysis, priorityRank, cascade, 
             <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--wr-amber)', lineHeight: 1.3 }}>{step.agent_label}</p>
           )}
         </div>
-        <button onClick={onClose} style={{ color: 'var(--wr-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }} aria-label="Close detail">
+        <button data-ui="icon" onClick={onClose} style={{ color: 'var(--wr-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }} aria-label="Close detail">
           <X style={{ width: 14, height: 14 }} />
         </button>
       </div>
@@ -357,7 +357,7 @@ export default function ChainFlowGraph({ chain, analysisMap = {}, rankMap = {}, 
                 const on = activeLens === val;
                 const disabled = val === 'domain' && !anyVector;
                 return (
-                  <button key={val} onClick={() => !disabled && setLens(val)} disabled={disabled}
+                  <button data-ui="action" key={val} onClick={() => !disabled && setLens(val)} disabled={disabled}
                     style={{
                       fontSize: 9.5, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.04em',
                       padding: '3px 8px', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',

@@ -32,7 +32,7 @@ export default function AnalysisStages({
         return (
           <div key={s.key} className="flex items-center gap-1">
             {i > 0 && <span className={lg ? 'text-sm px-0.5' : 'text-xs'} style={{ color: 'var(--wr-border)' }}>›</span>}
-            <button
+            <button data-ui="action"
               onClick={() => onNavigate?.(s.key)}
               className={`flex items-center gap-1.5 rounded font-mono transition-colors ${lg ? 'px-3 py-1.5 text-xs tracking-widest' : 'px-1.5 py-0.5 text-xs'}`}
               style={{
@@ -57,7 +57,7 @@ export default function AnalysisStages({
               {!lg && isDone && !isCurrent && <Check className="w-2.5 h-2.5" />}
               {lg ? s.label.toUpperCase() : s.label}
               {badge && (
-                <span className="font-mono font-bold px-1 rounded-sm"
+                <span data-ui="badge" className="font-mono font-bold px-1 rounded-sm"
                   style={{
                     fontSize: 9, lineHeight: 1.6,
                     backgroundColor: badge === '✓' ? 'rgba(39,174,96,0.15)' : 'rgba(240,165,0,0.12)',

@@ -15,7 +15,7 @@ const SEV_CLASS = {
 function SeverityPill({ severity }) {
   if (!severity) return null;
   return (
-    <span className={cn(
+    <span data-ui="badge" className={cn(
       'text-[10px] px-1.5 py-0.5 rounded-full border font-bold tracking-wider font-mono whitespace-nowrap',
       SEV_CLASS[severity] || SEV_CLASS.HIGH
     )}>
@@ -119,7 +119,7 @@ function AgentRow({ sa, agent, round, onGenerate, onUpdate, onReset }) {
                     {text}
                   </ReactMarkdown>
                 </div>
-                <button
+                <button data-ui="action"
                   onClick={() => setExpanded(v => !v)}
                   className="flex items-center gap-1 text-xs mt-2 transition-opacity hover:opacity-80"
                   style={{ color: 'var(--wr-amber)' }}
@@ -169,7 +169,7 @@ export default function DebateTranscript({
   const roundLabel = round === 1 ? 'Round 1 — Independent Assessments' : 'Round 2 — Rebuttals';
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded-2xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
       {/* Header */}
       <div
         className="flex items-center gap-3 px-5 py-3 border-b"

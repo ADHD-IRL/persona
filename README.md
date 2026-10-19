@@ -1,241 +1,69 @@
 # AgentDebate-local
 
-Independent local repository for planning local database and hosting support. See [the local hosting plan](docs/LOCAL_HOSTING_PLAN.md). Runtime setup is planned; the copied application still needs Supabase services and Anthropic access.
-
-
-Structured multi-agent risk assessment and decision-support platform. Frame a design decision, assemble a panel of expert agents, run two-round red-team sessions, and turn what they surface into quantified risk, kill chains, and a tracked mitigation plan — or drop into the **Live Debate Room** for a real-time streaming debate you can facilitate on the fly.
-
-Multi-user, workspace-aware deployment backed by Supabase. AI requests use your active workspace's key and pass through the application proxy to Anthropic.
-
----
-
-## What it does
-
-- **Multidisciplinary panels** — build expert agents (or generate them with AI), each a distinct discipline, cognitive bias, and risk posture. The debate is engineered to surface **cross-domain interaction risks** that no single-discipline review would find.
-- **Two-round analysis** — independent Round 1 assessments, then cross-examination in Round 2, then an AI synthesis with consensus, contested findings, blind spots, and priority mitigations.
-- **Quantified risk** — every assessment carries a **likelihood × impact** band (1–5 each) and a calibrated **confidence** score, plotted on a per-round risk matrix.
-- **Decisions** — frame a design choice with 2–4 options, run the panel against every option in one click, and get a reasoned recommendation that cites the evidence, flags assumptions at risk, and states the risk you accept. Then record an auditable decision.
-- **Threat Map** — coverage analysis of your threat landscape against your agent bench, with drill-down and Generate-SME gap closing.
-- **Chain Breaker & Mitigation Register** — dissect kill chains into a prioritized mitigation roadmap, then track each mitigation through its lifecycle and re-score residual risk.
-- **Evidence ledger** — every source an agent cites is captured per-SME with a credibility tier, so findings are traceable.
-- **Knowledge Base** — ingest your own design docs, incidents, and standards; the most relevant passages are retrieved and injected into each agent's prompt to ground the analysis.
-
----
+Multi-agent risk analysis with a React frontend, a local Node server, and standalone PostgreSQL. Supabase and Vercel are no longer runtime dependencies. The original database migrations are retained as schema history in `supabase/migrations`; the local migration is in `db/migrations`.
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/) v18 or higher
-- A [Supabase](https://supabase.com/) project (free tier is sufficient)
-- An [Anthropic API key](https://console.anthropic.com/) with Messages API access
+- Node.js 22 or newer and npm
+- PostgreSQL 17, installed directly or run with Docker Compose
+- A MITRE AIP API key, or an Anthropic key when that server provider is selected
 
----
+MITRE AIP is supported through a server-side OpenAI-compatible adapter. See [MITRE AIP setup](docs/MITRE_AIP_SETUP.md) for credentials, model selection, tool capabilities, and certificate configuration. The server selects either MITRE AIP or Anthropic; database/application hosting remains local, while analysis context is sent to that configured provider.
 
-## Supabase setup
+## Running on this Windows machine
 
-### 1. Create a Supabase project
+The app is running natively at [localhost:3000](http://localhost:3000), with PostgreSQL 17.11 on port 55432 and verified MITRE AIP access. See [local runtime instructions](docs/LOCAL_RUNNING.md) for restart and log locations.
 
-Go to [supabase.com/dashboard](https://supabase.com/dashboard) and create a new project. Note your **Project URL** and **anon public key** from **Project Settings → API**.
+## Run with Docker
 
-### 2. Run the database migrations
+Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD`. Use a URL-safe password and update `DATABASE_URL` to match if you will also run Node outside Docker.
 
-The schema lives in [`supabase/migrations/`](supabase/migrations). Every migration is idempotent (`create table if not exists`, `drop policy if exists` before each `create policy`, guarded realtime/publication adds), so applying them is safe and repeatable. Pick **one** of the two paths below — don't mix them (see the warning).
-
-**Path A — Supabase GitHub integration (recommended for any deployed/CI setup).**
-Connect the repo in **Supabase dashboard → Integrations → GitHub** and point it at your deploy branch. The integration applies the files in `supabase/migrations/` in order and records them in `supabase_migrations.schema_migrations`. Let the pipeline own the schema — **do not also paste SQL into the editor**, or the tracking table drifts out of sync with the actual schema and the next deploy fails with `relation "…" already exists`.
-
-- The incremental files `001`–`016` are the source of truth for this path.
-- `000_full_schema.sql` is a manual convenience only (see Path B). Because it duplicates `001`–`010`, the integration applies it too — harmless since everything is idempotent, but redundant. If you never run Path B you can ignore it.
-
-**Path B — Manual, in the SQL editor (quick local / one-off project).**
-Open the [SQL editor](https://supabase.com/dashboard/project/_/sql/new) and run:
-
-1. [`supabase/migrations/000_full_schema.sql`](supabase/migrations/000_full_schema.sql) — consolidated base: schema, RLS, Realtime, and everything through migration `010` (workspaces, agents, sessions, sources, SME library, extended personas). Equivalent to running `001`–`010` in order.
-2. [`011_quantified_risk.sql`](supabase/migrations/011_quantified_risk.sql) — likelihood/impact bands on assessments and threats
-3. [`012_mitigation_register.sql`](supabase/migrations/012_mitigation_register.sql) — mitigation register with residual re-scoring
-4. [`013_decisions.sql`](supabase/migrations/013_decisions.sql) — decisions, options, assumptions
-5. [`014_knowledge_base.sql`](supabase/migrations/014_knowledge_base.sql) — knowledge documents and chunks
-6. [`015_mitigation_session_link.sql`](supabase/migrations/015_mitigation_session_link.sql) — links mitigations to their originating session
-7. [`016_optimal_sme.sql`](supabase/migrations/016_optimal_sme.sql) — optimal-SME reasoning fields (competence boundaries, tradecraft, risk posture, debate behavior)
-8. [`017_remove_sme_library.sql`](supabase/migrations/017_remove_sme_library.sql) — removes the retired SME Library (drops `sme_tokens`, the library-only agent columns, and the shared library workspace)
-
-> ⚠️ **Don't run Path B on a project managed by the GitHub integration.** Pasting SQL by hand creates objects the integration hasn't recorded, so its next run tries to re-create them and fails. If that already happened, the migrations are idempotent — re-running through the integration now reconciles it (it applies them as no-ops and records them).
-
-### 3. Configure authentication
-
-In your Supabase dashboard go to **Authentication → URL Configuration** and add your app's URL (e.g. `http://localhost:5173`) to **Redirect URLs**.
-
-Optionally enable **Google OAuth** under **Authentication → Providers → Google** by supplying your Google OAuth client credentials.
-
----
-
-## Local setup
-
-### 1. Clone and install
-
-```bash
-git clone https://github.com/ADHD-IRL/AgentDebate.git
-cd AgentDebate
-npm install
+```powershell
+Copy-Item .env.example .env
+docker compose up --build -d
 ```
 
-### 2. Configure environment variables
+Open [the application](http://localhost:3000). The Node server applies pending local migrations on startup. Create a local account; signup immediately signs you in and creates your workspace in one transaction. For MITRE AIP, configure the server key in `.env`, then refresh models and test the connection in Settings. For Anthropic, add the workspace key in Settings.
 
-Create a `.env.local` file in the project root:
+The database and app ports bind to `127.0.0.1`. PostgreSQL data lives in the `postgres_data` volume. `docker compose down` stops the services while retaining that volume. Removing the volume deletes local data.
 
-```bash
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-public-key
+## Develop locally
+
+Start PostgreSQL with `docker compose up -d db`, or use an existing PostgreSQL installation and set `DATABASE_URL` in `.env`. The server's database user needs schema/role creation privileges for migrations. Application record queries switch to the restricted `agentdebate_app` role inside each transaction, where forced row-level security enforces the active workspace and member role.
+
+```powershell
+npm ci
+npm run db:migrate
+npm run server:dev
 ```
 
-Both values are found under **Project Settings → API**.
+In a second terminal run `npm run dev` and open [Vite](http://localhost:5173). Vite forwards `/api` to the Node server on port 3000. For normal local hosting, run `npm run build` followed by `npm start`; Node serves the built application and its API together.
 
-> If `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` are missing, the app shows a **Setup Required** screen with instructions rather than a blank page.
+No frontend database credentials or cloud project URLs are needed. The server URL is same-origin. A server/database failure presents a retry screen.
 
-### 3. Add the splash page hero image (optional)
+## Authentication and access
 
-Place your hero image at `public/splash-hero.jpg`. It's the full-bleed background on the login/splash page. The app works without it (dark fallback background).
+Local email/password accounts use scrypt password hashes and random, hashed, expiring session tokens. Browser sessions use HttpOnly, SameSite cookies. Google OAuth and email confirmation from the previous hosted setup are removed from signup. Mail-based recovery and enterprise SSO are not configured in this local version.
 
-### 4. Start the development server
+Workspace reads require membership; analysts and admins can create/update records, and administrative deletes retain the original role restrictions. References to agents, sessions, scenarios, chains, and documents are checked against the active workspace. Pagination and typed JSON/array values are retained.
 
-```bash
-npm run dev
+Workspace Anthropic keys remain shared with workspace members, matching the current product behavior; only admins can change them. The authenticated Node proxy streams provider output and cancels requests when the client disconnects. The MITRE AIP provider uses server-only credentials, authenticated model discovery, and the same workspace authorization boundary.
+
+## Database lifecycle
+
+`npm run db:migrate` applies the ordered, checksummed SQL files in `db/migrations` in one transaction. It runs again safely and rejects changed files that were already applied. New database changes belong in new migration files. Do not run the old Supabase migrations against the standalone database.
+
+This migration creates a fresh local database. It does not copy cloud data or Supabase Auth identities. Importing existing data needs an explicit export and account/ownership mapping; that is separate from changing the application backend.
+
+Back up the database using `pg_dump` or `docker compose exec -T db pg_dump -U agentdebate -d agentdebate`. Restore into a separate database and run migration checks before relying on a backup. For LAN hosting, configure an HTTPS reverse proxy, set `APP_ORIGIN`, enable secure cookies, and deliberately change the loopback port bindings.
+
+## Verification
+
+```powershell
+npm run verify
 ```
 
-The app is available at `http://localhost:5173`.
+Tests include actual PostgreSQL engine checks through PGlite: schema migration/replay, cookie authentication, workspace isolation, role restrictions, JSON values, cross-workspace references, and the Node HTTP endpoints. PGlite is a test dependency; production uses PostgreSQL through `pg`.
 
----
-
-## First-time use
-
-1. Open the app — the splash page is always shown first
-2. Click **Request access** to create an account, or sign in with Google
-3. A workspace is automatically created and you are added as admin
-4. Go to **Settings** and add your **Anthropic API key** — required for all AI analysis (stored in your workspace record, shared with members)
-5. You land on **Sessions**. Create one, and its **Next Step** bar walks you through the rest
-
----
-
-## Workflow
-
-The session is the hub: every analytical step happens inside one session. The sidebar has two groups.
-
-### Work
-
-- **Sessions** — where the analysis happens (see below)
-- **Decisions** — frame the design choice and the options you're comparing
-- **Scenarios** — describe the system or threat environment to stress-test
-
-### Library
-
-Reusable assets a session draws on:
-
-- **Agents** — your expert panel; build manually, **AI Generate**, or **Import** from Markdown
-- **Domains** — broad categories that link threats to the agents who can analyze them
-- **Threats** — optionally catalog known risks (with likelihood/impact)
-- **Chains** — kill chains, hand-built or extracted from a synthesis
-- **Knowledge Base** — add your own documents so analysis is grounded in your material
-
-### Inside a session
-
-A stepper walks the lifecycle in order, and a **Next Step** bar always shows the one thing to do now:
-
-1. **Setup** — agents and scenario (also the session's Settings)
-2. **Round 1** — independent assessments, each with severity, likelihood × impact, and confidence
-3. **Round 2** — cross-examination
-4. **Synthesis** — consensus, contested findings, blind spots, priority mitigations
-5. **Findings** — the kill chains and threats the panel surfaced; break the chains in place
-6. **Act** — this session's mitigation register plus the tools that work it: **Chain Breaker** (prioritized roadmap), **What-If Simulator** (toggle countermeasures against the risk score), and the **Decision Brief** (executive PDF)
-
-**Live Debate Room** and **Panel Room** sessions produce their rounds in a real-time room instead, then rejoin the same flow at Synthesis.
-
-### More
-
-Cross-session views live under **More**: **Threat Map** (coverage of your threat landscape by your agent bench), **Agent Analytics**, **Compare Sessions**, and the **Prompt Library**.
-
----
-
-## Session states
-
-| State | Meaning |
-|---|---|
-| **DRAFT** | Created but not yet run — shown with dashed border |
-| **ROUND 1** | Round 1 assessments in progress or complete |
-| **ROUND 2** | Rebuttal round in progress or complete |
-| **COMPLETE** | Both rounds done and synthesis generated |
-
-Findings (severity counts) only appear once agents have produced assessments — draft sessions show none.
-
----
-
-## Evidence & sources
-
-Every source an agent references — a tool-fetched URL, an inline `[SOURCE: "…"]` citation, or a facilitator entry — is captured on the session with a credibility tier (Authoritative / Credible / Speculative / Unverified). The session **SOURCES** tab shows this two ways:
-
-- **By SME** (the evidence ledger) — what each expert relied on, with an evidence-quality score and an *Unsupported Assessments* flag for agents that cited nothing
-- **By Tier** — grouped by credibility, with a **Run Validity Analysis** button that cross-checks sources for contradictions and unsupported claims
-
----
-
-## Agent import format
-
-Agents can be bulk-imported from a `.md` file. Each block starts with an `##` heading:
-
-```markdown
-## Agent Name / Discipline
-
-**Persona:** Who this expert is and how they think
-
-**Cognitive Bias:** What they systematically underweight
-
-**Primary Focus:** What they hunt for in an assessment
-
-**Severity:** CRITICAL | HIGH | MEDIUM | LOW
-
-**Vectors:**
-- Human: 85
-- Technical: 40
-- Physical: 50
-- Futures: 30
-
-**Tags:** comma, separated, keywords
-
-**Domain Tags:** Domain Name, Another Domain
-```
-
-Domains are matched by name (case-insensitive) or auto-created if they don't exist.
-
----
-
-## Build for production
-
-```bash
-npm run build
-```
-
-Output goes to `dist/`. Deploy on Vercel to include the `/api/anthropic` proxy, or provide an equivalent proxy when using another host. Set the Supabase environment variables in your hosting platform's settings:
-
-```
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-public-key
-```
-
-The Anthropic API key is entered by each workspace in Settings and stored in the workspace record — it does not need to be set at build time.
-
-Run `npm run verify` to check lint, all Node tests, and the production build together.
-
----
-
-## Tech stack
-
-| Layer | Technology |
-|---|---|
-| UI framework | React 18 + Vite |
-| Styling | Tailwind CSS + CSS variables (`--wr-*` tokens) |
-| Routing | React Router v6 |
-| Auth & database | Supabase (PostgreSQL + Row Level Security) |
-| Realtime | Supabase Realtime (sessions, session agents, live transcripts) |
-| AI — analysis | Anthropic API — `claude-sonnet-4-6`, `claude-opus-4-7`, `claude-haiku-4-5` |
-| Knowledge retrieval | Organizational Knowledge Base (Postgres full-text); Wikipedia API fallback for agent tool calls |
-| Charts | Recharts |
-| Icons | Lucide React |
+Optional read-only MCP access uses `MCP_WORKSPACE_ID` and `MCP_API_KEYS` on the Node server. Generate bearer keys with `node scripts/mcp-key.mjs`; the PostgreSQL MCP adapter scopes every query to the configured local workspace. Cloud MCP tooling remains disabled in `.mcp.json`.
 

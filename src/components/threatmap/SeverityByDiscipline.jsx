@@ -94,7 +94,7 @@ export default function SeverityByDiscipline({ groups, axisLabel, onSelect }) {
         {summaryStats.map(({ s, count }) => {
           const pct = threats.length ? Math.round((count / threats.length) * 100) : 0;
           return (
-            <div key={s} className="rounded p-4"
+            <div data-ui="surface" key={s} className="rounded p-4"
               style={{ backgroundColor: 'var(--wr-bg-card)', border: `1px solid ${SEV_COLORS[s]}40` }}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-mono font-bold tracking-wider" style={{ color: SEV_COLORS[s] }}>
@@ -117,7 +117,7 @@ export default function SeverityByDiscipline({ groups, axisLabel, onSelect }) {
       </div>
 
       {/* ── 2. Discipline severity breakdown (horizontal bars) ────────── */}
-      <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <div className="flex items-center gap-2 mb-1">
           <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }} />
           <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
@@ -199,7 +199,7 @@ export default function SeverityByDiscipline({ groups, axisLabel, onSelect }) {
 
       {/* ── 3. Discipline × Category matrix ──────────────────────────── */}
       {categories.length > 0 && (
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <div className="flex items-center gap-2 mb-1">
             <LayoutGrid className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }} />
             <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>

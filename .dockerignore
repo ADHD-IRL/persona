@@ -1,0 +1,13 @@
+.git
+.agents
+.claude
+node_modules
+dist
+.env
+.env.*
+*.local
+supabase
+scripts
+docs
+design_handoff_analyst_dashboard
+design_handoff_dashboard_clean

@@ -44,7 +44,7 @@ export default function SessionKillChains({ db, sessionId, chains = [], scenario
 
   if (!chains.length) {
     return (
-      <div className="rounded-2xl py-14 text-center" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-card)' }}>
+      <div data-ui="surface" className="rounded-2xl py-14 text-center" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-card)' }}>
         <Link2 className="w-7 h-7 mx-auto mb-3" style={{ color: 'var(--wr-text-muted)', opacity: 0.4 }} />
         <p className="text-sm" style={{ color: 'var(--wr-text-muted)' }}>No kill chains yet.</p>
         <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>Run the synthesis — it extracts the compound chains from the debate.</p>
@@ -55,7 +55,7 @@ export default function SessionKillChains({ db, sessionId, chains = [], scenario
   return (
     <div className="space-y-4">
       {/* Action bar */}
-      <div className="rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <div className="min-w-0">
           <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>
             {chains.length} kill chain{chains.length !== 1 ? 's' : ''} · {analyzedCount} analyzed
@@ -95,13 +95,13 @@ export default function SessionKillChains({ db, sessionId, chains = [], scenario
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-secondary)' }}>{chain.name || `Chain ${i + 1}`}</p>
                 {analysis?.chain_resilience && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
+                  <span data-ui="badge" className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
                     RESILIENCE: {analysis.chain_resilience}
                   </span>
                 )}
               </div>
               {analysis?.recommended_cut?.step_number != null && (
-                <div className="rounded-lg px-3 py-2 mb-2 flex items-start gap-2" style={{ backgroundColor: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.25)' }}>
+                <div data-ui="surface" className="rounded-lg px-3 py-2 mb-2 flex items-start gap-2" style={{ backgroundColor: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.25)' }}>
                   <Scissors className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: '#C0392B' }} />
                   <p className="text-xs" style={{ color: 'var(--wr-text-secondary)' }}>
                     <span className="font-mono font-bold" style={{ color: '#C0392B' }}>Cut here first — Step {analysis.recommended_cut.step_number}. </span>

@@ -1,0 +1,11 @@
+# Optional corporate CA bundle for the Node container.
+# docker compose -f compose.yaml -f compose.aip-ca.yaml up --build -d
+services:
+  app:
+    environment:
+      NODE_EXTRA_CA_CERTS: /etc/ssl/mitre-extra-ca.pem
+    volumes:
+      - type: bind
+        source: ${MITRE_AIP_CA_BUNDLE:?Set MITRE_AIP_CA_BUNDLE to the host PEM file}
+        target: /etc/ssl/mitre-extra-ca.pem
+        read_only: true

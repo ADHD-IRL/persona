@@ -17,7 +17,7 @@ const SEV_LEVELS = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 function StatCard({ label, value, sub, color = '#F0A500', icon: IconComp }) {
   const Icon = IconComp;
   return (
-    <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
       <div className="flex items-start justify-between mb-2">
         <div className="w-8 h-8 rounded flex items-center justify-center" style={{ backgroundColor: `${color}18` }}>
           <Icon className="w-4 h-4" style={{ color }} />
@@ -45,7 +45,7 @@ function SeverityShiftRow({ sa, agent }) {
       </div>
       <div className="flex items-center gap-2">
         {confidence != null && (
-          <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(46,134,171,0.12)', color: '#2E86AB' }}>
+          <span data-ui="badge" className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(46,134,171,0.12)', color: '#2E86AB' }}>
             {confidence}%
           </span>
         )}
@@ -191,14 +191,14 @@ export default function SessionResults() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--wr-bg-primary)' }}>
       {/* Header */}
       <div className="border-b px-6 py-4 flex items-center gap-4" style={{ borderColor: 'var(--wr-border)', backgroundColor: 'var(--wr-bg-secondary)' }}>
-        <Link to={`/sessions/${id}`} className="text-xs flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}>
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to Session
+        <Link data-ui="action" to={`/session-tracker?session=${id}`} className="text-xs flex items-center gap-1" style={{ color: 'var(--wr-text-muted)' }}>
+          <ArrowLeft className="w-3.5 h-3.5" /> Return to Session Tracker
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <BarChart2 className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
             <h1 className="font-bold text-lg" style={{ color: 'var(--wr-text-primary)' }}>{session.name} — Results</h1>
-            <span className="text-xs px-2 py-0.5 rounded font-bold font-mono" style={{ backgroundColor: `${statusColor}22`, color: statusColor }}>
+            <span data-ui="badge" className="text-xs px-2 py-0.5 rounded font-bold font-mono" style={{ backgroundColor: `${statusColor}22`, color: statusColor }}>
               {session.status?.toUpperCase()}
             </span>
           </div>
@@ -220,7 +220,7 @@ export default function SessionResults() {
         <div className="grid grid-cols-3 gap-5">
 
           {/* Severity Pie */}
-          <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <h2 className="text-xs font-bold tracking-widest font-mono mb-4" style={{ color: 'var(--wr-text-muted)' }}>FINAL SEVERITY DISTRIBUTION</h2>
             {pieData.length > 0 ? (
               <>
@@ -250,7 +250,7 @@ export default function SessionResults() {
           </div>
 
           {/* R1 vs R2 Bar */}
-          <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <h2 className="text-xs font-bold tracking-widest font-mono mb-4" style={{ color: 'var(--wr-text-muted)' }}>ROUND 1 vs ROUND 2 SHIFT</h2>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={r1r2Data} margin={{ top: 4, right: 4, bottom: 4, left: 0 }}>
@@ -265,7 +265,7 @@ export default function SessionResults() {
           </div>
 
           {/* Domain Radar */}
-          <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <h2 className="text-xs font-bold tracking-widest font-mono mb-4" style={{ color: 'var(--wr-text-muted)' }}>ESCALATION RATE BY DOMAIN</h2>
             {domainRadar.length > 0 ? (
               <ResponsiveContainer width="100%" height={200}>
@@ -289,7 +289,7 @@ export default function SessionResults() {
         <div className="grid grid-cols-2 gap-5">
 
           {/* Agent Severity Shifts */}
-          <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <h2 className="text-xs font-bold tracking-widest font-mono mb-4" style={{ color: 'var(--wr-text-muted)' }}>AGENT SEVERITY SHIFTS (R1 → R2)</h2>
             <div className="flex items-center gap-4 mb-4 text-xs">
               <div className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" style={{ color: '#C0392B' }} /><span style={{ color: 'var(--wr-text-secondary)' }}>Escalated: <strong style={{ color: '#C0392B' }}>{escalated}</strong></span></div>
@@ -304,7 +304,7 @@ export default function SessionResults() {
           </div>
 
           {/* Top Critical Findings */}
-          <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <h2 className="text-xs font-bold tracking-widest font-mono mb-4" style={{ color: 'var(--wr-text-muted)' }}>TOP CRITICAL / HIGH FINDINGS</h2>
             <div className="space-y-3 overflow-y-auto max-h-72">
               {sortedAgents
@@ -314,7 +314,7 @@ export default function SessionResults() {
                   const sev = sa.round2_revised_severity || sa.round1_severity;
                   const text = sa.round2_rebuttal || sa.round1_assessment || '';
                   return (
-                    <div key={sa.id} className="rounded p-3" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: `1px solid ${SEV_COLORS[sev]}33` }}>
+                    <div data-ui="surface" key={sa.id} className="rounded p-3" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: `1px solid ${SEV_COLORS[sev]}33` }}>
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-xs font-semibold" style={{ color: 'var(--wr-text-primary)' }}>{agent?.name}</span>
                         <SeverityBadge severity={sev} size="xs" />
@@ -332,7 +332,7 @@ export default function SessionResults() {
 
         {/* Synthesis Summary */}
         {synthText && (
-          <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <div className="flex items-center gap-2 mb-4">
               <Shield className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
               <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>SYNTHESIS SUMMARY</h2>

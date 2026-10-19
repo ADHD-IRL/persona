@@ -79,7 +79,7 @@ export async function retrieveKnowledge(db, query, k = 5) {
 export function formatKnowledgeContext(chunks) {
   if (!chunks?.length) return '';
   const body = chunks.map((c, i) =>
-    `[K${i + 1}${c.title ? ` — ${c.title}` : ''}]\n${(c.content || '').slice(0, 700)}`
+    `[K${i + 1}${c.title ? ` — ${c.title}` : ''}]\n${(c.content || '')}`
   ).join('\n\n');
   return `\nORGANIZATIONAL KNOWLEDGE BASE (retrieved for this scenario — ground your analysis in these where relevant and cite as [SOURCE: "title"]):\n${body}\n`;
 }

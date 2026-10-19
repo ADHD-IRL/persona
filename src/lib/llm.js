@@ -3,7 +3,8 @@
 // hand and does NOT auto-sync. When you add, remove, or materially change a prompt
 // here (or in decisionContext.js / knowledge.js), update PromptLibrary.jsx to match.
 
-import { getApiKey } from './apiCredentials.js';
+import { getApiKey, getActiveWorkspaceId, getProviderConfig } from './apiCredentials.js';
+import { sectionedCompletion } from './sectionedCompletion.js';
 import { readAnthropicStream } from './anthropicStream.js';
 export { getApiKey, setWorkspaceApiKey } from './apiCredentials.js';
 
@@ -15,36 +16,48 @@ const MODEL_MAP = {
 const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
 // Use backend proxy to avoid CORS preflight failures on deployed origins.
-const ANTHROPIC_URL = '/api/anthropic';
+// Historical helper names remain compatible; the Node server selects the provider.
+const ANTHROPIC_URL = '/api/llm/messages';
 
 export function getModelId() {
+  const config = getProviderConfig();
+  if (config.provider === 'mitre_aip') return localStorage.getItem('agd_aip_model_' + getActiveWorkspaceId()) || config.defaultModel || '';
   const val = localStorage.getItem('agd_llm_model');
-  return MODEL_MAP[val] || DEFAULT_MODEL;
+  return MODEL_MAP[val] || val || DEFAULT_MODEL;
 }
-
 export function setModelPref(val) {
-  localStorage.setItem('agd_llm_model', val);
+  const key = getProviderConfig().provider === 'mitre_aip' ? 'agd_aip_model_' + getActiveWorkspaceId() : 'agd_llm_model';
+  localStorage.setItem(key, val);
 }
-
-export async function callAnthropicStream({ messages, maxTokens = 2000, system, onToken, onDone }) {
+let usageSink = null;
+export function setUsageSink(sink) { usageSink = typeof sink === 'function' ? sink : null; }
+function reportUsage(usage) {
+  if (usage && usageSink) { try { usageSink({ ...usage, model: getModelId(), provider: getProviderConfig().provider }); } catch { /* accounting must not break analysis */ } }
+}
+let serverTransport = null;
+export function setServerTransport(transport) { serverTransport = transport; }
+export async function callAnthropicStream({ messages, maxTokens = 2000, system, onToken, onDone, onUsage, onRecovery, signal }) {
+  if (serverTransport) return serverTransport({ messages, maxTokens, system, onToken, onDone, onUsage, signal });
   const key = getApiKey();
-  if (!key) throw new Error('No Anthropic API key configured. Add it in Settings.');
+  if (!key && getProviderConfig().provider !== 'mitre_aip') throw new Error('No Anthropic API key configured. Add it in Settings.');
   const body = { model: getModelId(), max_tokens: maxTokens, messages, stream: true };
   if (system) body.system = system;
   const res = await fetch(ANTHROPIC_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': key,
+      ...(getProviderConfig().provider === 'anthropic' ? { 'x-api-key': key } : {}),
+      'x-workspace-id': getActiveWorkspaceId(),
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify(body),
+    signal,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
+    throw new Error(err.error?.message || err.error || `Model API error ${res.status}`);
   }
-  return readAnthropicStream(res.body, { onToken, onDone });
+  return readAnthropicStream(res.body, { onToken, onDone, onRecovery, signal, onUsage: usage => { reportUsage(usage); onUsage?.(usage); } });
 }
 
 export function parseSeverityFromText(text, fallback = 'HIGH') {
@@ -56,22 +69,26 @@ export function parseSeverityFromText(text, fallback = 'HIGH') {
 }
 
 async function callAnthropic({ messages, maxTokens = 2000, system }) {
+  if (serverTransport) return serverTransport({ messages, maxTokens, system });
   const key = getApiKey();
-  if (!key) throw new Error('No Anthropic API key configured. Add it in Settings.');
+  if (!key && getProviderConfig().provider !== 'mitre_aip') throw new Error('No Anthropic API key configured. Add it in Settings.');
   const body = { model: getModelId(), max_tokens: maxTokens, messages };
   if (system) body.system = system;
   const res = await fetch(ANTHROPIC_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': key,
+      ...(getProviderConfig().provider === 'anthropic' ? { 'x-api-key': key } : {}),
+      'x-workspace-id': getActiveWorkspaceId(),
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => null);
-  if (!res.ok || (data && data.error)) throw new Error(data?.error?.message || `Anthropic API error ${res.status}`);
+  if (!res.ok || (data && data.error)) throw new Error(data?.error?.message || data?.error || `Model API error ${res.status}`);
   if (!data) throw new Error(`Anthropic API error ${res.status} (non-JSON response)`);
+  if (data.stop_reason === 'max_tokens') throw new Error('The model response reached its token limit.');
+  reportUsage(data.usage);
   return data.content[0].text.trim();
 }
 
@@ -220,7 +237,7 @@ Return a JSON array of ${count} objects, each with:
 
 Return ONLY the JSON array.`;
 
-  const text = await callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 1400 });
+  const text = await callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 4096 });
   const match = text.match(/\[[\s\S]*\]/);
   return JSON.parse(match ? match[0] : text);
 }
@@ -296,7 +313,7 @@ Your red-team focus: ${agent.red_team_focus}
 You are about to enter a structured red team analysis session.
 
 SCENARIO CONTEXT:
-${(scenarioContext || '').slice(0, 1500)}
+${(scenarioContext || '')}
 
 PHASE/FOCUS: ${phaseFocus || 'General analysis'}
 
@@ -425,7 +442,7 @@ export function buildPersonaHeader(agent, { round } = {}) {
 // --- generateRound1 ---
 export async function generateRound1({ agent, scenarioContext, phaseFocus, threatCatalog = [], chainContext = '', facilitator_note = '', knowledgeContext = '' }) {
   const threatSection = threatCatalog.length
-    ? `\nKNOWN THREAT CATALOG (validate, challenge, or build on these — reference by T-number):\n${threatCatalog.map((t, i) => `[T${i+1}] ${t.severity} — ${t.name}: ${(t.description || '').slice(0, 120)}`).join('\n')}\n`
+    ? `\nKNOWN THREAT CATALOG (validate, challenge, or build on these — reference by T-number):\n${threatCatalog.map((t, i) => `[T${i+1}] ${t.severity} — ${t.name}: ${(t.description || '')}`).join('\n')}\n`
     : '';
 
   const chainSection = chainContext
@@ -460,12 +477,12 @@ COMPOUND_CHAIN: [one sentence describing the most critical compound threat chain
 
 Write in first person as the expert. Be specific and opinionated.`;
 
-  const fullText = await callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 1300 });
+  const fullText = await callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 4096 });
   return parseMarkers(fullText, agent.severity_default);
 }
 
 // --- generateRound2 ---
-export async function generateRound2({ agent, scenarioContext, phaseFocus, othersAssessments, threatCatalog = [], chainContext = '', facilitator_note = '', knowledgeContext = '' }) {
+export async function generateRound2({ agent, scenarioContext, phaseFocus, ownAssessment = '', othersAssessments, threatCatalog = [], chainContext = '', facilitator_note = '', knowledgeContext = '' }) {
   const chainSection = chainContext
     ? `\nPINNED THREAT CHAINS (reference for compound chain reasoning):\n${chainContext}\n`
     : '';
@@ -475,6 +492,15 @@ export async function generateRound2({ agent, scenarioContext, phaseFocus, other
     : '';
 
   const prompt = `${buildPersonaHeader(agent, { round: 2 })}
+
+SCENARIO CONTEXT AND DECISION FRAMING:
+${scenarioContext || '(No scenario context supplied)'}
+
+PHASE/FOCUS: ${phaseFocus || 'General analysis'}
+
+YOUR ROUND 1 ASSESSMENT:
+${ownAssessment || '(No earlier assessment supplied)'}
+Compare your earlier position with the peer evidence below. Keep the option, acceptance criteria, and assumptions in view when revising your judgement.
 
 You have just read all Round 1 assessments from the other experts. Here they are:
 
@@ -495,7 +521,7 @@ COMPOUND_CHAIN: [one sentence naming the most important compound threat chain th
 
 Be direct. Name names. Change your position if persuaded.`;
 
-  const fullText = await callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 1000 });
+  const fullText = await callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 4096 });
   return parseMarkers(fullText, agent.severity_default);
 }
 
@@ -505,10 +531,10 @@ export async function generateReaction({ agent, triggerText, scenarioContext }) 
 Your cognitive bias: ${agent.cognitive_bias}
 
 SCENARIO CONTEXT:
-${(scenarioContext || '').slice(0, 800)}
+${(scenarioContext || '')}
 
 You just read this finding from another analyst:
-"${(triggerText || '').slice(0, 400)}"
+"${(triggerText || '')}"
 
 React in 1-2 sentences — in character. Express genuine agreement, concern, or pushback from your disciplinary lens. No headings or preamble.`;
 
@@ -526,7 +552,7 @@ Only cite real, specific sources. Do not fabricate citations.`;
 // --- streaming variants ---
 export async function generateRound1Stream({ agent, scenarioContext, phaseFocus, threatCatalog = [], chainContext = '', facilitator_note = '', knowledgeContext = '', onToken, onDone }) {
   const threatSection = threatCatalog.length
-    ? `\nKNOWN THREAT CATALOG (validate, challenge, or build on these — reference by T-number):\n${threatCatalog.map((t, i) => `[T${i+1}] ${t.severity} — ${t.name}: ${(t.description || '').slice(0, 120)}`).join('\n')}\n`
+    ? `\nKNOWN THREAT CATALOG (validate, challenge, or build on these — reference by T-number):\n${threatCatalog.map((t, i) => `[T${i+1}] ${t.severity} — ${t.name}: ${(t.description || '')}`).join('\n')}\n`
     : '';
 
   const chainSection = chainContext ? `\nPINNED THREAT CHAINS:\n${chainContext}\n` : '';
@@ -556,14 +582,23 @@ COMPOUND_CHAIN: [one sentence describing the most critical compound threat chain
 
 Write in first person as the expert. Be specific and opinionated.${CITATION_INSTRUCTION}`;
 
-  return callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 1400, onToken, onDone });
+  return callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 4096, onToken, onDone });
 }
 
-export async function generateRound2Stream({ agent, scenarioContext, phaseFocus, othersAssessments, threatCatalog = [], chainContext = '', facilitator_note = '', knowledgeContext = '', onToken, onDone }) {
+export async function generateRound2Stream({ agent, scenarioContext, phaseFocus, ownAssessment = '', othersAssessments, threatCatalog = [], chainContext = '', facilitator_note = '', knowledgeContext = '', onToken, onDone }) {
   const chainSection = chainContext ? `\nPINNED THREAT CHAINS:\n${chainContext}\n` : '';
   const facilSection = facilitator_note ? `\nFACILITATOR NOTE: ${facilitator_note}\n` : '';
 
   const prompt = `${buildPersonaHeader(agent, { round: 2 })}
+
+SCENARIO CONTEXT AND DECISION FRAMING:
+${scenarioContext || '(No scenario context supplied)'}
+
+PHASE/FOCUS: ${phaseFocus || 'General analysis'}
+
+YOUR ROUND 1 ASSESSMENT:
+${ownAssessment || '(No earlier assessment supplied)'}
+Compare your earlier position with the peer evidence below. Keep the option, acceptance criteria, and assumptions in view when revising your judgement.
 
 You have just read all Round 1 assessments from the other experts. Here they are:
 
@@ -584,12 +619,12 @@ COMPOUND_CHAIN: [one sentence naming the most important compound threat chain th
 
 Be direct. Name names. Change your position if persuaded.${CITATION_INSTRUCTION}`;
 
-  return callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 1100, onToken, onDone });
+  return callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens: 4096, onToken, onDone });
 }
 
 // --- generatePanelTurn ---
 // A turn in Panel Mode: the SME is a working member of a standing expert panel
-// sitting with a human team, not an assistant answering a prompt. Short,
+// working with a single analyst, not an assistant answering a prompt. Short,
 // conversational, addresses people by name, and yields when the topic is
 // outside its competence (the behavior that makes a panel feel real).
 export async function generatePanelTurn({
@@ -597,7 +632,7 @@ export async function generatePanelTurn({
   shouldDefer = false, deferTo = [], wasListening = false, onToken, onDone,
 }) {
   const rosterLines = roster
-    .map(r => `- ${r.name}${r.discipline ? ` (${r.discipline})` : ''}${r.isHuman ? ' [human teammate]' : ''}`)
+    .map(r => `- ${r.name}${r.discipline ? ` (${r.discipline})` : ''}${r.isHuman ? ' [analyst]' : ''}`)
     .join('\n');
 
   const convo = transcript
@@ -618,11 +653,11 @@ You are a member of a standing expert panel convened for this engagement. Real
 people are in the room with you. This is a working conversation, not a written
 assessment.
 
-PANEL & TEAM IN THE ROOM:
+SME PANEL & ANALYST:
 ${rosterLines || '(just you)'}
 
 ENGAGEMENT CONTEXT:
-${(scenarioContext || '').slice(0, 1500)}
+${(scenarioContext || '')}
 
 CONVERSATION SO FAR:
 ${convo || '(the session is just opening)'}
@@ -635,7 +670,7 @@ Speak now, in first person, as yourself.
 - Add something only you would notice from your discipline — do not restate
   points already made.
 - If you disagree, say so directly and say why.
-- If you need something from another expert or from the team, ask them for it.${CITATION_INSTRUCTION}`;
+- If you need something from another SME or from the analyst, ask them for it.${CITATION_INSTRUCTION}`;
 
   return callAnthropicStream({
     messages: [{ role: 'user', content: prompt }],
@@ -646,8 +681,8 @@ Speak now, in first person, as yourself.
 }
 
 export async function generateAgentReply({ agent, question, priorMessages, scenarioContext, onToken, onDone }) {
-  const contextLines = (priorMessages || []).slice(-6).map(m =>
-    m.agentName ? `${m.agentName}: ${m.content.slice(0, 300)}` : `Facilitator: ${m.content}`
+  const contextLines = (priorMessages || []).map(m =>
+    m.agentName ? `${m.agentName}: ${m.content}` : `Facilitator: ${m.content}`
   ).join('\n\n');
 
   const prompt = `You are ${agent.name}, ${agent.persona_description}
@@ -655,7 +690,7 @@ Your cognitive bias: ${agent.cognitive_bias}
 Your red-team focus: ${agent.red_team_focus}
 
 SCENARIO CONTEXT:
-${(scenarioContext || '').slice(0, 1500)}
+${(scenarioContext || '')}
 
 RECENT DEBATE CONTEXT:
 ${contextLines || '(debate just started)'}
@@ -705,7 +740,7 @@ async function runSearchKnowledge(query) {
     try {
       const chunks = await _knowledgeRetriever(query, 3);
       if (chunks?.length) {
-        return chunks.map((c, i) => `[Knowledge base${c.title ? `: ${c.title}` : ''}]\n${(c.content || '').slice(0, 1200)}`).join('\n\n');
+        return chunks.map((c, i) => `[Knowledge base${c.title ? `: ${c.title}` : ''}]\n${(c.content || '')}`).join('\n\n');
       }
     } catch { /* fall through to public search */ }
   }
@@ -721,7 +756,7 @@ async function runSearchKnowledge(query) {
     const extractRes = await fetch(extractUrl);
     const extractData = await extractRes.json();
     const page = Object.values(extractData.query.pages)[0];
-    const text = (page?.extract || top.snippet?.replace(/<[^>]+>/g, '') || '').slice(0, 1500);
+    const text = (page?.extract || top.snippet?.replace(/<[^>]+>/g, '') || '');
 
     const related = pages.slice(1).map(p => p.title).join(', ');
     return `[Wikipedia: ${top.title}]\n${text}${related ? `\n\nRelated: ${related}` : ''}`;
@@ -741,8 +776,7 @@ async function runFetchUrl(url) {
       .replace(/<style[\s\S]*?<\/style>/gi, '')
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s{2,}/g, ' ')
-      .trim()
-      .slice(0, 2000);
+      .trim();
     return text || 'No readable content found at this URL.';
   } catch (e) {
     return `Fetch failed: ${e.message}`;
@@ -757,10 +791,10 @@ export async function executeToolCall(name, input) {
 
 export async function generateAgentReplyWithTools({ agent, question, priorMessages, scenarioContext, sourcePins = [], onToolCall, onDone }) {
   const key = getApiKey();
-  if (!key) throw new Error('No Anthropic API key configured. Add it in Settings.');
+  if (!key && getProviderConfig().provider !== 'mitre_aip') throw new Error('No Anthropic API key configured. Add it in Settings.');
 
-  const contextLines = (priorMessages || []).slice(-6)
-    .map(m => m.agentName ? `${m.agentName}: ${m.content.slice(0, 200)}` : `Facilitator: ${m.content}`)
+  const contextLines = (priorMessages || [])
+    .map(m => m.agentName ? `${m.agentName}: ${m.content}` : `Facilitator: ${m.content}`)
     .join('\n\n');
 
   const pinsSection = sourcePins.length > 0
@@ -772,7 +806,7 @@ Your cognitive bias: ${agent.cognitive_bias}
 Your red-team focus: ${agent.red_team_focus}
 
 SCENARIO CONTEXT:
-${(scenarioContext || '').slice(0, 800)}
+${(scenarioContext || '')}
 ${pinsSection}
 RECENT DEBATE CONTEXT:
 ${contextLines || '(debate just started)'}`;
@@ -789,7 +823,8 @@ Use tools if you need specific facts, recent incidents, or technical detail — 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': key,
+        ...(getProviderConfig().provider === 'anthropic' ? { 'x-api-key': key } : {}),
+      'x-workspace-id': getActiveWorkspaceId(),
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
@@ -803,10 +838,12 @@ Use tools if you need specific facts, recent incidents, or technical detail — 
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
+      throw new Error(err.error?.message || err.error || `Model API error ${res.status}`);
     }
 
     const data = await res.json();
+    if (data.stop_reason === 'max_tokens') throw new Error('The model response reached its token limit.');
+    reportUsage(data.usage);
     const hasToolUse = data.content.some(b => b.type === 'tool_use');
 
     if (!hasToolUse || data.stop_reason === 'end_turn') {
@@ -834,12 +871,16 @@ Use tools if you need specific facts, recent incidents, or technical detail — 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': key,
+      ...(getProviderConfig().provider === 'anthropic' ? { 'x-api-key': key } : {}),
+      'x-workspace-id': getActiveWorkspaceId(),
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({ model: getModelId(), max_tokens: 400, system, messages: [{ role: 'user', content: userMsg }] }),
   });
   const fallbackData = await fallback.json();
+  if (!fallback.ok || fallbackData.error) throw new Error(fallbackData.error?.message || fallbackData.error || 'Model fallback request failed.');
+  if (fallbackData.stop_reason === 'max_tokens') throw new Error('The model response reached its token limit.');
+  reportUsage(fallbackData.usage);
   const text = fallbackData.content?.[0]?.text?.trim() || '';
   onDone?.(text, toolCallLog);
   return { text, toolCalls: toolCallLog };
@@ -850,13 +891,12 @@ export async function extractSessionThreats({ sessionAgents, scenarioName, scena
   const assessmentText = sessionAgents
     .filter(sa => sa.round1_assessment)
     .map(sa => `=== ${sa.agentName || 'Agent'} (${sa.discipline || ''}) ===\n${sa.round1_assessment || ''}\n${sa.round2_rebuttal || ''}`)
-    .join('\n\n---\n\n')
-    .slice(0, 4000);
+    .join('\n\n---\n\n');
 
   const prompt = `You are a threat analyst extracting structured threat entries from red team session assessments.
 
 Scenario: ${scenarioName || 'Unknown'}
-Context: ${(scenarioContext || '').slice(0, 400)}
+Context: ${(scenarioContext || '')}
 
 Agent Assessments:
 ${assessmentText}
@@ -968,35 +1008,38 @@ function parseCompoundChains(chainsText) {
   return chains;
 }
 
-export async function generateSynthesis({ session, sessionAgents, scenarioContext, onToken }) {
-  const truncated = (scenarioContext || '').substring(0, 1500);
+export async function generateSynthesis({ session, sessionAgents, scenarioContext, decisionContext = '', onToken }) {
+  const fullContext = (scenarioContext || '');
   const agentsText = sessionAgents.map(sa => {
     const parts = [`=== ${sa.agentName} (${sa.discipline}) ===`];
     if (sa.round1_assessment) {
       const conf1 = sa.round1_confidence != null ? ` · confidence ${sa.round1_confidence}%` : '';
       parts.push(`ROUND 1 [${sa.round1_severity}${conf1}]:`);
-      parts.push((sa.round1_assessment || '').substring(0, 500));
+      parts.push((sa.round1_assessment || ''));
     }
     if (sa.round2_rebuttal) {
       const conf2 = sa.round2_confidence != null ? ` · confidence ${sa.round2_confidence}%` : '';
       parts.push(`ROUND 2 [${sa.round2_revised_severity}${conf2}]:`);
-      parts.push((sa.round2_rebuttal || '').substring(0, 400));
+      parts.push((sa.round2_rebuttal || ''));
     }
     return parts.join('\n');
   }).join('\n\n---\n\n');
 
-  const prompt = `You are the AgentDebate synthesis engine. You have received all agent assessments from a structured two-round red team analysis session.
+  const decisionSection = decisionContext ? `\nDECISION AND OPTION UNDER EVALUATION:\n${decisionContext}\n` : '';
+  const optionEvaluation = decisionContext ? `\n\n## OPTION EVALUATION\nAssess THIS OPTION against the acceptance criteria above. For each criterion, state MET, NOT MET, or UNKNOWN and cite the agent evidence. Identify assumptions the evidence supports, challenges, or leaves unverified. Distinguish established facts from speculation. If the option is unacceptable or evidence is insufficient, say so; do not invent a favorable recommendation.` : '';
+
+  const renderSynthesis = (contextText, assessmentText) => `You are the AgentDebate synthesis engine. You have received all agent assessments from a structured two-round red team analysis session.
 
 Session: ${session.name}
 Phase Focus: ${session.phase_focus || 'General'}
-
+${decisionSection}
 Scenario Context:
-${truncated}
+${contextText}
 
 ALL AGENT ASSESSMENTS:
-${agentsText}
+${assessmentText}
 
-Generate a comprehensive synthesis report with EXACTLY these sections in this order:
+Generate a comprehensive synthesis report with EXACTLY these sections in this order${decisionContext ? ', followed by OPTION EVALUATION as instructed below' : ''}:
 
 ## COMPOUND CHAINS
 List 2-4 multi-step attack chains that emerged from agents building on each other's work. Prefer chains that cross domains — where one discipline's threat becomes the enabling condition for another's. Each chain should read as a kill chain a defender can attack: every step must be an action the adversary takes that DEPENDS on the previous step succeeding, so that breaking any one step stops the chain. Format EACH chain EXACTLY as shown:
@@ -1024,13 +1067,17 @@ Step 3: [adversary action] — enabled by: [...] — vector: [Human|Technical|Ph
 ## SHARPEST INSIGHTS
 (5 most important or surprising specific statements from individual agents, with attribution)
 
-Write analytically. Be specific. Cite agents by name.`;
+Write analytically. Be specific. Cite agents by name.${optionEvaluation}`;
 
-  const synthesis = await callAnthropicStream({
-    messages: [{ role: 'user', content: prompt }],
-    maxTokens: 2800,
-    onToken,
+  let sectionCount = 0;
+  const report = await sectionedCompletion({
+    records: [{ id: 'scenario', kind: 'supplied', text: fullContext }, { id: 'assessments', kind: 'model', text: agentsText }],
+    onReview: review => { sectionCount = review.sectionCount; },
+    render: records => renderSynthesis(records.filter(r => r.id === 'scenario').map(r => r.text).join('\n\n') || 'See section reviews below.', records.filter(r => r.id !== 'scenario').map(r => r.id + ': ' + r.text).join('\n\n')),
+    complete: (prompt, maxTokens = 6144) => callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens }),
   });
+  const synthesis = report + (sectionCount ? '\n\n## EVIDENCE REVIEW METHOD\nThis synthesis used '+sectionCount+' source-linked section reviews. Exact quotes and section coverage were checked; these checks do not guarantee preservation of every nuance. Review the original scenario and SME responses before accepting conclusions.' : '');
+  onToken?.(synthesis, synthesis);
   const chainsSection = extractSection(synthesis, 'COMPOUND CHAINS');
   const compound_chains = parseCompoundChains(chainsSection);
   return { synthesis, compound_chains, synthesis_url: null };
@@ -1137,8 +1184,7 @@ export async function fetchUrlScenario({ url }) {
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s{2,}/g, ' ')
-    .trim()
-    .slice(0, 12000);
+    .trim();
 
   const prompt = `You are a red team analyst preparing a scenario briefing.
 

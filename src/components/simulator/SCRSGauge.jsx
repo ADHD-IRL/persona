@@ -91,7 +91,7 @@ export default function SCRSGauge({ scrs, size = 200, showLabel = true }) {
 
       {showLabel && (
         <div className="mt-1 text-center">
-          <span className="inline-flex items-center gap-1 text-xs font-bold font-mono px-2 py-0.5 rounded"
+          <span data-ui="badge" className="inline-flex items-center gap-1 text-xs font-bold font-mono px-2 py-0.5 rounded"
             style={{
               color: posture.color,
               backgroundColor: posture.bg,

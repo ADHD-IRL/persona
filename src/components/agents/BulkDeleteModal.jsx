@@ -16,16 +16,16 @@ export default function BulkDeleteModal({ count, agents, domains, filteredAgents
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="rounded-lg max-w-md w-full p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="rounded-lg max-w-md w-full p-6" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded flex items-center justify-center" style={{ backgroundColor: 'rgba(192,57,43,0.2)' }}>
             <AlertCircle className="w-5 h-5" style={{ color: '#C0392B' }} />
           </div>
-          <h2 className="text-lg font-bold" style={{ color: 'var(--wr-text-primary)' }}>Delete {count} Agent{count !== 1 ? 's' : ''}?</h2>
+          <h2 className="text-lg font-bold" style={{ color: 'var(--wr-text-primary)' }}>Delete {count} SME{count !== 1 ? 's' : ''}?</h2>
         </div>
 
         <p className="text-sm mb-4" style={{ color: 'var(--wr-text-secondary)' }}>
-          This action cannot be undone. The selected agents will be permanently removed from the library.
+          This action cannot be undone. The selected SMEs will be permanently removed from the library.
         </p>
 
         {count <= 10 ? (
@@ -47,7 +47,7 @@ export default function BulkDeleteModal({ count, agents, domains, filteredAgents
           <div className="mb-4 space-y-2">
             {Object.entries(byDomain).map(([domName, cnt]) => (
               <div key={domName} className="text-xs p-2 rounded" style={{ backgroundColor: 'var(--wr-bg-secondary)' }}>
-                <span style={{ color: 'var(--wr-text-secondary)' }}>{cnt} agent{cnt !== 1 ? 's' : ''} from </span>
+                <span style={{ color: 'var(--wr-text-secondary)' }}>{cnt} SME{cnt !== 1 ? 's' : ''} from </span>
                 <span className="font-medium" style={{ color: 'var(--wr-text-primary)' }}>{domName}</span>
               </div>
             ))}

@@ -55,7 +55,7 @@ export default function AgentAvatar({ agent, color, size = 40, status = 'idle', 
     'none';
 
   const wrap = (content) => onClick
-    ? <button onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{content}</button>
+    ? <button data-ui="action" onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{content}</button>
     : <div style={{ display: 'inline-block' }}>{content}</div>;
 
   return wrap(

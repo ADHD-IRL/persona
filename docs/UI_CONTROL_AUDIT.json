@@ -1,0 +1,466 @@
+{
+  "nestedButtonLinksConverted": 6,
+  "files": [
+    {
+      "file": "src\\pages\\AgentAnalytics.jsx",
+      "surface": 12,
+      "action": 7
+    },
+    {
+      "file": "src\\pages\\Agents.jsx",
+      "surface": 4,
+      "action": 10,
+      "badge": 2
+    },
+    {
+      "file": "src\\pages\\Analysis.jsx",
+      "surface": 1,
+      "action": 19,
+      "reference": 2
+    },
+    {
+      "file": "src\\pages\\ChainBreaker.jsx",
+      "action": 5,
+      "surface": 15,
+      "badge": 5
+    },
+    {
+      "file": "src\\pages\\Chains.jsx",
+      "surface": 6,
+      "action": 3,
+      "icon": 2
+    },
+    {
+      "file": "src\\pages\\DecisionDetail.jsx",
+      "action": 12,
+      "surface": 9,
+      "icon": 4,
+      "badge": 7
+    },
+    {
+      "file": "src\\pages\\Decisions.jsx",
+      "surface": 1,
+      "icon": 3,
+      "action": 1,
+      "card": 1,
+      "badge": 1
+    },
+    {
+      "file": "src\\pages\\Domains.jsx",
+      "surface": 3,
+      "icon": 3,
+      "action": 2,
+      "card": 1,
+      "badge": 1
+    },
+    {
+      "file": "src\\pages\\KnowledgeBase.jsx",
+      "surface": 3,
+      "icon": 2,
+      "action": 1
+    },
+    {
+      "file": "src\\pages\\LiveDebateRoom.jsx",
+      "badge": 5,
+      "surface": 3,
+      "icon": 1,
+      "switch": 1,
+      "action": 12,
+      "reference": 1
+    },
+    {
+      "file": "src\\pages\\LoginPage.jsx",
+      "surface": 2,
+      "action": 2
+    },
+    {
+      "file": "src\\pages\\NewSession.jsx",
+      "action": 7,
+      "card": 4,
+      "surface": 12,
+      "disclosure": 1,
+      "badge": 1,
+      "icon": 2,
+      "reference": 1
+    },
+    {
+      "file": "src\\pages\\PanelRoom.jsx",
+      "badge": 2,
+      "card": 1,
+      "action": 5,
+      "icon": 1
+    },
+    {
+      "file": "src\\pages\\PromptLibrary.jsx",
+      "surface": 5,
+      "action": 1,
+      "badge": 1,
+      "disclosure": 1,
+      "reference": 1
+    },
+    {
+      "file": "src\\pages\\Reports.jsx",
+      "action": 3,
+      "surface": 9,
+      "badge": 1
+    },
+    {
+      "file": "src\\pages\\RiskActions.jsx"
+    },
+    {
+      "file": "src\\pages\\Scenarios.jsx",
+      "surface": 4,
+      "icon": 2,
+      "action": 3,
+      "card": 1,
+      "badge": 2
+    },
+    {
+      "file": "src\\pages\\SessionComparison.jsx",
+      "surface": 10,
+      "badge": 1
+    },
+    {
+      "file": "src\\pages\\SessionResults.jsx",
+      "surface": 8,
+      "badge": 2,
+      "action": 1
+    },
+    {
+      "file": "src\\pages\\Sessions.jsx",
+      "action": 6,
+      "card": 1,
+      "badge": 6,
+      "icon": 4
+    },
+    {
+      "file": "src\\pages\\SessionTracker.jsx",
+      "action": 14,
+      "card": 1,
+      "surface": 2
+    },
+    {
+      "file": "src\\pages\\SessionWorkspace.jsx",
+      "surface": 27,
+      "action": 19,
+      "badge": 8,
+      "disclosure": 1,
+      "reference": 1,
+      "icon": 2,
+      "card": 1
+    },
+    {
+      "file": "src\\pages\\Settings.jsx",
+      "surface": 1,
+      "action": 1
+    },
+    {
+      "file": "src\\pages\\SignupPage.jsx",
+      "surface": 1,
+      "action": 2
+    },
+    {
+      "file": "src\\pages\\SplashPage.jsx",
+      "action": 5
+    },
+    {
+      "file": "src\\pages\\ThreatMap.jsx",
+      "action": 6,
+      "surface": 6
+    },
+    {
+      "file": "src\\pages\\Threats.jsx",
+      "surface": 3,
+      "icon": 2,
+      "action": 3
+    },
+    {
+      "file": "src\\pages\\UserGuide.jsx",
+      "surface": 8,
+      "action": 2,
+      "disclosure": 1
+    },
+    {
+      "file": "src\\pages\\WhatIfSimulator.jsx",
+      "surface": 8,
+      "action": 7,
+      "card": 1,
+      "badge": 2
+    },
+    {
+      "file": "src\\components\\agents\\AgentFormModal.jsx",
+      "action": 9,
+      "surface": 5,
+      "icon": 1,
+      "badge": 2,
+      "disclosure": 1
+    },
+    {
+      "file": "src\\components\\agents\\AgentImportModal.jsx",
+      "surface": 4,
+      "icon": 1,
+      "disclosure": 1,
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\agents\\AgentPerformanceCard.jsx"
+    },
+    {
+      "file": "src\\components\\agents\\BulkDeleteModal.jsx",
+      "surface": 1
+    },
+    {
+      "file": "src\\components\\agents\\DomainAssignModal.jsx",
+      "surface": 3,
+      "icon": 1,
+      "action": 2,
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\agents\\TeamPerformanceSummary.jsx",
+      "surface": 5
+    },
+    {
+      "file": "src\\components\\analysis\\ActionEditor.jsx"
+    },
+    {
+      "file": "src\\components\\analysis\\AnalysisStatus.jsx",
+      "surface": 3,
+      "action": 3
+    },
+    {
+      "file": "src\\components\\chainbreaker\\ChainFlowGraph.jsx",
+      "icon": 1,
+      "action": 1
+    },
+    {
+      "file": "src\\components\\debate\\AddressChips.jsx",
+      "action": 1
+    },
+    {
+      "file": "src\\components\\debate\\AgentAvatar.jsx",
+      "action": 1
+    },
+    {
+      "file": "src\\components\\debate\\SpeakerStage.jsx"
+    },
+    {
+      "file": "src\\components\\debate\\Waveform.jsx"
+    },
+    {
+      "file": "src\\components\\domains\\DomainCoverage.jsx",
+      "card": 2,
+      "action": 8,
+      "surface": 1
+    },
+    {
+      "file": "src\\components\\layout\\AppLayout.jsx"
+    },
+    {
+      "file": "src\\components\\layout\\Sidebar.jsx",
+      "disclosure": 1,
+      "action": 1,
+      "brand": 1
+    },
+    {
+      "file": "src\\components\\risks\\RiskLibrary.jsx",
+      "action": 31,
+      "surface": 5,
+      "card": 1
+    },
+    {
+      "file": "src\\components\\session\\AnalysisStages.jsx",
+      "action": 1,
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\session\\ConvenePanelButton.jsx",
+      "surface": 1,
+      "icon": 1,
+      "action": 4,
+      "card": 1
+    },
+    {
+      "file": "src\\components\\session\\DebateTranscript.jsx",
+      "badge": 1,
+      "action": 1,
+      "surface": 1
+    },
+    {
+      "file": "src\\components\\session\\EvidenceLedger.jsx",
+      "surface": 2,
+      "card": 1,
+      "badge": 2,
+      "reference": 1
+    },
+    {
+      "file": "src\\components\\session\\ExposureCalculationModal.jsx",
+      "surface": 4,
+      "icon": 1
+    },
+    {
+      "file": "src\\components\\session\\NextSteps.jsx",
+      "surface": 1,
+      "action": 1
+    },
+    {
+      "file": "src\\components\\session\\RiskMatrix.jsx",
+      "surface": 3,
+      "action": 2
+    },
+    {
+      "file": "src\\components\\session\\RiskRegistry.jsx",
+      "badge": 2,
+      "surface": 1
+    },
+    {
+      "file": "src\\components\\session\\SessionEntry.jsx",
+      "action": 2
+    },
+    {
+      "file": "src\\components\\session\\SessionKillChains.jsx",
+      "surface": 3,
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\session\\SessionMitigations.jsx",
+      "badge": 2,
+      "surface": 3,
+      "icon": 1
+    },
+    {
+      "file": "src\\components\\session\\SessionRiskHeader.jsx",
+      "surface": 1
+    },
+    {
+      "file": "src\\components\\session\\SynthesisDocument.jsx"
+    },
+    {
+      "file": "src\\components\\session\\SynthesisSummary.jsx",
+      "surface": 2,
+      "badge": 2,
+      "action": 1
+    },
+    {
+      "file": "src\\components\\settings\\DangerZone.jsx",
+      "surface": 5,
+      "action": 2,
+      "icon": 1
+    },
+    {
+      "file": "src\\components\\simulator\\CountermeasureToggle.jsx",
+      "badge": 2
+    },
+    {
+      "file": "src\\components\\simulator\\RiskBreakdownCard.jsx",
+      "surface": 1,
+      "badge": 1,
+      "action": 1
+    },
+    {
+      "file": "src\\components\\simulator\\ScrsCalculationModal.jsx",
+      "surface": 3,
+      "icon": 1,
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\simulator\\SCRSGauge.jsx",
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\threatmap\\CoverageGapPanel.jsx",
+      "action": 2,
+      "badge": 1,
+      "surface": 5
+    },
+    {
+      "file": "src\\components\\threatmap\\DisciplineRadar.jsx",
+      "surface": 3,
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\threatmap\\DrillDownPanel.jsx",
+      "icon": 1,
+      "action": 2,
+      "surface": 3,
+      "badge": 2
+    },
+    {
+      "file": "src\\components\\threatmap\\SeverityByDiscipline.jsx",
+      "surface": 3
+    },
+    {
+      "file": "src\\components\\threatmap\\ThreatHeatmap.jsx",
+      "surface": 2
+    },
+    {
+      "file": "src\\components\\tracker\\AnalysisQueue.jsx",
+      "surface": 1,
+      "action": 1
+    },
+    {
+      "file": "src\\components\\tracker\\SessionIntelligence.jsx",
+      "surface": 1,
+      "action": 2,
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\ui\\button.jsx",
+      "action": 1
+    },
+    {
+      "file": "src\\components\\ui\\EmptyState.jsx"
+    },
+    {
+      "file": "src\\components\\ui\\MetricHint.jsx",
+      "surface": 1
+    },
+    {
+      "file": "src\\components\\ui\\PageHeader.jsx"
+    },
+    {
+      "file": "src\\components\\ui\\ProcessingBar.jsx"
+    },
+    {
+      "file": "src\\components\\ui\\SeverityBadge.jsx",
+      "badge": 1
+    },
+    {
+      "file": "src\\components\\ui\\toast.jsx",
+      "icon": 1
+    },
+    {
+      "file": "src\\components\\ui\\toaster.jsx"
+    },
+    {
+      "file": "src\\components\\ui\\tooltip.jsx"
+    },
+    {
+      "file": "src\\components\\ui\\use-toast.jsx"
+    },
+    {
+      "file": "src\\components\\ui\\VectorBar.jsx"
+    },
+    {
+      "file": "src\\components\\ui\\WorkflowControls.jsx",
+      "action": 1,
+      "surface": 1
+    },
+    {
+      "file": "src\\components\\ui\\WrButton.jsx",
+      "action": 1
+    },
+    {
+      "file": "src\\components\\ui\\WrInput.jsx"
+    },
+    {
+      "file": "src/App.jsx",
+      "action": 2,
+      "reference": 1
+    },
+    {
+      "file": "src/lib/PageNotFound.jsx",
+      "action": 1
+    }
+  ]
+}

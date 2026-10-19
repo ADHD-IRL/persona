@@ -200,7 +200,7 @@ export default function WhatIfSimulator() {
   // ── Skeleton ──────────────────────────────────────────────────────────────
 
   const Skeleton = ({ h = 'h-32' }) => (
-    <div className={`${h} rounded-lg animate-pulse`}
+    <div data-ui="surface" className={`${h} rounded-lg animate-pulse`}
       style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }} />
   );
 
@@ -216,17 +216,17 @@ export default function WhatIfSimulator() {
           <div className="flex items-center gap-2">
             {sessionId && chainAnalyses.length > 0 && (
               <>
-                <button onClick={clearAll}
+                <button data-ui="action" onClick={clearAll}
                   className="px-3 py-2 rounded text-xs font-medium transition-all"
                   style={{ color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
                   Clear all
                 </button>
-                <button onClick={applyAll}
+                <button data-ui="action" onClick={applyAll}
                   className="px-3 py-2 rounded text-xs font-medium transition-all"
                   style={{ color: 'var(--wr-amber)', border: '1px solid rgba(240,165,0,0.3)', backgroundColor: 'rgba(240,165,0,0.08)' }}>
                   Apply all
                 </button>
-                <button onClick={saveSimulation}
+                <button data-ui="action" onClick={saveSimulation}
                   className="flex items-center gap-1.5 px-4 py-2 rounded text-sm font-semibold transition-all"
                   style={{ backgroundColor: saved ? '#27AE60' : 'var(--wr-amber)', color: '#0D1B2A' }}>
                   <Save className="w-3.5 h-3.5" />
@@ -240,7 +240,7 @@ export default function WhatIfSimulator() {
 
       {preloadSessionId && (
         <div className="px-6 pt-4">
-          <Link to={`/sessions/${preloadSessionId}`} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
+          <Link data-ui="action" to={`/sessions/${preloadSessionId}`} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
             style={{ color: 'var(--wr-amber)', backgroundColor: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.25)', textDecoration: 'none' }}>
             ← Back to session
           </Link>
@@ -249,7 +249,7 @@ export default function WhatIfSimulator() {
 
       <div className="p-6">
         {/* Session selector — collapsed to a label when scoped to a session */}
-        <div className="mb-5 rounded-lg p-4"
+        <div data-ui="surface" className="mb-5 rounded-lg p-4"
           style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           {!pickSession && session ? (
             <div className="flex items-center justify-between gap-3">
@@ -257,7 +257,7 @@ export default function WhatIfSimulator() {
                 <p className="text-xs font-bold font-mono" style={{ color: 'var(--wr-text-muted)' }}>SESSION</p>
                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--wr-text-primary)' }}>{session.name}</p>
               </div>
-              <button onClick={() => setPickSession(true)} className="text-xs underline flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }}>
+              <button data-ui="action" onClick={() => setPickSession(true)} className="text-xs underline flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }}>
                 Change session
               </button>
             </div>
@@ -286,7 +286,7 @@ export default function WhatIfSimulator() {
         </div>
 
         {!sessionId ? (
-          <div className="rounded-lg py-20 text-center"
+          <div data-ui="surface" className="rounded-lg py-20 text-center"
             style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <FlaskConical className="w-10 h-10 mx-auto mb-3 opacity-20" style={{ color: 'var(--wr-amber)' }} />
             <p className="text-sm font-medium mb-1" style={{ color: 'var(--wr-text-secondary)' }}>
@@ -304,7 +304,7 @@ export default function WhatIfSimulator() {
 
               {/* Score delta bar */}
               {chainAnalyses.length > 0 && (
-                <div className="rounded-lg p-4 flex items-center gap-6"
+                <div data-ui="surface" className="rounded-lg p-4 flex items-center gap-6"
                   style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                   <div className="text-center">
                     <p className="text-xs font-mono mb-1" style={{ color: 'var(--wr-text-muted)' }}>BASELINE</p>
@@ -340,22 +340,22 @@ export default function WhatIfSimulator() {
                 const resColor = CHAIN_RESILIENCE_COLOR[chain.chain_resilience] || 'var(--wr-text-muted)';
 
                 return (
-                  <div key={chain._key} className="rounded-lg overflow-hidden"
+                  <div data-ui="surface" key={chain._key} className="rounded-lg overflow-hidden"
                     style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
 
                     {/* Chain header */}
-                    <button
+                    <button data-ui="card"
                       className="w-full flex items-center justify-between px-5 py-4 text-left"
                       onClick={() => toggleExpanded(chain._key)}>
                       <div className="flex items-center gap-3">
                         <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>
                           {chain.name}
                         </p>
-                        <span className="text-xs font-bold font-mono px-2 py-0.5 rounded"
+                        <span data-ui="badge" className="text-xs font-bold font-mono px-2 py-0.5 rounded"
                           style={{ color: resColor, backgroundColor: `${resColor}15`, border: `1px solid ${resColor}30` }}>
                           {chain.chain_resilience} RESILIENCE
                         </span>
-                        <span className="text-xs font-mono px-2 py-0.5 rounded"
+                        <span data-ui="badge" className="text-xs font-mono px-2 py-0.5 rounded"
                           style={{ color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
                           {chain._source === 'library' ? 'LIBRARY CHAIN' : 'SESSION CHAIN'}
                         </span>
@@ -419,7 +419,7 @@ export default function WhatIfSimulator() {
               })}
 
               {chainAnalyses.length === 0 && sessionId && (
-                <div className="rounded-lg py-16 text-center"
+                <div data-ui="surface" className="rounded-lg py-16 text-center"
                   style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                   <AlertTriangle className="w-8 h-8 mx-auto mb-3 opacity-20" style={{ color: '#D68910' }} />
                   <p className="text-sm font-medium mb-2" style={{ color: 'var(--wr-text-secondary)' }}>
@@ -429,7 +429,7 @@ export default function WhatIfSimulator() {
                     Run Chain Breaker on this session's synthesised chains, or on a library chain with
                     {session?.scenario_id ? ' this session’s scenario' : ' a scenario'} selected, then save the analysis.
                   </p>
-                  <Link to="/chain-breaker"
+                  <Link data-ui="action" to="/chain-breaker"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold"
                     style={{ backgroundColor: 'var(--wr-amber)', color: '#0D1B2A' }}>
                     Open Chain Breaker <ArrowRight className="w-3.5 h-3.5" />
@@ -442,7 +442,7 @@ export default function WhatIfSimulator() {
             <div className="col-span-1 space-y-4">
 
               {/* Gauge */}
-              <div className="rounded-lg p-5 flex flex-col items-center"
+              <div data-ui="surface" className="rounded-lg p-5 flex flex-col items-center"
                 style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold tracking-widest font-mono mb-4"
                   style={{ color: 'var(--wr-text-muted)' }}>SYSTEMIC CRITICAL RISK SCORE</p>
@@ -458,7 +458,7 @@ export default function WhatIfSimulator() {
 
               {/* Priority actions */}
               {priorityActions.length > 0 && (
-                <div className="rounded-lg overflow-hidden"
+                <div data-ui="surface" className="rounded-lg overflow-hidden"
                   style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
                   <p className="px-4 py-3 text-xs font-bold tracking-widest font-mono border-b"
                     style={{ color: 'var(--wr-text-muted)', borderColor: 'var(--wr-border)' }}>
@@ -485,7 +485,7 @@ export default function WhatIfSimulator() {
 
               {/* Generate brief — routes to Reports pre-scoped to this session */}
               {sessionId && (
-                <Link to={`/reports?session=${sessionId}`}
+                <Link data-ui="action" to={`/reports?session=${sessionId}`}
                   className="flex items-center justify-center gap-2 w-full py-2.5 rounded text-sm font-semibold transition-all hover:opacity-90"
                   style={{ backgroundColor: 'rgba(240,165,0,0.1)', color: 'var(--wr-amber)',
                     border: '1px solid rgba(240,165,0,0.3)' }}>

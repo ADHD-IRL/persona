@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ShieldCheck, Scissors, Trash2 } from 'lucide-react';
 import { riskScore, riskBandFromScore, likelihoodLabel, impactLabel } from '@/lib/risk';
 
@@ -12,7 +11,7 @@ const fieldStyle = { backgroundColor: 'var(--wr-bg-secondary)', border: '1px sol
 function Pill({ label, color }) {
   if (!label) return null;
   return (
-    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${color}1f`, color, border: `1px solid ${color}55` }}>
+    <span data-ui="badge" className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${color}1f`, color, border: `1px solid ${color}55` }}>
       {label}
     </span>
   );
@@ -23,7 +22,7 @@ function RiskChip({ l, i, muted }) {
   if (s == null) return <span className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>—</span>;
   const band = riskBandFromScore(s);
   return (
-    <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: muted ? 'var(--wr-bg-secondary)' : `${band.color}18`, color: band.color, border: `1px solid ${band.color}44` }}>
+    <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: muted ? 'var(--wr-bg-secondary)' : `${band.color}18`, color: band.color, border: `1px solid ${band.color}44` }}>
       {s}
     </span>
   );
@@ -50,25 +49,8 @@ function ResidualPicker({ m, onChange }) {
   );
 }
 
-// Owner is free text; save on blur or Enter so every keystroke isn't a write.
-function OwnerField({ m, onSave }) {
-  const [val, setVal] = useState(m.owner || '');
-  const commit = () => { if ((val || '') !== (m.owner || '')) onSave(val.trim() || null); };
-  return (
-    <input
-      value={val}
-      onChange={e => setVal(e.target.value)}
-      onBlur={commit}
-      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-      placeholder="owner"
-      className="text-xs px-2 py-1 rounded outline-none w-24"
-      style={fieldStyle}
-    />
-  );
-}
-
 // The session's mitigation register. Chain Breaker populates it; this is the
-// one place to work it: status, owner, residual re-scoring, removal.
+// one place to work it: status, residual re-scoring, removal.
 export default function SessionMitigations({ db, mitigations = [], onChange }) {
   const update = async (m, patch) => {
     try { await db.Mitigation.update(m.id, patch); onChange?.(); } catch { /* ignore */ }
@@ -87,7 +69,7 @@ export default function SessionMitigations({ db, mitigations = [], onChange }) {
 
   if (!mitigations.length) {
     return (
-      <div className="rounded-2xl py-14 text-center" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-card)' }}>
+      <div data-ui="surface" className="rounded-2xl py-14 text-center" style={{ border: '1px solid var(--wr-border)', backgroundColor: 'var(--wr-bg-card)' }}>
         <ShieldCheck className="w-7 h-7 mx-auto mb-3" style={{ color: 'var(--wr-text-muted)', opacity: 0.4 }} />
         <p className="text-sm" style={{ color: 'var(--wr-text-muted)' }}>No mitigations yet.</p>
         <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>Break the kill chains under Findings, or add roadmap items from Chain Breaker — mitigations land here.</p>
@@ -98,7 +80,7 @@ export default function SessionMitigations({ db, mitigations = [], onChange }) {
   return (
     <div className="space-y-3">
       {/* Summary */}
-      <div className="rounded-xl p-4 flex items-center gap-6 flex-wrap" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <div data-ui="surface" className="rounded-xl p-4 flex items-center gap-6 flex-wrap" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
         <div>
           <p className="text-[10px] font-mono tracking-wider" style={{ color: 'var(--wr-text-muted)' }}>MITIGATIONS</p>
           <p className="text-lg font-bold font-mono" style={{ color: 'var(--wr-text-primary)' }}>{mitigations.length}</p>
@@ -119,13 +101,13 @@ export default function SessionMitigations({ db, mitigations = [], onChange }) {
       </div>
 
       {/* Rows */}
-      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
-        <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-2 text-[10px] font-mono font-bold tracking-wider" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)' }}>
-          <span>MITIGATION</span><span>STATUS</span><span>OWNER</span><span className="text-center">INHERENT</span><span className="text-center">RESIDUAL</span><span />
+      <div data-ui="surface" className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-2 text-[10px] font-mono font-bold tracking-wider" style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)' }}>
+          <span>MITIGATION</span><span>STATUS</span><span className="text-center">INHERENT</span><span className="text-center">RESIDUAL</span><span />
         </div>
         <div style={{ backgroundColor: 'var(--wr-bg-card)' }}>
           {mitigations.map(m => (
-            <div key={m.id} className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-3 items-center border-t" style={{ borderColor: 'var(--wr-border)' }}>
+            <div key={m.id} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-3 items-center border-t" style={{ borderColor: 'var(--wr-border)' }}>
               <div className="min-w-0">
                 <p className="text-sm font-medium" style={{ color: 'var(--wr-text-primary)' }}>{m.title}</p>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -149,10 +131,9 @@ export default function SessionMitigations({ db, mitigations = [], onChange }) {
               >
                 {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
               </select>
-              <OwnerField key={`${m.id}-${m.owner || ''}`} m={m} onSave={owner => update(m, { owner })} />
               <div className="text-center"><RiskChip l={m.inherent_likelihood} i={m.inherent_impact} /></div>
               <ResidualPicker m={m} onChange={(k, v) => update(m, { [k]: v })} />
-              <button onClick={() => remove(m)} title="Remove mitigation" className="p-1 rounded opacity-50 hover:opacity-100" style={{ color: '#C0392B' }}>
+              <button data-ui="icon" onClick={() => remove(m)} title="Remove mitigation" className="p-1 rounded opacity-50 hover:opacity-100" style={{ color: '#C0392B' }}>
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>

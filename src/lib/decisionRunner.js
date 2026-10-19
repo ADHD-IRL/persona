@@ -1,3 +1,4 @@
+import { sectionedCompletion } from './sectionedCompletion.js';
 // Runs a decision's panel end to end and writes the reasoned assessment.
 //
 // For every option of a decision this creates a Decision-Focus session, drives
@@ -10,18 +11,20 @@
 import {
   generateRound1, generateRound2, generateSynthesis,
   callAnthropicStream, parseLooseJson,
-} from '@/lib/llm';
-import { buildDecisionFraming } from '@/lib/decisionContext';
-import { retrieveKnowledge, formatKnowledgeContext } from '@/lib/knowledge';
-import { saveTurnSources } from '@/lib/sources';
-import { aggregateSessionRisk } from '@/lib/risk';
-import { sessionResumePlan } from '@/lib/runState';
+} from './llm.js';
+import { buildDecisionFraming } from './decisionContext.js';
+import { retrieveKnowledge, formatKnowledgeContext } from './knowledge.js';
+import { saveTurnSources } from './sources.js';
+import { aggregateSessionRisk } from './risk.js';
+import { sessionResumePlan } from './runState.js';
+import { normalizeAssessment } from './decisionAssessment.js';
+export { normalizeAssessment, resolveOptionId } from './decisionAssessment.js';
 
 export const assessmentKey = (decisionId) => `dec_assess_${decisionId}`;
 export const setupKey      = (decisionId) => `dec_setup_${decisionId}`;
 
 // KV helpers live in lib/appConfigKV; re-exported so existing imports keep working.
-export { readKV, writeKV, deleteKV } from '@/lib/appConfigKV';
+export { readKV, writeKV, deleteKV } from './appConfigKV.js';
 
 // ── One option = one full session ─────────────────────────────────────────────
 
@@ -46,12 +49,13 @@ function othersTextFor(sa, sessionAgents, agentById) {
  * synthesis are skipped. Returns { session, sessionAgents, synthesis }.
  */
 export async function runOptionSession({
-  db, decision, option, assumptions = [], scenario, agents = [], threats = [],
+  db, decision, option, assumptions = [], scenario, agents = [], threats = [], chains = [],
   onProgress = () => {}, shouldCancel = () => false, resume = null,
+  onCheckpoint = null, knowledgeOverride, analysisName, phaseFocusOverride, analysisJobId,
 }) {
   const framing = buildDecisionFraming(decision, option, assumptions);
   const scenarioContext = framing + (scenario?.context_document || '');
-  const phaseFocus = 'Decision option evaluation';
+  const phaseFocus = phaseFocusOverride || 'Decision option evaluation';
   const agentById = Object.fromEntries(agents.map(a => [a.id, a]));
 
   let session;
@@ -63,6 +67,9 @@ export async function runOptionSession({
     // with no agents in it.
     const fresh = await db.SessionAgent.filter({ session_id: session.id });
     sessionAgents = (fresh || []).map(({ agent: _a, ...sa }) => sa);
+    if (onCheckpoint) {
+      for (const agent of agents) if (!sessionAgents.some(sa => sa.agent_id === agent.id)) sessionAgents.push(await db.SessionAgent.create({ session_id: session.id, agent_id: agent.id, status: 'pending' }));
+    }
     if (!sessionAgents.length) {
       throw new Error(`The unfinished session for "${option.name}" has no agents on record, so it cannot be resumed. Re-run everything to start it fresh.`);
     }
@@ -78,16 +85,18 @@ export async function runOptionSession({
     }
   } else {
     session = await db.Session.create({
-      name: `${decision.title} — ${option.name}`,
+      name: decision ? `${decision.title} — ${option.name}` : analysisName || scenario.name,
       scenario_id: scenario.id,
       domain_id: scenario.domain_id || null,
       phase_focus: phaseFocus,
       mode: 'classic',
+      ...(analysisJobId ? { analysis_job_id: analysisJobId } : {}),
       status: 'pending',
       agent_ids: agents.map(a => a.id),
-      decision_id: decision.id,
-      decision_option_id: option.id,
+      decision_id: decision?.id || null,
+      decision_option_id: decision ? option.id : null,
     });
+    if (onCheckpoint) await onCheckpoint(session);
     for (const a of agents) {
       const sa = await db.SessionAgent.create({ session_id: session.id, agent_id: a.id, status: 'pending' });
       sessionAgents.push(sa);
@@ -95,7 +104,7 @@ export async function runOptionSession({
   }
 
   const kChunks = await retrieveKnowledge(db, `${scenario?.context_document || ''} ${phaseFocus}`, 5).catch(() => []);
-  const knowledgeContext = formatKnowledgeContext(kChunks);
+  const knowledgeContext = knowledgeOverride ?? formatKnowledgeContext(kChunks);
 
   const checkCancel = () => { if (shouldCancel()) throw new Error('Cancelled'); };
 
@@ -108,7 +117,7 @@ export async function runOptionSession({
       const sa = sessionAgents[i];
       const agent = agentById[sa.agent_id];
       if (!agent || sa[doneField]) continue;
-      onProgress({ stage: round === 1 ? 'round1' : 'round2', agentIndex: i + 1, agentTotal: sessionAgents.length, agentName: agent.name });
+      await onProgress({ stage: round === 1 ? 'round1' : 'round2', agentIndex: i + 1, agentTotal: sessionAgents.length, agentName: agent.name, agentId: agent.id, sessionId: session.id });
 
       const statusKey = round === 1 ? 'generating_r1' : 'generating_r2';
       await db.SessionAgent.update(sa.id, { status: statusKey });
@@ -118,9 +127,10 @@ export async function runOptionSession({
           agent: { ...agent },
           scenarioContext,
           phaseFocus,
+          ownAssessment: round === 2 ? sa.round1_assessment : '',
           othersAssessments: round === 2 ? othersTextFor(sa, sessionAgents, agentById) : '',
           threatCatalog: threats,
-          chainContext: '',
+          chainContext: JSON.stringify(chains.map(c => ({ name: c.name, description: c.description, steps: c.steps, evidence: c.evidence, review_status: c.review_status }))),
           facilitator_note: '',
           knowledgeContext,
         });
@@ -162,7 +172,7 @@ export async function runOptionSession({
   if (existingSynth?.raw_text) {
     synthesisText = existingSynth.raw_text;
   } else {
-    onProgress({ stage: 'synthesis', agentIndex: 0, agentTotal: 0 });
+    await onProgress({ stage: 'synthesis', sessionId: session.id, agentIndex: 0, agentTotal: sessionAgents.length });
     const synthAgents = sessionAgents.map(sa => ({
       ...sa,
       agentName: agentById[sa.agent_id]?.name,
@@ -172,6 +182,7 @@ export async function runOptionSession({
       session,
       sessionAgents: synthAgents,
       scenarioContext: scenario?.context_document || '',
+      decisionContext: framing,
     });
     await db.SessionSynthesis.create({
       raw_text: synth.synthesis,
@@ -179,18 +190,16 @@ export async function runOptionSession({
       compound_chains: synth.compound_chains || [],
     });
     await saveTurnSources(db, session.id, null, null, synth.synthesis).catch(() => {});
-    for (const c of (synth.compound_chains || [])) {
-      await db.Chain.create({
-        session_id: session.id,
-        scenario_id: scenario.id,
-        name: c.name,
-        description: c.description || '',
-        steps: c.steps || [],
-        is_ai_generated: true,
-        tags: [],
-      }).catch(() => {});
-    }
     synthesisText = synth.synthesis;
+  }
+  const savedSynthesis = (await db.SessionSynthesis.filter({ session_id: session.id }))[0];
+  const existingChains = await db.Chain.filter({ session_id: session.id });
+  for (const [index,c] of (savedSynthesis?.compound_chains || []).entries()) {
+    const sourceKey = 'session:' + session.id + ':chain:' + index;
+    if (existingChains.some(row => row.source_key === sourceKey || (!row.source_key && row.name === c.name))) continue;
+    await db.Chain.create({ session_id: session.id, scenario_id: scenario.id, name: c.name,
+      description: c.description || '', steps: c.steps || [], is_ai_generated: true, tags: [],
+      ...(analysisJobId ? { analysis_job_id: analysisJobId, source_key: sourceKey, review_status: 'needs_review', evidence: [{ kind: 'model', text: synthesisText, session_id: session.id }] } : {}) });
   }
   await db.Session.update(session.id, { status: 'complete' });
 
@@ -198,13 +207,6 @@ export async function runOptionSession({
 }
 
 // ── Cross-option reasoned assessment ─────────────────────────────────────────
-
-function section(text, heading) {
-  if (!text) return '';
-  const re = new RegExp(`##\\s*${heading}[\\s\\S]*?(?=\\n##\\s|$)`, 'i');
-  const m = text.match(re);
-  return m ? m[0] : '';
-}
 
 /**
  * perOption: [{ option, sessionAgents (with .agent), synthesis }]
@@ -222,24 +224,20 @@ export async function generateDecisionAssessment({ decision, options, assumption
       const conf = sa.round2_confidence ?? sa.round1_confidence;
       const l = sa.round2_likelihood ?? sa.round1_likelihood;
       const i = sa.round2_impact ?? sa.round1_impact;
-      const text = (sa.round2_rebuttal || sa.round1_assessment || '').replace(/\s+/g, ' ').slice(0, 420);
+      const text = (sa.round2_rebuttal || sa.round1_assessment || '').replace(/\s+/g, ' ');
       return `- ${a.name || 'SME'} (${a.discipline || ''}) — ${sev}${conf != null ? `, confidence ${conf}%` : ''}${l && i ? `, L${l}×I${i}` : ''}: ${text}`;
     }).join('\n');
-    const synthBits = [
-      section(synthesis, 'CONSENSUS FINDINGS').slice(0, 900),
-      section(synthesis, 'CROSS-DOMAIN INTERACTION RISKS').slice(0, 700),
-      section(synthesis, 'PRIORITY MITIGATIONS').slice(0, 600),
-    ].filter(Boolean).join('\n');
+    const synthBits = synthesis;
     return [
       `### OPTION ${letter} — ${option.name} (id: ${option.id})`,
       option.description ? option.description : '',
       agg ? `Aggregate: peak risk ${agg.peak}/25, avg exposure ${agg.avgExposure}, ratings ${agg.count} (C${agg.severityCounts.CRITICAL} H${agg.severityCounts.HIGH} M${agg.severityCounts.MEDIUM} L${agg.severityCounts.LOW})` : 'Aggregate: no quantified ratings',
       'SME final positions:', smeLines,
-      synthBits ? `Synthesis excerpts:\n${synthBits}` : '',
+      synthBits ? `Full synthesis:\n${synthBits}` : '',
     ].filter(Boolean).join('\n');
   }).join('\n\n');
 
-  const prompt = `You are the decision-assessment engine for a multidisciplinary red-team platform. A panel of expert agents has just run a two-round analysis of EACH option of a design decision. Compare the options and recommend one, with reasons that cite the evidence.
+  const renderAssessment = records => `You are the decision-assessment engine for a multidisciplinary red-team platform. A panel of expert agents has just run a two-round analysis of EACH option of a design decision. Compare the options and determine whether any option can be recommended, with reasons that cite the evidence.
 
 DECISION: ${decision.title}
 ${decision.description || ''}
@@ -247,10 +245,12 @@ ${decision.acceptance_criteria ? `ACCEPTANCE CRITERIA: ${decision.acceptance_cri
 ${live.length ? `KEY ASSUMPTIONS:\n${live.map(a => `- [${a.criticality || 'MEDIUM'}] ${a.text}`).join('\n')}` : ''}
 
 PANEL EVIDENCE PER OPTION:
-${optionBlocks}
+${records.map(r => r.text).join('\n\n')}
 
 Rules:
-- Recommend exactly one option. Lower risk is not automatically better: weigh peak risk, how many SMEs rated CRITICAL/HIGH and how confident they were, whether the option meets the acceptance criteria, and which assumptions it puts at risk.
+- Set recommendation_status to RECOMMEND_OPTION only when the evidence supports choosing an option. Set REJECT_ALL when every option fails mandatory acceptance criteria or carries unacceptable risk. Set NEEDS_MORE_INFORMATION when missing or conflicting evidence prevents a defensible choice. Never choose an option merely because one must win.
+- For RECOMMEND_OPTION, provide exactly one valid recommended_option_id. For REJECT_ALL or NEEDS_MORE_INFORMATION, recommended_option_id must be null and no option verdict may be RECOMMENDED. For REJECT_ALL, every option verdict must be NOT RECOMMENDED.
+- State the evidence or redesign needed to move forward in conditions_to_revisit. Lower risk is not automatically better: weigh peak risk, how many SMEs rated CRITICAL/HIGH and how confident they were, whether the option meets the acceptance criteria, and which assumptions it puts at risk.
 - Every reason must point at evidence: name SMEs, severities, confidences, or synthesis findings. No generic statements.
 - Be candid about what the chosen option still costs (the risk knowingly accepted) and what would change your recommendation.
 - Use the exact option ids shown in parentheses above for "recommended_option_id" and "option_id" — never the letter or the name.
@@ -258,14 +258,15 @@ Rules:
 
 Return ONLY one JSON object, no markdown, in exactly this shape:
 {
-  "recommended_option_id": "<id>",
+  "recommendation_status": "RECOMMEND_OPTION" | "REJECT_ALL" | "NEEDS_MORE_INFORMATION",
+  "recommended_option_id": "<id>" | null,
   "confidence": "HIGH" | "MEDIUM" | "LOW",
-  "headline": "<one sentence: which option and the decisive reason>",
+  "headline": "<one sentence: the recommended option or why no option can be recommended>",
   "rationale": ["<reason citing evidence>", "..."],
   "options": [
     {
       "option_id": "<id>",
-      "verdict": "RECOMMENDED" | "VIABLE" | "NOT RECOMMENDED",
+      "verdict": "RECOMMENDED" | "VIABLE" | "NOT RECOMMENDED" | "NEEDS EVIDENCE",
       "risk_summary": "<2-3 sentences on this option's risk picture>",
       "key_risks": ["<specific risk, with the SME or finding that raised it>", "..."],
       "meets_acceptance_criteria": "YES" | "PARTIAL" | "NO" | "UNKNOWN",
@@ -278,10 +279,7 @@ Return ONLY one JSON object, no markdown, in exactly this shape:
   "conditions_to_revisit": ["<observable condition that should trigger re-assessment>", "..."]
 }`;
 
-  const raw = await callAnthropicStream({
-    messages: [{ role: 'user', content: prompt }],
-    maxTokens: 6000,
-  });
+  const raw = await sectionedCompletion({ records: [{ id: 'option-evidence', text: optionBlocks }], render: renderAssessment, complete: (prompt, maxTokens = 6144) => callAnthropicStream({ messages: [{ role: 'user', content: prompt }], maxTokens }) });
   let parsed;
   try { parsed = parseLooseJson(raw); }
   catch (e) { throw new Error(`The assessment did not come back as valid JSON (${e.message}). Try regenerating.`); }
@@ -291,59 +289,3 @@ Return ONLY one JSON object, no markdown, in exactly this shape:
   return normalizeAssessment(parsed, options);
 }
 
-// ── Shape normalisation ───────────────────────────────────────────────────────
-// The page renders this object straight from storage on every load, so a
-// single malformed reply (a string where a list was asked for, a letter where
-// an id was asked for) must never be persisted as-is.
-
-const toText = (x) => (x == null ? '' : typeof x === 'string' ? x : typeof x === 'object' ? JSON.stringify(x) : String(x));
-const toList = (x) => Array.isArray(x) ? x.map(toText).filter(Boolean) : (x == null || x === '' ? [] : [toText(x)]);
-const oneOf = (x, allowed, fallback) => { const v = toText(x).trim().toUpperCase(); return allowed.includes(v) ? v : fallback; };
-
-/** Map whatever the model called an option (id, letter, "Option B", or its name) to a real option id. */
-export function resolveOptionId(raw, options) {
-  if (raw == null) return null;
-  const s = toText(raw).trim();
-  if (!s) return null;
-  const byId = options.find(o => o.id === s);
-  if (byId) return byId.id;
-  const m = s.match(/^(?:option\s*)?([A-Za-z])\b/i);
-  if (m) { const idx = m[1].toUpperCase().charCodeAt(0) - 65; if (options[idx]) return options[idx].id; }
-  const low = s.toLowerCase();
-  const byName = options.find(o => (o.name || '').trim().toLowerCase() === low);
-  if (byName) return byName.id;
-  const byContains = options.find(o => o.name && low.includes(o.name.trim().toLowerCase()));
-  return byContains?.id || null;
-}
-
-export function normalizeAssessment(parsed, options) {
-  const recommended = resolveOptionId(parsed.recommended_option_id, options);
-  if (!recommended) {
-    throw new Error(`The assessment recommended "${toText(parsed.recommended_option_id)}", which is not one of this decision's options. Try regenerating.`);
-  }
-  const seen = new Set();
-  const normOptions = parsed.options
-    .filter(o => o && typeof o === 'object')
-    .map(o => ({
-      option_id: resolveOptionId(o.option_id, options),
-      verdict: oneOf(o.verdict, ['RECOMMENDED', 'VIABLE', 'NOT RECOMMENDED'], 'VIABLE'),
-      risk_summary: toText(o.risk_summary),
-      key_risks: toList(o.key_risks),
-      meets_acceptance_criteria: oneOf(o.meets_acceptance_criteria, ['YES', 'PARTIAL', 'NO', 'UNKNOWN'], 'UNKNOWN'),
-      acceptance_note: toText(o.acceptance_note),
-      assumptions_at_risk: toList(o.assumptions_at_risk),
-      accepted_risk_if_chosen: toText(o.accepted_risk_if_chosen),
-    }))
-    .filter(o => o.option_id && !seen.has(o.option_id) && seen.add(o.option_id))
-    // The recommended option's verdict follows the recommendation, whatever the model wrote.
-    .map(o => o.option_id === recommended ? { ...o, verdict: 'RECOMMENDED' } : o);
-  return {
-    recommended_option_id: recommended,
-    confidence: oneOf(parsed.confidence, ['HIGH', 'MEDIUM', 'LOW'], 'MEDIUM'),
-    headline: toText(parsed.headline),
-    rationale: toList(parsed.rationale),
-    options: normOptions,
-    tradeoffs: toList(parsed.tradeoffs),
-    conditions_to_revisit: toList(parsed.conditions_to_revisit),
-  };
-}

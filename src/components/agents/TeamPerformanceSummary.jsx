@@ -31,7 +31,7 @@ function InfoTip({ children, align = 'right' }) {
 
 function StatCard({ label, value, sub, color = '#F0A500', icon: IconComp, tip }) {
   return (
-    <div className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+    <div data-ui="surface" className="rounded p-4" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
       <div className="flex items-start justify-between mb-2">
         <div className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
           <IconComp className="w-4 h-4" style={{ color }} />
@@ -72,8 +72,8 @@ export default function TeamPerformanceSummary({ agentStats, domains }) {
   const active = agentStats.filter(s => s.perf.total > 0);
 
   if (active.length === 0) return (
-    <div className="rounded p-8 text-center" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
-      <p className="text-sm" style={{ color: 'var(--wr-text-muted)' }}>No performance data — complete sessions to see team metrics.</p>
+    <div data-ui="surface" className="rounded p-8 text-center" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+      <p className="text-sm" style={{ color: 'var(--wr-text-muted)' }}>No performance data — complete sessions to see SME panel metrics.</p>
     </div>
   );
 
@@ -128,10 +128,10 @@ export default function TeamPerformanceSummary({ agentStats, domains }) {
 
       {/* Risk signals */}
       {riskSignals.length > 0 && (
-        <div className="rounded p-3" style={{ backgroundColor: 'rgba(240,165,0,0.06)', border: '1px solid rgba(240,165,0,0.25)' }}>
+        <div data-ui="surface" className="rounded p-3" style={{ backgroundColor: 'rgba(240,165,0,0.06)', border: '1px solid rgba(240,165,0,0.25)' }}>
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#F0A500' }} />
-            <p className="text-xs font-bold font-mono tracking-widest" style={{ color: '#F0A500' }}>TEAM RISK SIGNALS</p>
+            <p className="text-xs font-bold font-mono tracking-widest" style={{ color: '#F0A500' }}>SME PANEL RISK SIGNALS</p>
           </div>
           <div className="space-y-1.5">
             {riskSignals.map((sig, i) => (
@@ -158,21 +158,21 @@ export default function TeamPerformanceSummary({ agentStats, domains }) {
           tip="How often severity ratings hold from Round 1 to Round 2. Low consistency may indicate peer influence or analytical uncertainty." />
         <StatCard icon={Users} label="CRIT/HIGH RATE" value={`${avgEscalation}%`}
           sub={`across ${totalAssessments} assessments`} color={escalationColor}
-          tip="Team-wide share rated CRITICAL or HIGH. >60% = pessimistic tendency, <25% = optimistic. Use this to calibrate aggregate risk appetite before decision-making." />
+          tip="SME panel share rated CRITICAL or HIGH. >60% = pessimistic tendency, <25% = optimistic. Use this to calibrate aggregate risk appetite before decision-making." />
       </div>
 
       {/* Team severity mix + Domain performance side by side */}
       <div className="grid grid-cols-2 gap-4">
 
         {/* Team severity mix */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <div className="flex items-center gap-1 mb-0.5">
             <h3 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
-              TEAM ASSESSMENT MIX
+              SME ASSESSMENT MIX
             </h3>
             <InfoTip>
               Combined severity breakdown across all {totalAssessments} assessments from active agents.
-              A heavily red/orange bar means the team skews pessimistic — apply calibration before aggregating into scenario risk scores.
+              A heavily red/orange bar means the SME panel skews pessimistic — apply calibration before aggregating into scenario risk scores.
             </InfoTip>
           </div>
           <p className="text-xs mb-4" style={{ color: 'var(--wr-text-muted)', opacity: 0.6 }}>
@@ -200,22 +200,22 @@ export default function TeamPerformanceSummary({ agentStats, domains }) {
           {/* Interpretation */}
           <div className="mt-4 pt-3 border-t text-xs leading-relaxed" style={{ borderColor: 'var(--wr-border)', color: 'var(--wr-text-muted)' }}>
             {avgEscalation >= 60
-              ? <span><strong style={{ color: '#C0392B' }}>Pessimistic team:</strong> Over 60% of findings rated high-severity. Cross-check critical threats before escalating to decision-makers.</span>
+              ? <span><strong style={{ color: '#C0392B' }}>Pessimistic SME panel:</strong> Over 60% of findings rated high-severity. Cross-check critical threats before escalating to decision-makers.</span>
               : avgEscalation <= 25
-              ? <span><strong style={{ color: '#27AE60' }}>Optimistic team:</strong> Under 25% rated high-severity. Verify that genuine risks aren't being systematically discounted.</span>
+              ? <span><strong style={{ color: '#27AE60' }}>Optimistic SME panel:</strong> Under 25% rated high-severity. Verify that genuine risks aren't being systematically discounted.</span>
               : <span><strong style={{ color: '#2E86AB' }}>Balanced mix:</strong> Severity distribution appears reasonably calibrated. Use findings at face value with normal review.</span>
             }
           </div>
         </div>
 
         {/* Domain performance */}
-        <div className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <div className="flex items-center gap-1 mb-0.5">
             <h3 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
               PERFORMANCE BY DOMAIN
             </h3>
             <InfoTip>
-              Average performance score per domain. Low score = agents in that domain complete fewer rounds or revise severity often — consider reviewing capacity or reassigning.
+              Average performance score per domain. Low score = agents in that domain complete fewer rounds or revise severity often — consider reviewing SME coverage or domain organization.
               <br /><br />
               <strong style={{ color: 'var(--wr-amber)' }}>C/H</strong> = avg CRIT/HIGH rate for agents in that domain — use to spot domain-level bias.
             </InfoTip>

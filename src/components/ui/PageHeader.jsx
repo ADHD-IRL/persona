@@ -1,6 +1,6 @@
 export default function PageHeader({ title, subtitle, actions, icon: Icon }) {
   return (
-    <div className="flex items-start justify-between px-6 py-5 border-b" 
+    <div className="flex flex-wrap items-start justify-between gap-4 px-6 py-5 border-b" 
       style={{ borderColor: 'var(--wr-border)' }}>
       <div className="flex items-center gap-3">
         {Icon && (
@@ -16,7 +16,7 @@ export default function PageHeader({ title, subtitle, actions, icon: Icon }) {
           {subtitle && <p className="text-xs mt-0.5" style={{ color: 'var(--wr-text-muted)' }}>{subtitle}</p>}
         </div>
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }

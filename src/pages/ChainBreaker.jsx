@@ -58,10 +58,10 @@ export default function ChainBreaker() {
 
   // Selection state
   const [source,             setSource]             = useState('library');
-  const [selectedChainId,    setSelectedChainId]    = useState('');
+  const [selectedChainId,    setSelectedChainId]    = useState(searchParams.get('chain') || '');
   const [selectedSynthId,    setSelectedSynthId]    = useState('');
   const [compoundIdx,        setCompoundIdx]        = useState(0);
-  const [selectedScenarioId, setSelectedScenarioId] = useState('');
+  const [selectedScenarioId, setSelectedScenarioId] = useState(searchParams.get('scenario') || '');
   // When opened from a session the page is scoped to it: the chain source and
   // scenario are preset, and these disclosures let a power user change them.
   const [showSourcePicker,   setShowSourcePicker]   = useState(false);
@@ -460,7 +460,7 @@ export default function ChainBreaker() {
 
       {activeSessionId && (
         <div className="px-6 pt-4">
-          <Link to={`/sessions/${activeSessionId}`} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
+          <Link data-ui="action" to={`/sessions/${activeSessionId}`} className="text-xs font-mono inline-flex items-center gap-1 px-2 py-1 rounded"
             style={{ color: 'var(--wr-amber)', backgroundColor: 'rgba(240,165,0,0.08)', border: '1px solid rgba(240,165,0,0.25)', textDecoration: 'none' }}>
             ← Back to session
           </Link>
@@ -470,7 +470,7 @@ export default function ChainBreaker() {
       <div className="p-6 space-y-6">
 
         {/* ── Configuration panel ───────────────────────────────────────── */}
-        <div className="rounded-lg p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+        <div data-ui="surface" className="rounded-lg p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
           <h2 className="text-xs font-bold tracking-widest font-mono mb-4" style={{ color: 'var(--wr-text-muted)' }}>
             CONFIGURE ANALYSIS
           </h2>
@@ -487,16 +487,16 @@ export default function ChainBreaker() {
                       ? `Analysing ${scopedSession?.name || 'this session'}’s synthesised chains`
                       : `Library chains for ${scopedSession?.name || 'this session'}${scopedScenario ? ` · ${scopedScenario.name}` : ''}`}
                   </span>
-                  <button onClick={() => setShowSourcePicker(true)} className="underline" style={{ color: 'var(--wr-amber)' }}>Change source</button>
+                  <button data-ui="action" onClick={() => setShowSourcePicker(true)} className="underline" style={{ color: 'var(--wr-amber)' }}>Change source</button>
                 </p>
               ) : (
                 <div>
                   <label className="block text-xs font-bold tracking-widest font-mono mb-2" style={{ color: 'var(--wr-text-muted)' }}>
                     CHAIN SOURCE
                   </label>
-                  <div className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)', width: 'fit-content' }}>
+                  <div data-ui="surface" className="flex rounded overflow-hidden" style={{ border: '1px solid var(--wr-border)', width: 'fit-content' }}>
                     {[['library', 'Chain Library'], ['session', 'Session Synthesis']].map(([val, lbl]) => (
-                      <button key={val} onClick={() => handleSourceChange(val)}
+                      <button data-ui="action" key={val} onClick={() => handleSourceChange(val)}
                         className="px-4 py-2 text-xs font-medium transition-colors"
                         style={{
                           backgroundColor: source === val ? 'var(--wr-amber)' : 'transparent',
@@ -589,7 +589,7 @@ export default function ChainBreaker() {
 
               {/* Chain preview */}
               {hasSteps && (
-                <div className="rounded p-3 space-y-1" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="rounded p-3 space-y-1" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                   <p className="text-xs font-bold font-mono mb-1" style={{ color: 'var(--wr-amber)' }}>{activeChain.name}</p>
                   {activeChain.description && (
                     <p className="text-xs mb-2" style={{ color: 'var(--wr-text-muted)' }}>{activeChain.description}</p>
@@ -617,10 +617,10 @@ export default function ChainBreaker() {
                   )}
                 </label>
                 {scenarioLocked ? (
-                  <div className="flex items-center justify-between gap-3 px-3 py-2 text-sm rounded"
+                  <div data-ui="surface" className="flex items-center justify-between gap-3 px-3 py-2 text-sm rounded"
                     style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-primary)' }}>
                     <span className="truncate">{scopedScenario.name}</span>
-                    <button onClick={() => setChangeScenario(true)} className="text-xs underline flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }}>change</button>
+                    <button data-ui="action" onClick={() => setChangeScenario(true)} className="text-xs underline flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }}>change</button>
                   </div>
                 ) : (
                   <select value={selectedScenarioId}
@@ -680,7 +680,7 @@ export default function ChainBreaker() {
 
         {/* ── Error ─────────────────────────────────────────────────────── */}
         {error && (
-          <div className="rounded p-4 flex items-start gap-3"
+          <div data-ui="surface" className="rounded p-4 flex items-start gap-3"
             style={{ backgroundColor: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.3)' }}>
             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C0392B' }} />
             <p className="text-sm" style={{ color: '#C0392B' }}>{error}</p>
@@ -692,7 +692,7 @@ export default function ChainBreaker() {
           <div className="space-y-4">
 
             {/* Summary + resilience */}
-            <div className="rounded-lg p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+            <div data-ui="surface" className="rounded-lg p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
               <div className="flex items-start gap-6 mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -711,7 +711,7 @@ export default function ChainBreaker() {
                   </p>
                 </div>
                 {analysis.chain_resilience && (
-                  <div className="flex-shrink-0 text-center rounded-lg p-4"
+                  <div data-ui="surface" className="flex-shrink-0 text-center rounded-lg p-4"
                     style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)', minWidth: 110 }}>
                     <p className="text-xs font-bold font-mono mb-1" style={{ color: 'var(--wr-text-muted)' }}>CHAIN RESILIENCE</p>
                     <p className="text-xl font-bold font-mono" style={{ color: RESILIENCE_COLOR[analysis.chain_resilience] || 'var(--wr-amber)' }}>
@@ -738,7 +738,7 @@ export default function ChainBreaker() {
                       const stepData = activeChain.steps.find(s => s.step_number === stepNum);
                       const lev      = LEVERAGE[sa?.leverage] || LEVERAGE.MEDIUM;
                       return (
-                        <div key={stepNum} className="flex items-center gap-2.5 rounded px-3 py-2"
+                        <div data-ui="surface" key={stepNum} className="flex items-center gap-2.5 rounded px-3 py-2"
                           style={{ backgroundColor: lev.bg, border: `1px solid ${lev.border}` }}>
                           <span className="text-xs font-bold font-mono" style={{ color: lev.color }}>#{i + 1}</span>
                           <div>
@@ -762,7 +762,7 @@ export default function ChainBreaker() {
 
               {/* Recommended first cut */}
               {analysis.recommended_cut?.step_number != null && (
-                <div className="rounded-lg px-4 py-3 flex items-start gap-3"
+                <div data-ui="surface" className="rounded-lg px-4 py-3 flex items-start gap-3"
                   style={{ backgroundColor: 'rgba(39,174,96,0.08)', border: '1px solid rgba(39,174,96,0.35)' }}>
                   <Scissors className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#27AE60' }} />
                   <div>
@@ -778,7 +778,7 @@ export default function ChainBreaker() {
 
               {/* Mitigation roadmap — deduplicated, prioritized action plan */}
               {analysis.mitigation_roadmap?.length > 0 && (
-                <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
+                <div data-ui="surface" className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--wr-border)' }}>
                   <div className="flex items-center gap-2 px-4 py-2.5" style={{ backgroundColor: 'var(--wr-bg-secondary)' }}>
                     <Shield className="w-3.5 h-3.5" style={{ color: 'var(--wr-amber)' }} />
                     <p className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
@@ -803,19 +803,19 @@ export default function ChainBreaker() {
                             )}
                             <div className="flex flex-wrap items-center gap-1.5 mt-2">
                               {m.type && (
-                                <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
+                                <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
                                   style={{ backgroundColor: `${typeClr}1f`, color: typeClr, border: `1px solid ${typeClr}55` }}>
                                   {m.type}
                                 </span>
                               )}
                               {m.effort && (
-                                <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
+                                <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
                                   style={{ backgroundColor: `${effClr}1f`, color: effClr, border: `1px solid ${effClr}55` }}>
                                   {m.effort} EFFORT
                                 </span>
                               )}
                               {m.time_to_deploy && (
-                                <span className="text-xs font-mono px-1.5 py-0.5 rounded"
+                                <span data-ui="badge" className="text-xs font-mono px-1.5 py-0.5 rounded"
                                   style={{ backgroundColor: 'var(--wr-bg-secondary)', color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }}>
                                   {m.time_to_deploy}
                                 </span>
@@ -827,7 +827,7 @@ export default function ChainBreaker() {
                               )}
                             </div>
                           </div>
-                          <button
+                          <button data-ui="action"
                             onClick={() => addToRegister(m, i)}
                             disabled={addedRoadmap[i]}
                             className="flex-shrink-0 text-xs font-mono font-bold px-2 py-1 rounded flex items-center gap-1"
@@ -847,7 +847,7 @@ export default function ChainBreaker() {
             </div>
 
             {/* Save + report action bar */}
-            <div className="flex items-center justify-between rounded px-4 py-3"
+            <div data-ui="surface" className="flex items-center justify-between rounded px-4 py-3"
               style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
               <div className="flex items-center gap-2">
                 {savedAt ? (
@@ -893,7 +893,7 @@ export default function ChainBreaker() {
 
         {/* ── Idle / empty state ─────────────────────────────────────────── */}
         {!analysis && !analyzing && !error && (
-          <div className="rounded-lg py-20 text-center"
+          <div data-ui="surface" className="rounded-lg py-20 text-center"
             style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <Scissors className="w-10 h-10 mx-auto mb-4 opacity-20" style={{ color: 'var(--wr-amber)' }} />
             <p className="text-sm font-medium" style={{ color: 'var(--wr-text-muted)' }}>
@@ -907,7 +907,7 @@ export default function ChainBreaker() {
 
         {/* ── Saved analyses management ──────────────────────────────────── */}
         {hasSavedAnalyses && (
-          <div className="rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
+          <div data-ui="surface" className="rounded-lg" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
             <div className="flex items-center gap-2 px-5 py-4 border-b" style={{ borderColor: 'var(--wr-border)' }}>
               <FolderOpen className="w-4 h-4" style={{ color: 'var(--wr-amber)' }} />
               <h2 className="text-xs font-bold tracking-widest font-mono" style={{ color: 'var(--wr-text-muted)' }}>
@@ -930,7 +930,7 @@ export default function ChainBreaker() {
                     const res      = entry?.analysis?.chain_resilience;
                     const isActive = source === 'library' && selectedChainId === chain.id;
                     return (
-                      <div key={chain.id} className="flex items-center gap-3 rounded px-4 py-3"
+                      <div data-ui="surface" key={chain.id} className="flex items-center gap-3 rounded px-4 py-3"
                         style={{
                           backgroundColor: isActive ? 'rgba(240,165,0,0.06)' : 'var(--wr-bg-secondary)',
                           border: `1px solid ${isActive ? 'rgba(240,165,0,0.3)' : 'var(--wr-border)'}`,
@@ -942,7 +942,7 @@ export default function ChainBreaker() {
                           </p>
                         </div>
                         {res && (
-                          <span className="text-xs font-bold font-mono px-2 py-0.5 rounded flex-shrink-0"
+                          <span data-ui="badge" className="text-xs font-bold font-mono px-2 py-0.5 rounded flex-shrink-0"
                             style={{ color: RESILIENCE_COLOR[res] || 'var(--wr-amber)', border: `1px solid ${RESILIENCE_COLOR[res] || 'var(--wr-amber)'}40` }}>
                             {res}
                           </span>
@@ -984,7 +984,7 @@ export default function ChainBreaker() {
                     const res      = result?.chain_resilience;
                     const isActive = source === 'session' && selectedSynthId === synthId && compoundIdx === idx;
                     return (
-                      <div key={`${synthId}-${idx}`} className="flex items-center gap-3 rounded px-4 py-3"
+                      <div data-ui="surface" key={`${synthId}-${idx}`} className="flex items-center gap-3 rounded px-4 py-3"
                         style={{
                           backgroundColor: isActive ? 'rgba(240,165,0,0.06)' : 'var(--wr-bg-secondary)',
                           border: `1px solid ${isActive ? 'rgba(240,165,0,0.3)' : 'var(--wr-border)'}`,
@@ -996,7 +996,7 @@ export default function ChainBreaker() {
                           </p>
                         </div>
                         {res && (
-                          <span className="text-xs font-bold font-mono px-2 py-0.5 rounded flex-shrink-0"
+                          <span data-ui="badge" className="text-xs font-bold font-mono px-2 py-0.5 rounded flex-shrink-0"
                             style={{ color: RESILIENCE_COLOR[res] || 'var(--wr-amber)', border: `1px solid ${RESILIENCE_COLOR[res] || 'var(--wr-amber)'}40` }}>
                             {res}
                           </span>
