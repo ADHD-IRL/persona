@@ -1,3 +1,5 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { apiRequest } from '@/lib/apiClient';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -65,6 +67,7 @@ export default function DecisionDetail() {
 
   // Run state (this tab's loop) + the durable record any tab can see (R-N10)
   const [running, setRunning] = useState(null);   // { optionIndex, optionName, stage, agentIndex, agentTotal, agentName, reused }
+ useBackgroundWork(!!running,'Decision analysis',{});
   const [runError, setRunError] = useState(null);
   const cancelRef = useRef(false);
   const elapsed = useElapsed(!!running);
@@ -347,7 +350,7 @@ export default function DecisionDetail() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-lg font-bold" style={{ color: 'var(--wr-text-primary)' }}>{decision.title}</h1>
-            {decision.description && <p className="text-sm mt-1" style={{ color: 'var(--wr-text-secondary)', maxWidth: 720 }}>{decision.description}</p>}
+            {decision.description && <MarkdownContent className="text-sm mt-1" style={{ color: 'var(--wr-text-secondary)', maxWidth: 720 }}>{decision.description}</MarkdownContent>}
             {decision.acceptance_criteria && (
               <p className="text-xs mt-2" style={{ color: 'var(--wr-text-muted)' }}><span className="font-mono font-bold">ACCEPTANCE: </span>{decision.acceptance_criteria}</p>
             )}
@@ -533,7 +536,7 @@ export default function DecisionDetail() {
                   <p className="text-base font-semibold" style={{ color: 'var(--wr-text-primary)' }}>
                     {recommendedOpt ? <span style={{ color: recommendationColor }}>Option {letter(options.indexOf(recommendedOpt))} · {recommendedOpt.name}</span> : <span>{recommendationLabel}</span>}
                   </p>
-                  <p className="text-sm mt-1" style={{ color: 'var(--wr-text-secondary)' }}>{assessment.headline}</p>
+                  <MarkdownContent className="text-sm mt-1" style={{ color: 'var(--wr-text-secondary)' }}>{assessment.headline}</MarkdownContent>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button data-ui="action" onClick={() => navigate('/analysis?decision=' + id)} className="text-xs inline-flex items-center gap-1 px-2 py-1 rounded" style={{ color: 'var(--wr-text-muted)', border: '1px solid var(--wr-border)' }} title="Review current inputs and reuse only unchanged assessments">
@@ -603,7 +606,7 @@ export default function DecisionDetail() {
                     {!verdict && isRec && !isChosen && agg && <span data-ui="badge" className="text-xs font-mono font-bold px-1.5 rounded" style={{ backgroundColor: 'rgba(240,165,0,0.15)', color: 'var(--wr-amber)' }}>LOWEST RISK</span>}
                   </div>
                   <p className="text-sm font-semibold mb-1" style={{ color: 'var(--wr-text-primary)' }}>{opt.name}</p>
-                  {opt.description && <p className="text-xs mb-3" style={{ color: 'var(--wr-text-muted)' }}>{opt.description}</p>}
+                  {opt.description && <MarkdownContent className="text-xs mb-3" style={{ color: 'var(--wr-text-muted)' }}>{opt.description}</MarkdownContent>}
 
                   {agg ? (
                     <div className="flex items-center gap-3 mb-3">

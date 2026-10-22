@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {citationPassages,reviewRecords,validateReferences,parsePanelReview} from '../src/lib/panelReview.js';
+const doc={id:'saved-source',text:'The backup remains uncertain. Verify the measured capacity before deciding.',kind:'model'};
+test('passage references insert saved text rather than requiring model quotation copying',()=>{const items=parsePanelReview(JSON.stringify({items:[{type:'finding',title:'Capacity',detail:'Check capacity',references:[{id:doc.id,passage_id:'p0'}]}]}),[doc]);assert.deepEqual(items[0].references,[{id:doc.id,quote:doc.text}]);});
+test('unknown source and passage IDs and fabricated quote overrides fail',()=>{for(const ref of [{id:'missing',passage_id:'p0'},{id:doc.id,passage_id:'p99'},{id:doc.id,passage_id:'p0',quote:'Invented supporting evidence'}])assert.throws(()=>validateReferences([ref],[doc]),/could not be matched/);});
+test('catalog preserves all characters including a short final caveat',()=>{const source={id:'s',text:'x'.repeat(800)+' No.'};assert.equal(citationPassages(source).map(p=>p.quote).join(''),source.text);});
+test('sectioned results use original passage IDs and only verified quote overlaps',()=>{const original={id:'s',text:'A'.repeat(800)+'B'.repeat(800)+'C'.repeat(800)};const reduced={id:'s',text:JSON.stringify({section_id:'section-1-2',notes:'Review',quotes:['B'.repeat(30)]})};const row=reviewRecords([reduced],[original])[0];assert.deepEqual(row.passages.map(p=>p.passage_id),['p800']);assert.equal(validateReferences([{id:'s',passage_id:'p800'}],[original])[0].quote,'B'.repeat(800));});

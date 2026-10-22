@@ -1,3 +1,4 @@
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
@@ -36,9 +37,8 @@ function SmeBubble({ msg, color }) {
             <span className="text-[10px] italic" style={{ color: 'var(--wr-text-muted)' }}>spoke up: {msg.floorReason}</span>
           )}
         </div>
-        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ color: 'var(--wr-text-secondary)' }}>
-          {msg.content}{msg.isStreaming && <span className="opacity-50">▌</span>}
-        </p>
+        <div className="text-sm leading-relaxed break-words" style={{ color: 'var(--wr-text-secondary)' }}>
+          <MarkdownContent>{msg.content}</MarkdownContent>{msg.isStreaming && <span className="opacity-50">▌</span>}</div>
       </div>
     </div>
   );
@@ -56,7 +56,7 @@ function HumanBubble({ msg }) {
           {msg.authorName || 'You'}
           {msg.authorRole && <span className="ml-1.5 font-normal" style={{ color: 'var(--wr-text-muted)' }}>{msg.authorRole}</span>}
         </span>
-        <p className="text-sm leading-relaxed mt-0.5 whitespace-pre-wrap break-words" style={{ color: 'var(--wr-text-primary)' }}>{msg.content}</p>
+        <MarkdownContent className="text-sm leading-relaxed mt-0.5 break-words" style={{ color: 'var(--wr-text-primary)' }}>{msg.content}</MarkdownContent>
       </div>
     </div>
   );

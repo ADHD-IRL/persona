@@ -1,3 +1,5 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
@@ -78,14 +80,14 @@ function AgentBubble({ msg, agent, color, isStreaming }) {
           {msg.toolCalls.map((tc, i) => <ToolChip key={i} tc={tc} />)}
         </div>
       )}
-      <div data-ui="surface" className="rounded p-3 text-sm leading-relaxed whitespace-pre-wrap"
+      <div data-ui="surface" className="rounded p-3 text-sm leading-relaxed"
         style={{
           backgroundColor: `${color}08`,
           borderLeft: `3px solid ${color}`,
           border: `1px solid ${color}20`,
           color: 'var(--wr-text-secondary)',
         }}>
-        {msg.content || (isStreaming ? '' : '—')}
+        <MarkdownContent>{msg.content || (isStreaming ? '' : '—')}</MarkdownContent>
         {isStreaming && (
           <span className="inline-block w-1.5 h-4 ml-1 align-middle animate-pulse rounded-sm"
             style={{ backgroundColor: color }} />
@@ -196,9 +198,11 @@ const [messages, setMessages]           = useState([]);
   const [phase, setPhase]     = useState('idle');
   const [running, setRunning] = useState(false);
 
+
   const [question, setQuestion]         = useState('');
   const [targetAgentId, setTargetAgentId] = useState(null); // null = all
   const [asking, setAsking]             = useState(false);
+ useBackgroundWork(running||asking,'Live debate',{});
   const [toolsEnabled, setToolsEnabled] = useState(true);
   const [threats, setThreats]           = useState([]);
 

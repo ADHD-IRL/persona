@@ -1,3 +1,5 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect } from 'react';
 import { queued } from '@/lib/apiQueue';
 import { Link } from 'react-router-dom';
@@ -58,6 +60,7 @@ function ScenarioModal({ scenario, domains, onSave, onClose }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
+ useBackgroundWork(aiLoading||urlLoading,'Scenario assistance',{});
   const [urlError, setUrlError] = useState('');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -353,7 +356,7 @@ export default function Scenarios() {
               <div className="flex items-start justify-between gap-4 mb-6">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl font-bold break-words" style={{ color: 'var(--wr-text-primary)' }}>{selected.name}</h2>
-                  <p className="text-sm mt-1 break-words" style={{ color: 'var(--wr-text-secondary)' }}>{selected.description}</p>
+                  <MarkdownContent className="text-sm mt-1 break-words" style={{ color: 'var(--wr-text-secondary)' }}>{selected.description}</MarkdownContent>
                 </div>
                 <div className="flex gap-2 flex-wrap justify-end">
                   <WrButton variant="secondary" size="sm" onClick={() => setModal(selected)}>Edit</WrButton>

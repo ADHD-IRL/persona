@@ -19,9 +19,12 @@ export function createRiskService(pool) {
     if(step!==null && (kind!=='Chain'||!Number.isInteger(step)||!(source.steps||[]).some(s=>s.step_number===step))) throw httpError(400,'Choose an existing chain step.');
     if(source.merged_into || source.review_status==='archived') throw httpError(400,'Create actions on an active finding.');
     const action=String(input.action||'').trim(), criteria=String(input.completion_criteria||'').trim();
+    const actionType=input.action_type||'unspecified', notes=input.notes||'';
+    if(!['unspecified','verify','reduce','monitor'].includes(actionType))throw httpError(400,'Choose a valid response purpose.');
+    if(typeof notes!=='string'||notes.length>20000||action.length>4000||criteria.length>10000)throw httpError(400,'Response action text is too long or invalid.');
     const key=kind+':'+id+':'+(step??'all')+':'+createHash('sha256').update(action.toLowerCase()).digest('hex');
     if(!action||!criteria) throw httpError(400,'Enter an action and observable completion criteria.');
-    const result=await query(`INSERT INTO mitigations(workspace_id,title,completion_criteria,source,scenario_id,session_id,chain_id,threat_id,breaks_steps,evidence_ids,risk_action_key) VALUES($1,$2,$3,'risk_review',$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(workspace_id,risk_action_key) WHERE risk_action_key IS NOT NULL DO UPDATE SET risk_action_key=EXCLUDED.risk_action_key RETURNING *`,[workspace,action,criteria,source.scenario_id,source.session_id,kind==='Chain'?id:null,kind==='Threat'?id:source.threat_id,JSON.stringify(step===null?[]:[step]),JSON.stringify((source.evidence||[]).map(e=>e.id).filter(Boolean)),key]);
+    const result=await query(`INSERT INTO mitigations(workspace_id,title,completion_criteria,source,scenario_id,session_id,chain_id,threat_id,breaks_steps,evidence_ids,risk_action_key,action_type,notes) VALUES($1,$2,$3,'risk_review',$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(workspace_id,risk_action_key) WHERE risk_action_key IS NOT NULL DO UPDATE SET risk_action_key=EXCLUDED.risk_action_key RETURNING *`,[workspace,action,criteria,source.scenario_id,source.session_id,kind==='Chain'?id:null,kind==='Threat'?id:source.threat_id,JSON.stringify(step===null?[]:[step]),JSON.stringify((source.evidence||[]).map(e=>e.id).filter(Boolean)),key,actionType,notes]);
     return {status:200,data:result.rows[0]};
    }
    const target=rows.find(r=>r.id===input.target_id);

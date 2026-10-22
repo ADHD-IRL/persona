@@ -1,3 +1,5 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { analyzeChainBreaker } from '@/lib/llm';
@@ -73,6 +75,7 @@ export default function ChainBreaker() {
   const [analysis,  setAnalysis]  = useState(null);
   const [error,     setError]     = useState(null);
   const [saving,    setSaving]    = useState(false);
+ useBackgroundWork(analyzing||saving,'Chain analysis',{});
   const [savedAt,   setSavedAt]   = useState(null);
 
   // ── Load all data + analysis configs ────────────────────────────────────────
@@ -592,7 +595,7 @@ export default function ChainBreaker() {
                 <div data-ui="surface" className="rounded p-3 space-y-1" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                   <p className="text-xs font-bold font-mono mb-1" style={{ color: 'var(--wr-amber)' }}>{activeChain.name}</p>
                   {activeChain.description && (
-                    <p className="text-xs mb-2" style={{ color: 'var(--wr-text-muted)' }}>{activeChain.description}</p>
+                    <MarkdownContent className="text-xs mb-2" style={{ color: 'var(--wr-text-muted)' }}>{activeChain.description}</MarkdownContent>
                   )}
                   {activeChain.steps.map((s, i) => (
                     <div key={i} className="flex items-start gap-2">
@@ -706,9 +709,7 @@ export default function ChainBreaker() {
                       </div>
                     )}
                   </div>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--wr-text-secondary)', maxWidth: 720 }}>
-                    {analysis.summary}
-                  </p>
+                  <MarkdownContent className="text-sm leading-relaxed" style={{ color: 'var(--wr-text-secondary)', maxWidth: 720 }}>{analysis.summary}</MarkdownContent>
                 </div>
                 {analysis.chain_resilience && (
                   <div data-ui="surface" className="flex-shrink-0 text-center rounded-lg p-4"
@@ -769,9 +770,7 @@ export default function ChainBreaker() {
                     <p className="text-xs font-bold font-mono mb-1" style={{ color: '#27AE60' }}>
                       CUT HERE FIRST — STEP {analysis.recommended_cut.step_number}
                     </p>
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--wr-text-secondary)' }}>
-                      {analysis.recommended_cut.rationale}
-                    </p>
+                    <MarkdownContent className="text-sm leading-relaxed" style={{ color: 'var(--wr-text-secondary)' }}>{analysis.recommended_cut.rationale}</MarkdownContent>
                   </div>
                 </div>
               )}

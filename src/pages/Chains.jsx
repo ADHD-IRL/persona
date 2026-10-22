@@ -1,3 +1,4 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
 import RiskLibrary from '@/components/risks/RiskLibrary';
 import { useState } from 'react';
 import { generateChain as generateChainLLM } from '@/lib/llm';
@@ -46,6 +47,7 @@ function ChainBuilderPanel({ chain, domains, scenarios, agents, onSave, onClose,
   const [aiForm, setAiForm] = useState({ scenario_id:chain?.scenario_id || '', chain_type:'Multi-discipline attack chain', num_steps:5, focus_area:'' });
   const [mode, setMode] = useState(initialMode || 'manual');
   const [generating, setGenerating] = useState(false);
+ useBackgroundWork(generating||saving,'Chain generation',{});
   const [genError, setGenError] = useState(null);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const setAi = (k,v) => setAiForm(f=>({...f,[k]:v}));

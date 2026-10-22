@@ -1,10 +1,11 @@
+import {descendantDomainIds} from './domainHierarchy.js';
 export const normalizeDomainName = name => (name || '').trim().replace(/\s+/g, ' ').toLowerCase();
 export const COVERAGE_BANDS = [
-  { label: '0 SMEs', max: 0, color: '#182230' },
-  { label: '1–5 SMEs', max: 5, color: '#173e53' },
-  { label: '6–15 SMEs', max: 15, color: '#205d72' },
-  { label: '16–30 SMEs', max: 30, color: '#267f86' },
-  { label: '31+ SMEs', max: Infinity, color: '#399b88' },
+  { label: '0 SMEs', max: 0, color: '#1B232F' },
+  { label: '1–5 SMEs', max: 5, color: '#28282C' },
+  { label: '6–15 SMEs', max: 15, color: '#37302A' },
+  { label: '16–30 SMEs', max: 30, color: '#493A25' },
+  { label: '31+ SMEs', max: Infinity, color: '#5C4624' },
 ];
 export const coverageBand = count => COVERAGE_BANDS.find(b => count <= b.max);
 export function domainCoverage(domains, agents, scenarios = []) {
@@ -22,7 +23,7 @@ export function domainCoverage(domains, agents, scenarios = []) {
     if (!names.has(name)) names.set(name, []);
     names.get(name).push(domain);
   }
-  const rows = domains.map(domain => ({ ...domain, count: members.get(domain.id).length, members: members.get(domain.id), scenarioCount: scenarios.filter(s => s.domain_id === domain.id).length, share: uniqueAgents.length ? members.get(domain.id).length / uniqueAgents.length * 100 : 0 }));
+  const rows = domains.map(domain => {const family=descendantDomainIds(domains,domain.id),familyMembers=uniqueAgents.filter(a=>family.has(a.domain_id));return {...domain,directCount:members.get(domain.id).length,children:domains.filter(d=>d.parent_domain_id===domain.id),parentName:domains.find(d=>d.id===domain.parent_domain_id)?.name||'',count:familyMembers.length,members:familyMembers,scenarioCount:scenarios.filter(s=>family.has(s.domain_id)).length,share:uniqueAgents.length?familyMembers.length/uniqueAgents.length*100:0};});
   return { rows, total: uniqueAgents.length, unassigned, assigned: uniqueAgents.length - unassigned.length, empty: rows.filter(d => !d.count).length, duplicates: [...names.values()].filter(group => group.length > 1) };
 }
 export async function moveDomainMembers(db, agents, selectedIds, targetId, onProgress = () => {}) {

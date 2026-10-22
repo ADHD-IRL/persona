@@ -37,7 +37,7 @@ test('standalone PostgreSQL schema and Node application', { timeout: 60000 }, as
     await t.test('fresh migration applies and replay is a no-op', async () => {
       await migrate(pool);
       await migrate(pool);
-      assert.equal((await pool.query('SELECT count(*)::int AS count FROM local_schema_migrations')).rows[0].count, 3);
+      assert.equal((await pool.query('SELECT count(*)::int AS count FROM local_schema_migrations')).rows[0].count, 4);
       const columns = await loadColumns(pool);
       for (const table of Object.values(TABLES)) assert.ok(columns[table], `missing ${table}`);
       assert.ok(columns.agents.has('expertise_boundaries'));

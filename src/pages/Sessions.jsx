@@ -1,3 +1,4 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
@@ -52,6 +53,7 @@ export default function Sessions() {
   const [editSessionId,  setEditSessionId]  = useState(null);
   const [editForm,       setEditForm]       = useState({ name: '', scenario_id: '' });
   const [editSaving,     setEditSaving]     = useState(false);
+ useBackgroundWork(editSaving,'Session update');
 
   useEffect(() => {
     if (!db) return;

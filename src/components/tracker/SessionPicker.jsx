@@ -1,0 +1,16 @@
+import {useWorkspace} from '@/lib/WorkspaceContext';
+import {readKV} from '@/lib/appConfigKV';
+import {trackerKey} from '@/lib/sessionTracker';
+import {useEffect,useState} from 'react';
+import {WorkflowField} from '@/components/ui/WorkflowControls';
+export default function SessionPicker({sessions,scenarios,selected,onChange,loading}){
+ const {db}=useWorkspace(),[reviews,setReviews]=useState({});
+ const ids=sessions.map(s=>s.id).join(',');
+ useEffect(()=>{let live=true;const pending=sessions.filter(s=>!reviews[s.id]);let index=0;const load=async()=>{while(live&&index<pending.length){const session=pending[index++];try{const review=await readKV(db,trackerKey(session.id));if(live)setReviews(r=>({...r,[session.id]:review||{state:'not_reviewed'}}));}catch{if(live)setReviews(r=>({...r,[session.id]:{state:'not_checked'}}));}}};void Promise.all(Array.from({length:Math.min(4,pending.length)},load));return()=>{live=false;};},[db,ids]);
+ useEffect(()=>{const update=e=>setReviews(r=>({...r,[e.detail.id]:e.detail.review}));window.addEventListener('agd-session-review',update);return()=>window.removeEventListener('agd-session-review',update);},[]);
+ const [query,setQuery]=useState(''),[view,setView]=useState('recent');
+ const name=s=>scenarios.find(r=>r.id===s.scenario_id)?.name||'No scenario';
+ const included=s=>s.id===selected?.id||((view!=='completed'||s.status==='complete')&&(view!=='attention'||s.status!=='complete'||reviews[s.id]?.state!=='reviewed')&&[name(s),s.name,s.status].join(' ').toLowerCase().includes(query.toLowerCase()));
+ const rows=sessions.filter(included),groups=[...new Set(rows.map(name))];
+ return <section aria-labelledby="tracker-selection-heading" className="rounded-2xl border border-slate-600/60 bg-slate-800/30 p-4 space-y-3"><header><h2 id="tracker-selection-heading" className="text-base font-semibold">Choose scenario and session</h2><p className="text-xs text-slate-400 mt-1">Select the debate to work on. Everything in the workspace below belongs to this selection.</p></header><div className="grid md:grid-cols-4 gap-3"><WorkflowField label="Filter sessions" as="select" value={view} onChange={e=>setView(e.target.value)}><option value="recent">Recent</option><option value="attention">Needs attention</option><option value="completed">Completed debates</option></WorkflowField><WorkflowField label="Find a session" type="search" placeholder="Search scenario or question" value={query} onChange={e=>setQuery(e.target.value)}/><div className="sm:col-span-2"><WorkflowField label="Scenario / session" as="select" value={selected?.id||''} onChange={e=>onChange(e.target.value)}><option value="" disabled>{loading?'Loading sessions…':'Select a session'}</option>{groups.map(group=><optgroup key={group} label={group}>{rows.filter(s=>name(s)===group).map(s=><option key={s.id} value={s.id}>{group} — {s.name} · {s.mode==='panel'?'Panel Room':'Agent Debate'} · {s.status.replaceAll('_',' ')} · {(reviews[s.id]?.state||'checking review').replaceAll('_',' ')}{s.created_at?' · '+new Date(s.created_at).toLocaleString():''}</option>)}</optgroup>)}</WorkflowField></div></div><p className="text-xs text-slate-400">Needs attention includes unfinished debates and incomplete analyst reviews. Your current selection stays available when filtering.</p></section>;
+}

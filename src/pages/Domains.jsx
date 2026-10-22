@@ -1,3 +1,7 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
+import {loadDomainHierarchy} from '@/lib/domainHierarchy';
+import {distinctDomainColors,DOMAIN_PALETTE,nextDomainColor} from '@/lib/domainColors';
 import { useState, useEffect } from 'react';
 import { queued } from '@/lib/apiQueue';
 import { useWorkspace } from '@/lib/WorkspaceContext';
@@ -8,13 +12,14 @@ import { domainCoverage, normalizeDomainName } from '@/lib/domainCoverage';
 import WrButton from '@/components/ui/WrButton';
 import { WrInput } from '@/components/ui/WrInput';
 
-const PRESET_COLORS = ['#2E75B6','#F0A500','#27AE60','#C0392B','#7B2D8B','#2E86AB','#E67E22','#546E7A'];
+const PRESET_COLORS = DOMAIN_PALETTE;
 const DOMAIN_COLORS = ['#F0A500','#2E86AB','#27AE60','#C0392B','#7B2D8B','#E67E22','#16A085','#8E44AD'];
 
 // ── Domain edit modal ─────────────────────────────────────────────────────────
-function DomainModal({ domain, onSave, onClose }) {
-  const [form, setForm] = useState({ name: '', description: '', color: '#2E75B6', icon: 'Globe', ...domain });
+function DomainModal({ domain, domains, onSave, onClose }) {
+  const [form, setForm] = useState({ name: '', description: '', color: nextDomainColor(domains.map(d=>d.color)), icon: 'Globe', ...domain });
   const [saving, setSaving] = useState(false);
+ useBackgroundWork(saving,'Domain update');
   const [error, setError] = useState('');
   const save = async () => { setSaving(true); setError(''); try { await onSave(form); } catch (e) { setError(e.message); } finally { setSaving(false); } };
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -34,9 +39,9 @@ function DomainModal({ domain, onSave, onClose }) {
           <div>
             <label className="block text-xs font-medium mb-2 tracking-wide" style={{ color: 'var(--wr-text-secondary)' }}>COLOR</label>
             <div className="flex gap-2">
-              {PRESET_COLORS.map(c => (
-                <button data-ui="action" key={c} onClick={() => set('color', c)}
-                  className="w-7 h-7 rounded-full transition-transform hover:scale-110"
+              {[...new Set([...PRESET_COLORS,form.color])].map(c => (
+                <button type="button" data-ui="icon" aria-label={'Use domain color '+c} aria-pressed={form.color===c} disabled={domains.some(d=>d.id!==form.id&&d.color===c)} title={domains.some(d=>d.id!==form.id&&d.color===c)?'Already used by another domain':c} key={c} onClick={() => set('color', c)}
+                  className="w-7 h-7 rounded-full transition-transform hover:scale-110 disabled:opacity-25 disabled:cursor-not-allowed"
                   style={{ backgroundColor: c, outline: form.color === c ? `2px solid ${c}` : 'none', outlineOffset: '2px' }} />
               ))}
             </div>
@@ -102,7 +107,7 @@ function DuplicateModal({ group, agentCounts, onMerge, onClose }) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold" style={{ color: 'var(--wr-text-primary)' }}>{d.name}</p>
                   {d.description && (
-                    <p className="text-xs truncate" style={{ color: 'var(--wr-text-muted)' }}>{d.description}</p>
+                    <MarkdownContent className="text-xs truncate" style={{ color: 'var(--wr-text-muted)' }}>{d.description}</MarkdownContent>
                   )}
                 </div>
                 <div className="flex-shrink-0 text-right mr-2">
@@ -254,8 +259,9 @@ export default function Domains() {
     if (!db) return;
     try {
       const [doms, agents, scenarios] = await Promise.all([db.Domain.list(), db.Agent.list(), db.Scenario.list()]);
-      const coverage = domainCoverage(doms, agents, scenarios);
-      setDomains(doms); setAllAgents(agents); setAllScenarios(scenarios);
+      const colored=distinctDomainColors(await loadDomainHierarchy(db,doms));
+      const coverage = domainCoverage(colored, agents, scenarios);
+      setDomains(colored); setAllAgents(agents); setAllScenarios(scenarios);
       setAgentCounts(Object.fromEntries(coverage.rows.map(d => [d.id, d.count])));
       setDuplicates(coverage.duplicates); setError('');
     } catch (e) { setError(e.message); throw e; }
@@ -370,6 +376,7 @@ export default function Domains() {
   // Reassign every domain-bearing entity before deleting duplicate records.
   const handleMergeDuplicates = async (keepId, toDelete) => {
     const ids = new Set(toDelete.map(d => d.id));
+    if(domains.some(d=>ids.has(d.id)&&d.parent_domain_id||ids.has(d.parent_domain_id)))throw new Error('This domain participates in an umbrella category. Update the hierarchy before merging it.');
     for (const entity of ['Agent', 'Scenario', 'Threat', 'Chain', 'Session']) {
       for (const row of await db[entity].list()) if (ids.has(row.domain_id)) await db[entity].update(row.id, { domain_id: keepId });
     }
@@ -379,6 +386,7 @@ export default function Domains() {
   };
   const handleDelete = async id => {
     try {
+      if(domains.some(d=>d.parent_domain_id===id))throw new Error('This umbrella domain has child domains. Keep or reorganize its children before deleting it.');
       const linked = [];
       for (const entity of ['Agent', 'Scenario', 'Threat', 'Chain', 'Session']) {
         const count = (await db[entity].filter({ domain_id: id })).length;
@@ -397,7 +405,7 @@ export default function Domains() {
       <details className="rounded border border-slate-700 p-4 text-slate-200"><summary className="cursor-pointer font-semibold">Domain cleanup {duplicates.length > 0 ? '· ' + duplicates.length + ' duplicate name groups' : ''}</summary><div className="mt-4 space-y-3 text-sm"><p>Use existing broad domains where possible. Discipline sync can propose new domains; review the list before creating them.</p><WrButton variant="secondary" onClick={previewSync} disabled={!canWrite || syncing}>{syncing ? 'Scanning…' : 'Preview discipline sync'}</WrButton>{duplicates.map(group => <div key={group[0].id} className="flex items-center justify-between gap-3"><span>{group[0].name} · {group.length} domains with the same name</span><WrButton variant="secondary" disabled={!canDelete} onClick={() => setDupModal(group)}>Review duplicates</WrButton></div>)}</div></details>
       {syncResult && <p role="status" className="text-sm text-amber-300">{syncResult.created} domains created · {syncResult.reassigned} SMEs assigned.{!syncResult.created && !syncResult.reassigned ? ' No discipline-based changes found. Use Unassigned SMEs to assign unmatched profiles manually.' : ''}</p>}
     </div>
-    {modal && <DomainModal domain={modal === 'new' ? null : modal} onSave={handleSave} onClose={() => setModal(null)} />}
+    {modal && <DomainModal domains={domains} domain={modal === 'new' ? null : modal} onSave={handleSave} onClose={() => setModal(null)} />}
     {dupModal && <DuplicateModal group={dupModal} agentCounts={agentCounts} onMerge={handleMergeDuplicates} onClose={() => setDupModal(null)} />}
     {syncPreview && <SyncPreviewModal preview={syncPreview} onConfirm={commitSync} onClose={() => setSyncPreview(null)} />}
   </div>;

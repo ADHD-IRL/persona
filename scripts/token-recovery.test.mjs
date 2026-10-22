@@ -67,3 +67,36 @@ for(const mode of ['badQuote','missingCoverage'])test('section validation reject
 test('output failures do not trigger lossy context reduction',async()=>{
  let calls=0;await assert.rejects(sectionedCompletion({records:[{id:'source',text:'Original'}],render:r=>JSON.stringify(r),complete:async()=>{calls++;throw new Error('output token limit');}}),/output token limit/);assert.equal(calls,1);
 });
+
+for (const failure of ['quote','id','json','notes']) test('section correction recovers '+failure+' without changing source evidence',async()=>{
+ const records=[{id:'source',text:'Exact evidence with a minority view.'},{id:'second',text:'Keep this uncertainty.'}],seen=[],progress=[];let initial=true,retries=0;
+ const result=await sectionedCompletion({records,render:JSON.stringify,onProgress:p=>progress.push(p),complete:async prompt=>{
+  if(initial){initial=false;throw new Error('maximum context length exceeded');}
+  if(prompt.includes('SOURCE SECTION:')){
+   const section=JSON.parse(prompt.split('SOURCE SECTION:\n')[1]);seen.push(section);
+   if(section.id==='section-2-1'&&retries++===0){
+    if(failure==='json')return 'invalid JSON';
+    return JSON.stringify({section_id:failure==='id'?'second':section.id,notes:failure==='notes'?'':'Retain uncertainty',quotes:[failure==='quote'?'Invented evidence':section.text]});
+   }
+   return JSON.stringify({section_id:section.id,notes:'Retain uncertainty',quotes:[section.text]});
+  }
+  return JSON.stringify({covered_sections:['section-1-1','section-2-1'],answer:'Qualified decision'});
+ }});
+ assert.equal(result,'Qualified decision');assert.deepEqual(seen.map(s=>s.id),['section-1-1','section-2-1','section-2-1']);assert.deepEqual(seen[1],seen[2]);assert.ok(progress.some(p=>p.message.includes('retry 1 of 2')));
+});
+test('persistent fabricated quotes stop after three section attempts with source diagnostics',async()=>{
+ let calls=0,consolidated=false;
+ await assert.rejects(sectionedCompletion({records:[{id:'source',text:'Actual evidence'}],render:JSON.stringify,complete:async prompt=>{
+  if(++calls===1)throw new Error('maximum context length exceeded');
+  if(!prompt.includes('SOURCE SECTION:'))consolidated=true;
+  return JSON.stringify({section_id:'section-1-1',notes:'Review',quotes:['Fabricated evidence']});
+ }}),/section 1 of 1.*source source.*after 3 attempts/);
+ assert.equal(calls,4);assert.equal(consolidated,false);
+});
+test('section cancellation is propagated without correction attempts',async()=>{
+ let calls=0;
+ await assert.rejects(sectionedCompletion({records:[{id:'source',text:'Actual evidence'}],render:JSON.stringify,complete:async()=>{
+  if(++calls===1)throw new Error('maximum context length exceeded');
+  throw new DOMException('Stopped','AbortError');
+ }}),e=>e.name==='AbortError');assert.equal(calls,2);
+});

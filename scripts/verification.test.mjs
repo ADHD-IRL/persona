@@ -51,6 +51,12 @@ test('verification API enforces session/workspace/role scope, caching, history, 
   await assert.rejects(call('review',reviewInput),e=>e.status===409);
   await call('check',{kind:'Threat',id:threat.id});assert.equal(calls,2);assert.equal((await call()).data.findings[0].history.length,2);
   await assert.rejects(route({method:'GET'},user,new URL('http://local/api/verification/'+other.id+'/history?'+new URLSearchParams({workspace_id:ws.id,kind:'Threat',id:threat.id,run_id:first.id})),async()=>({})),e=>e.status===404);
+  const knowledge=await db.KnowledgeDocument.create({title:'Reusable report',source:'analyst',content:'Independent recovery record'});
+  const reference={title:knowledge.title,quality:'secondary',origin:'separate-report',knowledge_document_id:knowledge.id};
+  await call('sources',reference);await call('sources',reference);
+  const sources=(await call()).data.sources.filter(s=>s.knowledge_document_id===knowledge.id);assert.equal(sources.length,1);assert.equal(sources[0].text,'Independent recovery record');
+  await db.KnowledgeDocument.update(knowledge.id,{content:'Updated independent record'});assert.equal((await call()).data.sources.find(s=>s.knowledge_document_id===knowledge.id).text,'Updated independent record');
+  await assert.rejects(call('sources',reference,viewer),e=>e.status===403);
   const ws2=(await pool.query("INSERT INTO workspaces(name,owner_id) VALUES ('Other workspace',$1) RETURNING id",[user.id])).rows[0];
   await assert.rejects(route({method:'GET'},user,new URL('http://local/api/verification/'+session.id+'?workspace_id='+ws2.id),async()=>({})),e=>e.status===403);
  }finally{await engine.close();}

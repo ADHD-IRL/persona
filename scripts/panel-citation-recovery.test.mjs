@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {matchedQuotation,validatedPanelResults,validateReferences} from '../src/lib/panelReview.js';
+const docs=[{id:'source',text:'Backup capacity\n  remains uncertain. (Check [A].)'}];
+const draft=quote=>JSON.stringify({items:[{type:'finding',title:'Capacity',detail:'Needs checking',references:[{id:'source',quote}]}]});
+test('whitespace-only variation restores the actual saved quotation',()=>{assert.equal(matchedQuotation(docs[0].text,'Backup capacity remains uncertain.'),'Backup capacity\n  remains uncertain.');assert.equal(matchedQuotation(docs[0].text,'uncertain. (Check [A].)'),'uncertain. (Check [A].)');});
+test('changed words, punctuation, source IDs and invented support still fail',()=>{for(const quote of ['Backup capacity is certain.','backup capacity remains uncertain.','Backup capacity remains uncertain!'])assert.throws(()=>validateReferences([{id:'source',quote}],docs),/could not be matched/);assert.throws(()=>validateReferences([{id:'wrong',quote:docs[0].text}],docs));});
+test('one correction attempt can recover an invalid reference',async()=>{let calls=0,retries=0;const result=await validatedPanelResults({docs,generate:async correction=>{calls++;if(calls===2)assert.match(correction,/source source/);return draft(calls===1?'Invented evidence here.':docs[0].text);},onRetry:()=>retries++});assert.equal(calls,2);assert.equal(retries,1);assert.equal(result[0].references[0].quote,docs[0].text);});
+test('persistent invalid references fail without a partial result',async()=>{let calls=0;await assert.rejects(validatedPanelResults({docs,generate:async()=>{calls++;return draft('Invented evidence here.');}}),/previously saved results remain unchanged/);assert.equal(calls,2);});
+test('cancellation stops citation recovery',async()=>{const controller=new AbortController();let calls=0;await assert.rejects(validatedPanelResults({docs,signal:controller.signal,generate:async()=>{calls++;return draft('Invented evidence here.');},onRetry:()=>controller.abort()}),e=>e.name==='AbortError');assert.equal(calls,1);});

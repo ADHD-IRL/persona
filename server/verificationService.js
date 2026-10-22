@@ -9,9 +9,10 @@ const runKey=id=>'verification_run_'+id, reviewKey=id=>'verification_review_'+id
 const running=new Set();
 export async function verificationContext(db,sessionId) {
  const session=await db.Session.get(sessionId);
- const [threats,chains,documents,extra,scenario]=await Promise.all([db.Threat.list(),db.Chain.list(),db.KnowledgeDocument.list(),readKV(db,verificationSourcesKey(sessionId)),session.scenario_id?db.Scenario.get(session.scenario_id):null]);
- const records=sessionRecords(session,{threats,chains});
- const sources=[{id:'scenario',title:'Scenario premises (not independently verified)',text:[session.context_override,scenario?.context_document].filter(Boolean).join('\n'),kind:'scenario',quality:'context',origin:'scenario'},...documents.filter(d=>d.content).map(d=>({id:'knowledge-'+d.id,title:d.title,text:d.content,kind:'document',quality:'unknown',origin:'unknown',url:/^https?:/.test(d.source||'')?d.source:'',published_at:null})),...(extra?.sources||[])].filter(s=>s.text).map(s=>({...s,version:fingerprint({text:s.text,url:s.url,quality:s.quality,origin:s.origin,published_at:s.published_at})}));
+ const [threats,chains,documents,extra,scenario]=await Promise.all([db.Threat.filter({session_id:sessionId}),db.Chain.filter({session_id:sessionId}),db.KnowledgeDocument.list(),readKV(db,verificationSourcesKey(sessionId)),session.scenario_id?db.Scenario.get(session.scenario_id):null]);
+ const linked=(await Promise.all(threats.map(t=>db.Chain.filter({threat_id:t.id})))).flat();
+ const records=sessionRecords(session,{threats,chains:[...new Map([...chains,...linked].map(c=>[c.id,c])).values()]});
+ const sources=[{id:'scenario',title:'Scenario premises (not independently verified)',text:[session.context_override,scenario?.context_document].filter(Boolean).join('\n'),kind:'scenario',quality:'context',origin:'scenario'},...documents.filter(d=>d.content&&!(extra?.sources||[]).some(s=>s.knowledge_document_id===d.id)).map(d=>({id:'knowledge-'+d.id,title:d.title,text:d.content,kind:'document',quality:'unknown',origin:'unknown',url:/^https?:/.test(d.source||'')?d.source:'',published_at:null})),...(extra?.sources||[]).map(s=>{if(!s.knowledge_document_id)return s;const d=documents.find(d=>d.id===s.knowledge_document_id);return {...s,title:d?.title||s.title,text:d?.content||''};})].filter(s=>s.text).map(s=>({...s,version:fingerprint({text:s.text,url:s.url,quality:s.quality,origin:s.origin,published_at:s.published_at})}));
  const findings=[...records.threats.map(record=>({kind:'Threat',record})),...records.chains.map(record=>({kind:'Chain',record}))].filter(f=>!f.record.merged_into&&f.record.review_status!=='archived');
  return {session,sources,findings};
 }
@@ -52,7 +53,7 @@ export async function verificationView(db,context,model) {
   const latestReview=index.reviews?.length?await readKV(db,reviewKey(index.reviews.at(-1).id)):null;
   findings.push({kind,id:record.id,name:record.name,run,history:index.runs,review:latestReview,stale:!!run&&run.fingerprint!==signature(record,context.sources,model)});
  }
- return {findings,sources:context.sources.filter(s=>s.id.startsWith('added-')),approved_hosts:approvedSourceHosts};
+ return {findings,sources:context.sources.filter(s=>s.id.startsWith('added-')||s.knowledge_document_id),approved_hosts:approvedSourceHosts};
 }
 export function createVerificationService(pool,provider,{fetchSource=fetchApprovedSource}={}) {
  return async(req,user,url,body)=>{
@@ -80,11 +81,13 @@ export function createVerificationService(pool,provider,{fetchSource=fetchApprov
    if(typeof input.title!=='string'||!input.title.trim()||input.title.length>300||!['primary','secondary','unknown'].includes(input.quality))throw httpError(400,'Add a source title and provenance classification.');
    if(input.published_at&&(!/^\d{4}-\d{2}-\d{2}$/.test(input.published_at)||!Number.isFinite(Date.parse(input.published_at))||new Date(input.published_at).toISOString().slice(0,10)!==input.published_at||Date.parse(input.published_at)>Date.now()))throw httpError(400,'Use a valid publication date that is not in the future.');
    if(input.url){const u=new URL(input.url);if(!['http:','https:'].includes(u.protocol)||u.username||u.password)throw httpError(400,'Use a public HTTP(S) source URL without credentials.');}
-   const fetched=input.retrieve===true?await fetchSource(input.url):{text:input.text,retrieval:'analyst_supplied'};
+   const knowledgeDocument=input.knowledge_document_id?await db.KnowledgeDocument.get(uuid(input.knowledge_document_id)):null;
+   if(input.knowledge_document_id&&!knowledgeDocument)throw httpError(404,'Knowledge source not found.');
+   const fetched=knowledgeDocument?{text:knowledgeDocument.content,retrieval:'knowledge_reference'}:input.retrieve===true?await fetchSource(input.url):{text:input.text,retrieval:'analyst_supplied'};
    if(typeof fetched.text!=='string'||!fetched.text.trim()||fetched.text.length>1000000)throw httpError(400,'Add source text up to 1 MB.');
-   const record={id:'added-'+randomUUID(),title:input.title.trim(),text:fetched.text,url:input.url||'',kind:'document',quality:input.quality,origin:String(input.origin||'unknown').trim().slice(0,300)||'unknown',published_at:input.published_at||null,retrieval:fetched.retrieval,retrieved_at:fetched.retrieved_at||null,added_at:new Date().toISOString(),added_by:user.id};
+   const record={id:knowledgeDocument?'knowledge-'+knowledgeDocument.id:'added-'+randomUUID(),title:knowledgeDocument?.title||input.title.trim(),...(knowledgeDocument?{knowledge_document_id:knowledgeDocument.id}:{text:fetched.text}),url:input.url||'',kind:'document',quality:input.quality,origin:String(input.origin||'unknown').trim().slice(0,300)||'unknown',published_at:input.published_at||null,retrieval:fetched.retrieval,retrieved_at:fetched.retrieved_at||null,added_at:new Date().toISOString(),added_by:user.id};
    const existing=await readKV(db,verificationSourcesKey(sessionId))||{sources:[]};
-   existing.sources.push(record);await writeKV(db,verificationSourcesKey(sessionId),existing);return {status:201,data:record};
+   existing.sources=existing.sources.filter(s=>s.id!==record.id);existing.sources.push(record);await writeKV(db,verificationSourcesKey(sessionId),existing);return {status:201,data:record};
   }
   const finding=context.findings.find(f=>f.kind===input.kind&&f.record.id===input.id);
   if(!finding)throw httpError(404,'Finding not found in this session.');

@@ -1,3 +1,7 @@
+import PanelRoomHome from './pages/PanelRoomHome';
+import PanelWorkspace from './pages/PanelWorkspace';
+import SessionReports from './pages/SessionReports';
+import SessionSummary from './pages/SessionSummary';
 import SessionEntry from '@/components/session/SessionEntry';
 import SessionTracker from './pages/SessionTracker';
 import RiskActions from './pages/RiskActions';
@@ -35,7 +39,7 @@ import DecisionDetail from '@/pages/DecisionDetail';
 import KnowledgeBase from '@/pages/KnowledgeBase';
 import WhatIfSimulator from '@/pages/WhatIfSimulator';
 import LiveDebateRoom from '@/pages/LiveDebateRoom';
-import PanelRoom from '@/pages/PanelRoom';
+
 
 const LoadingScreen = () => (
   <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'var(--wr-bg-primary)' }}>
@@ -102,13 +106,16 @@ const AppRoutes = () => {
         <Route path="/sessions/new"         element={<NewSession />} />
         <Route path="/sessions/:id"         element={<SessionEntry><SessionWorkspace /></SessionEntry>} />
         <Route path="/sessions/:id/live"    element={<SessionEntry><LiveDebateRoom /></SessionEntry>} />
-        <Route path="/sessions/:id/panel"   element={<SessionEntry><PanelRoom /></SessionEntry>} />
+        <Route path="/sessions/:id/panel"   element={<SessionEntry><PanelWorkspace /></SessionEntry>} />
         <Route path="/sessions/:id/results" element={<SessionResults />} />
-        <Route path="/reports"              element={<Reports />} />
+        <Route path="/panel-room" element={<PanelRoomHome />} />
+        <Route path="/reports" element={<SessionReports />} />
+        <Route path="/reports/library" element={<Reports />} />
         <Route path="/threatmap"            element={<ThreatMap />} />
         <Route path="/agent-analytics"      element={<AgentAnalytics />} />
         <Route path="/compare"              element={<SessionComparison />} />
         <Route path="/chain-breaker"        element={<ChainBreaker />} />
+        <Route path="/session-summary" element={<SessionSummary />} />
         <Route path="/session-tracker" element={<SessionTracker />} />
         <Route path="/mitigations"          element={<RiskActions />} />
         <Route path="/simulator"            element={<WhatIfSimulator />} />

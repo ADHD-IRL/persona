@@ -36,7 +36,15 @@ export async function buildSnapshot(db, input, model) {
   } else {
     assumptions = (typeof input.assumptions === 'string' ? input.assumptions : '').split('\n').filter(s => s.trim()).map(text => ({ text: text.trim(), status: 'unverified' }));
   }
-  const knowledge = (await retrieveKnowledge(db, `${scenario.context_document || ''} ${question}`, 5)).map(semantic);
+  let knowledgeSources;
+  if(input.knowledge_document_ids!==undefined){
+    const ids=input.knowledge_document_ids;
+    if(!Array.isArray(ids)||ids.length>100||new Set(ids).size!==ids.length)throw httpError(400,'Select up to 100 distinct knowledge sources.');
+    const docs=await Promise.all(ids.map(id=>db.KnowledgeDocument.get(uuid(id))));
+    if(docs.some(d=>!d))throw httpError(400,'A selected knowledge source is no longer available.');
+    knowledgeSources=docs.map(d=>({id:d.id,title:d.title,version:fingerprint({content:d.content,source:d.source})})).sort((a,b)=>a.id.localeCompare(b.id));
+  }
+  const knowledge = (await retrieveKnowledge(db, `${scenario.context_document || ''} ${question}`, 5, input.knowledge_document_ids)).map(semantic);
   const selected = async (entity, ids) => {
     if (ids === undefined) return [];
     if (!Array.isArray(ids) || ids.length > 30 || new Set(ids).size !== ids.length) throw httpError(400, 'Choose up to 30 distinct findings of each type.');
@@ -46,7 +54,7 @@ export async function buildSnapshot(db, input, model) {
   };
   const threats = await selected('Threat', input.threat_ids);
   const chains = await selected('Chain', input.chain_ids);
-  const snapshot = { version: ANALYSIS_VERSION, model, mode: input.mode, question, constraints, scenario, agents, decision, options, assumptions, knowledge, threats, chains };
+  const snapshot = { version: ANALYSIS_VERSION, model, mode: input.mode, question, constraints, scenario, agents, decision, options, assumptions, knowledge, threats, chains, ...(knowledgeSources?{knowledge_sources:knowledgeSources}:{}) };
   const checks = readiness(snapshot);
   if (checks.errors.length) throw httpError(400, checks.errors.join(' '));
   return snapshot;
@@ -65,6 +73,17 @@ export function createAnalysisService(pool, config) {
     if (!match) return null;
     const workspace = uuid(url.searchParams.get('workspace_id'));
     const [, id, action] = match;
+    if (req.method === 'GET' && !id && url.searchParams.get('view') === 'tracker-index') return scoped(user, workspace, false, async client => {
+      const sessions = (await client.query('SELECT id,name,status,scenario_id,analysis_job_id,mode,created_at FROM sessions WHERE workspace_id=$1 ORDER BY created_at DESC', [workspace])).rows;
+      const scenarios = (await client.query('SELECT id,name FROM scenarios WHERE workspace_id=$1 ORDER BY name', [workspace])).rows;
+      return {status:200,data:{sessions,scenarios}};
+    });
+    if (req.method === 'GET' && !id && url.searchParams.get('status') === '1') return scoped(user, workspace, false, async client => ({status:200,data:(await client.query("SELECT id,status,jsonb_build_object('question',input->>'question') AS input,error,progress,created_at,updated_at FROM analysis_jobs WHERE workspace_id=$1 AND status IN ('queued','running','failed') ORDER BY created_at DESC",[workspace])).rows}));
+    if (req.method === 'GET' && id && !action && url.searchParams.get('status') === '1') return scoped(user, workspace, false, async client => {
+      const row=(await client.query('SELECT id,status,progress,updated_at FROM analysis_jobs WHERE id=$1 AND workspace_id=$2',[uuid(id),workspace])).rows[0];
+      if(!row)throw httpError(404,'Analysis not found.');
+      return {status:200,data:row};
+    });
     if (req.method === 'GET' && !id) return scoped(user, workspace, false, async client => ({ status: 200, data: (await client.query('SELECT id,status,input,result,error,progress,created_at,updated_at FROM analysis_jobs WHERE workspace_id=$1 ORDER BY created_at DESC LIMIT 100', [workspace])).rows }));
     if (req.method === 'GET' && id) {
       const job = await get(user, workspace, id);
@@ -75,6 +94,7 @@ export function createAnalysisService(pool, config) {
         } catch (error) { return { status: 200, data: { stale: true, changes: ['Inputs are no longer available or ready'], error: error.message } }; }
       }
       if (action) throw httpError(405, 'Method not allowed.');
+      if(url.searchParams.get('status')==='1')return {status:200,data:{id:job.id,status:job.status,progress:job.progress,updated_at:job.updated_at}};
       const activity = await scoped(user, workspace, false, client => readAnalysisActivity(client, job, url.searchParams.get('debate') === '1'));
       return { status: 200, data: { ...job, activity } };
     }

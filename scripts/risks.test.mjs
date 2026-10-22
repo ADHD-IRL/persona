@@ -37,9 +37,9 @@ test('risk database workflow: scoped merge, repeat-safe actions, review, step pr
   await assert.rejects(call('Threat',a.id,'merge',{target_id:foreign.id}),/different, unmerged/);
   await assert.rejects(call('Threat',a.id,'merge',{target_id:b.id},viewer),/permission/);
   await assert.rejects(db.Chain.update(chain.id,{threat_id:foreign.id}),/workspace/);
-  const payload={step:1,action:'Test failover',completion_criteria:'Record recovery time'};
+  const payload={step:1,action:'Test failover',completion_criteria:'Record recovery time',action_type:'verify',notes:'AI draft reviewed by analyst'};
   const action=(await call('Chain',chain.id,'action',payload)).data;
-  assert.equal(action.title,'Test failover');assert.deepEqual(action.breaks_steps,[1]);
+  assert.equal(action.action_type,'verify');assert.equal(action.notes,payload.notes);await assert.rejects(call('Chain',chain.id,'action',{...payload,action_type:'invalid'}),/valid response purpose/);await assert.rejects(call('Chain',chain.id,'action',payload,viewer),/permission/);assert.equal(action.title,'Test failover');assert.deepEqual(action.breaks_steps,[1]);
   assert.equal((await call('Chain',chain.id,'action',payload)).data.id,action.id);
   assert.notEqual((await call('Chain',chain.id,'action',{...payload,action:'Install backup power'})).data.id,action.id);
   await assert.rejects(call('Chain',chain.id,'action',{...payload,step:9}),/existing chain step/);

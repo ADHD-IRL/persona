@@ -418,3 +418,73 @@ Open Session Tracker → Verify findings to inspect model-assisted evidence stre
 ## Single-analyst workflow
 
 Use Session Tracker to manage your own findings, follow-up, evidence and conclusions. Threats, chains and mitigation lists use review status, rationale and evidence confidence. Follow-up actions use due dates, completion criteria and verification notes. In the expert panel, your transcript name and optional analytical focus describe your contributions; the remaining speakers are AI SMEs. Organize SMEs by domain from the SME library or Domains heatmap.
+
+## Streamlined analyst workflow
+
+The streamlined Session Tracker opens with a decision summary and the highest-priority unresolved findings. Review next finding opens a side panel with review status, confidence, analyst notes, decision impact, evidence verification and linked follow-up. Save and next moves through findings without leaving the session. The panel confirms before discarding unsaved review edits. Search and comparison tools are collapsed; comparisons appear only when an earlier completed debate exists. The analysis brief and suggested actions are available in Overview. Evidence contains the debate, live messages, and saved knowledge passages; Run details provides advanced controls.
+
+Choose your session groups debates by scenario and shows the question, date, debate state and saved analyst-review state. Recent, Needs attention and Completed debates filters help narrow the list. Needs attention includes unfinished debates and sessions without a completed analyst review; the open dashboard checks whether saved reviews need reassessment. The last selected session is remembered.
+
+Closeout notes autosave to the local database as a draft after a short pause. Saving, Saved and Failed feedback reports the result; Retry draft save is available after a failure. A browser copy protects pending edits. Save session review explicitly confirms the selected review state; autosave never completes a review.
+
+Start session begins with the scenario, then the question and recommended SME panel. Saved context is included by default when available. Uncheck the context box to add session-specific information. Edit this scenario and Edit options, criteria, and assumptions open a drawer without losing the setup draft. Constraints, assumptions, threats/chains and source selection are optional disclosures. Source selection can use automatic retrieval or an explicit selection from Knowledge Base; an empty explicit selection uses no knowledge documents. Up to five matching passages enter a guided analysis. Evidence lists which selected sources contributed passages and shows the saved text. Verification can reuse a Knowledge Base document by reference, so edits to the original require rechecking; this does not establish its reliability.
+
+The sidebar reports local server/database connectivity, not LLM health. Test the model connection in Settings. Tracker polling checks run status and reloads session material when progress changes; wider scenario material is fetched when its attachment controls are opened.
+
+
+## Agent Debate, Panel Room, and Reports
+
+AgentDebate now manages two distinct ways to work. Under Run, choose **Agent Debate** for guided analysis that continues on the Node server, or **Panel Room** for an interactive discussion that you facilitate in the browser. Both share scenarios, SMEs, Knowledge Base, Session Tracker, Session Summary, and Reports.
+
+**Panel Room workflow**
+1. Choose a scenario or standalone question, enter the objective and supporting context, then select Structured debate or Live discussion and a stance.
+2. Review the suggested panel of 3–8 SMEs. Topic relevance and discipline diversity help select perspectives; the analyst reviews suitability.
+3. In a structured debate, work through opening positions, cross-examination, evidence check, closing positions, and analyst resolution. Use Run remaining phase to automate the remaining turns, or invite one SME at a time. Advance deliberately; completing a phase does not establish consensus. Live discussion lets you ask questions without fixed phases.
+4. Add analyst input as facts or questions become available. Each turn can retrieve up to three relevant Knowledge Base passages; expand the contribution to see the passages actually supplied. New sessions snapshot scenario context and SME profiles. Recent turns, selected earlier remarks, and persistent model positions guide subsequent responses; the complete saved transcript remains available in Reports.
+5. Review SME positions and changes. Confidence is subjective model belief, not a measured truth probability. Updates are bounded per turn, and the display explains what evidence could change a position.
+6. Record an analyst resolution, including unresolved disagreements when appropriate, and complete the session. This saves the conclusion into Session Tracker, but does not mark all findings or the entire session review as verified.
+7. Open Reports, review the output, then use Session Tracker to record findings and follow-up.
+
+Keep the browser open during Panel Room turns and report generation. Stop generation cancels the current request and retains completed saved turns. A failed contribution save blocks further turns and provides Retry saving contribution. Refresh resumes the last saved phase; there is no automatic restart of a model request.
+
+**Shared Reports**
+Choose a session from either mode, then select Session overview, Full debate record, SME positions and changes, Evidence and source context, Decision memo, or Mitigation and follow-up recommendations. The first four are built from saved records without a model call. AI reports are available after completion, review the full saved record using section review when necessary, and are saved as model drafts with model/time provenance. Regenerating replaces that report’s prior draft. Changes to the source record make the draft outdated. Mark report reviewed records your review; it does not verify every underlying claim or approve recommended actions. Download Markdown or Print / save PDF to share a report. No report automatically creates threats or mitigation actions.
+
+
+## Visual debate room and Debate Pulse
+
+Panel Room now uses the visual debate room: SME avatars and the active-speaker stage above the transcript, structured phase controls, a Debate Pulse rail, straw polls, and an agenda/phase history.
+
+Select an SME avatar to choose the next speaker, then Invite next SME contribution. Run remaining phase uses relevance, turn coverage, and cross-examination disagreement to select speakers. The speaker spotlight and provisional caption show a response in progress; it becomes part of the saved debate and pulse only after the complete response validates and saves. The waveform is a visual activity indicator, not audio.
+
+Debate Pulse scores saved turns locally for new vocabulary relative to recent turns (novelty), engagement with other perspectives, and textual specificity such as figures or source references. These are facilitation heuristics, not proof of novelty, evidence quality, truth, or percentage complete. Colored bars identify speakers; the line smooths turn scores. Use Table for exact values and How to read for the legend.
+
+Use Straw poll to ask every SME about the same explicit proposition. The first complete poll shows model stances; movement requires a repeat poll with the same proposition and roster. Poll information becomes stale after four subsequent saved SME turns. No poll means agreement and movement are unknown. A failed or cancelled poll creates no saved poll marker.
+
+A low-value streak or settled poll can pause an automated cross-examination or live burst. Opening positions, evidence check, and closing positions still run their required SME coverage. The analyst decides whether to continue, advance early, seek evidence, or record an unresolved outcome. Pause after current turn saves the current contribution before pausing; Stop generation cancels the current request and retains previously saved turns. The pulse never approves a decision or completes the session.
+
+Pulse bars and poll markers reconstruct from the saved record on reload. Reports includes Debate Pulse and straw polls for review and export. Choose an analyst resolution outcome explicitly; a model poll does not choose it for you.
+
+
+### Automatic structured debate
+
+Choose **Run debate automatically** in Panel Room to continue from the saved phase through opening positions, cross-examination, evidence check, and closing positions. Each contribution and phase change is saved before continuing. Repetitive cross-examination detected by Debate Pulse advances to the evidence check; opening, evidence, and closing coverage still run. Progress identifies the phase, turn, and active SME.
+
+**Pause after current turn** saves the current contribution before pausing. **Stop generation** cancels the in-progress response and keeps completed turns. Resume with **Run debate automatically**; after a save failure, retry the unsaved contribution first. Keep the room open while it runs. Automatic runs stop after at most one hour; you can resume from saved progress.
+
+Automation stops at **Resolution** for the analyst to record a conclusion or remaining uncertainties and complete the session. It does not approve a decision or complete the session on your behalf. **Run remaining phase** and single-SME contributions remain available for manual facilitation.
+
+
+### Panel Room: prepare, run, review, follow up, export
+
+1. In **Run → Panel Room**, choose a scenario, frame the question and context, and review the suggested SMEs. Choose **Start automatic debate** or **Open for manual facilitation**. The session list supports scenario/objective search, status and date filters.
+2. Use the session tabs: **Overview**, **Debate**, **Findings & actions**, **Evidence**, and **Reports**. Automatic discussion stays active when switching room tabs; keep the browser open. The compact header shows the objective and current phase.
+3. **Search this session** finds saved arguments, model positions, sources, findings, actions and analyst review notes. Open a match to see highlighted text and its origin; **Jump to this debate turn** opens the exact turn and surrounding phase. Debate filters select phase or SME; bookmarks and **Jump to latest** reduce scrolling. System events and straw-poll controls are collapsed by default.
+4. After closing positions, review results before recording a resolution. **Generate results draft** proposes takeaways, disagreements, findings, threats, evidence-gap questions and follow-up actions. Each proposal must cite an exact saved quotation. Edit, accept or dismiss each item. Changed debate/source content requires regenerating unaccepted drafts; accepted items remain. Quotation matching proves provenance, not truth.
+5. Use **Inspect evidence / capture** on any turn to read source passages and capture a relevant excerpt. Accepted findings/threats become session-linked records requiring evidence review. Actions need completion criteria and can verify, reduce risk or monitor. Questions are saved in Session Tracker’s open questions. Matching titles reuse existing records without overwriting them.
+6. **Ask about this debate** uses the saved session and returns cited answers or an explicit insufficient-evidence response. Answers are model assistance; inspect the linked passages.
+7. Record the analyst resolution and complete the debate. Completion opens the overview; it does not mark all findings verified or actions finished. Manage impact, verification and closeout in Session Tracker. **Reports → Panel Room reviewed results** exports the result list with selection status and quotations, alongside existing transcript, evidence, pulse and AI reports.
+
+### Cyber umbrella category
+
+Cyber groups Enterprise IT and Digital Services and Tech Platforms. Select Cyber in the SME domain tree to include both children, or select a child to narrow the list. Domain management shows the same hierarchy and rolls child SME counts up to Cyber. Library totals count each SME once; umbrella and child counts overlap. Primary SME assignments remain in their child domains. Tech Platforms can remain empty until relevant SMEs are assigned.

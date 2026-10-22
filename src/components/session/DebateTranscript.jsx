@@ -1,5 +1,6 @@
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+
 import { Swords, ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import WrButton from '@/components/ui/WrButton';
@@ -107,17 +108,7 @@ function AgentRow({ sa, agent, round, onGenerate, onUpdate, onReset }) {
               <>
                 <div className={cn('prose prose-sm max-w-none break-words', !expanded && 'line-clamp-4')}
                   style={{ '--tw-prose-body': 'var(--wr-text-secondary)', '--tw-prose-bold': 'var(--wr-text-primary)' }}>
-                  <ReactMarkdown
-                    components={{
-                      p: ({ children }) => <p style={{ fontSize: 13.5, color: 'var(--wr-text-secondary)', lineHeight: 1.75, marginBottom: 8 }}>{children}</p>,
-                      ul: ({ children }) => <ul style={{ paddingLeft: 18, marginBottom: 8 }}>{children}</ul>,
-                      ol: ({ children }) => <ol style={{ paddingLeft: 18, marginBottom: 8 }}>{children}</ol>,
-                      li: ({ children }) => <li style={{ fontSize: 13.5, color: 'var(--wr-text-secondary)', lineHeight: 1.7, marginBottom: 3 }}>{children}</li>,
-                      strong: ({ children }) => <strong style={{ fontWeight: 700, color: 'var(--wr-text-primary)' }}>{children}</strong>,
-                    }}
-                  >
-                    {text}
-                  </ReactMarkdown>
+                  <MarkdownContent>{text}</MarkdownContent>
                 </div>
                 <button data-ui="action"
                   onClick={() => setExpanded(v => !v)}

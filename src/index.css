@@ -166,12 +166,12 @@
   --ui-card-radius: 1rem;
   --ui-control-height: 2.5rem;
 }
-[data-ui="action"], [data-ui="icon"] {
+[data-ui="action"], [data-ui="icon"], [data-ui="choice"] {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 2.25rem;
+  min-height: var(--ui-control-height);
   max-width: 100%;
   border-radius: var(--ui-pill-radius) !important;
   border-width: 1px !important;
@@ -221,7 +221,7 @@ summary { cursor: pointer; border-radius: var(--ui-field-radius); }
   [data-ui="action"], [data-ui="icon"] { transition: none; }
 }
 
-[data-ui="action"], [data-ui="icon"] { font-family: inherit !important; font-size: 0.8125rem !important; }
+[data-ui="action"], [data-ui="icon"], [data-ui="choice"] { font-family: inherit !important; font-size: 0.8125rem !important; }
 [data-ui="action"][data-size="xs"] { font-size: 0.75rem !important; }
 [data-ui="badge"] { border-radius: var(--ui-pill-radius) !important; }
 [data-ui="action"].sidebar-link {
@@ -230,3 +230,129 @@ summary { cursor: pointer; border-radius: var(--ui-field-radius); }
   margin-top: 2px;
   margin-bottom: 2px;
 }
+
+/* Domain navigation is a tree, separate from pill actions. */
+.sme-domain-item { outline: none; }
+.sme-domain-row { display: flex; align-items: center; gap: 0.5rem; min-height: 2rem; padding: 0.35rem 0.4rem; cursor: pointer; font-size: 0.8125rem; color: var(--wr-text-secondary); border-radius: 3px; }
+.sme-domain-item[aria-selected="true"] > .sme-domain-row { color: var(--wr-amber); background: rgba(240,165,0,0.1); box-shadow: inset 2px 0 var(--wr-amber); }
+.sme-domain-row:hover { background: rgba(240,165,0,0.06); }
+.sme-domain-item:focus-visible > .sme-domain-row { outline: 2px solid var(--wr-amber); outline-offset: -2px; }
+.sme-domain-branches { margin-left: 0.65rem; padding-left: 0.65rem; border-left: 1px solid var(--wr-border-strong); }
+
+/* Compact card toolbars do not inherit page-level pill sizing. */
+.sme-card-actions { display:flex; flex-wrap:wrap; align-items:center; gap:0.25rem; }
+.sme-card-actions [data-ui="toolbar-action"] { display:inline-flex; align-items:center; justify-content:center; gap:0.3rem; min-height:2rem; padding:0.3rem 0.45rem; border:0; border-radius:0.3rem; background:transparent; color:var(--wr-text-secondary); font-size:0.75rem; white-space:nowrap; }
+.sme-card-actions [data-ui="toolbar-action"] svg { width:0.875rem; height:0.875rem; flex-shrink:0; }
+.sme-card-actions [data-ui="toolbar-action"]:hover { background:rgba(255,255,255,0.06); }
+.sme-card-actions [data-ui="toolbar-action"]:focus-visible { outline:2px solid var(--wr-amber); outline-offset:1px; }
+.sme-card-actions [data-ui="toolbar-action"]:disabled { opacity:0.45; cursor:not-allowed; }
+.sme-card-actions .sme-card-edit { color:var(--wr-amber); }
+.sme-card-actions .sme-card-delete { color:#e57373; margin-left:auto; }
+
+/* Give text fields a consistent inset; preserve explicit space for leading icons. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([class*="pl-"]),
+textarea:not([class*="pl-"]), select:not([class*="pl-"]) {
+  padding-left: 1rem;
+}
+
+/* Match the text-field inset in expandable analysis brief sections. */
+.session-tracker .analysis-brief-section > summary { padding-left: 1rem; }
+.analysis-brief-section article { padding-left: 1rem; padding-right: 1rem; }
+.analysis-brief-section > p { margin-left: 1rem; margin-right: 1rem; }
+.analysis-brief-section > ul { padding-left: 2rem; padding-right: 1rem; }
+
+/* Readable Markdown in analyst reference material. */
+.markdown-content > :first-child { margin-top: 0; }
+.markdown-content > :last-child { margin-bottom: 0; }
+.markdown-content p { margin: 0.5rem 0; }
+.markdown-content h4, .markdown-content h5, .markdown-content h6 { font-weight: 600; margin: 1rem 0 0.5rem; color: var(--wr-text-primary); }
+.markdown-content h4 { font-size: 1rem; }
+.markdown-content ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+.markdown-content ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+.markdown-content li { margin: 0.25rem 0; }
+.markdown-content a { color: var(--wr-amber); text-decoration: underline; text-underline-offset: 3px; }
+.markdown-content blockquote { border-left: 2px solid var(--wr-border-strong); margin: 0.75rem 0; padding-left: 1rem; color: var(--wr-text-secondary); }
+.markdown-content pre { overflow-x: auto; padding: 0.75rem; margin: 0.75rem 0; border-radius: 0.5rem; background: var(--wr-bg-primary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.markdown-content code { font-family: monospace; font-size: 0.9em; }
+.markdown-content :not(pre) > code { padding: 0.1rem 0.3rem; border-radius: 0.25rem; background: var(--wr-bg-primary); overflow-wrap: anywhere; }
+.markdown-table-scroll { max-width: 100%; overflow-x: auto; margin: 0.75rem 0; }
+.markdown-content table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.markdown-content th, .markdown-content td { border: 1px solid var(--wr-border-strong); padding: 0.5rem 0.75rem; text-align: left; vertical-align: top; white-space: normal; overflow-wrap: anywhere; }
+.markdown-content th { background: var(--wr-bg-secondary); font-weight: 600; }
+.markdown-content hr { margin: 1rem 0; border-color: var(--wr-border); }
+
+.markdown-content { overflow-wrap: anywhere; }
+.markdown-content pre code { white-space: inherit; overflow-wrap: inherit; }
+
+/* Consistent spacing and controls across the guided session setup. */
+.analysis-setup details {
+  border-top: 1px solid var(--wr-border);
+  padding-top: 1rem;
+}
+.analysis-setup details > summary {
+  cursor: pointer;
+  padding: .5rem 1rem;
+  font-size: .875rem;
+  font-weight: 500;
+}
+.analysis-setup details[open] > summary { margin-bottom: .75rem; }
+.analysis-setup input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  accent-color: #fbbf24;
+}
+
+@media print {
+  body:has(.reports-workspace) { background: white !important; }
+  body:has(.reports-workspace) main { margin-left: 0 !important; overflow: visible !important; }
+  body:has(.reports-workspace) .fixed,
+  body:has(.reports-workspace) .report-controls,
+  body:has(.reports-workspace) .reports-workspace > header { display: none !important; }
+  .reports-workspace, .report-document { padding: 0 !important; border: 0 !important; background: white !important; color: black !important; }
+  .report-document * { color: black !important; background: transparent !important; }
+  .report-document h1, .report-document h2, .report-document h3 { break-after: avoid; }
+  .report-document pre { white-space: pre-wrap; }
+}
+
+/* Shared pill appearance, matching Scenarios / Decisions / Knowledge Base. */
+[data-ui="action"][data-size="sm"] { min-height: 2.25rem; }
+[data-ui="action"][data-variant="amber"] { border-color: #f59e0b; font-weight: 600; }
+[data-ui="action"][data-variant="outline"] { border-color: rgb(245 158 11 / 0.4); }
+[data-ui="action"][data-variant="secondary"] { border-color: var(--wr-border); }
+[data-ui="action"][data-variant="ghost"] { border-color: transparent; }
+[data-ui="action"][data-variant="danger"] { border-color: #b91c1c; }
+[data-ui="action"][aria-current]:not([aria-current="false"]),
+[data-ui="choice"][data-state="checked"] { border-color: rgb(245 158 11 / 0.4); background-color: rgb(245 158 11 / 0.1); color: #f59e0b; }
+[data-ui="choice"][data-state="unchecked"] { border-color: var(--wr-border); color: var(--wr-text-secondary); background-color: transparent; }
+[data-ui="choice"]:not([aria-disabled="true"]):hover { border-color: var(--wr-amber); background-color: rgb(255 255 255 / 0.05); }
+[data-ui="choice"][aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+[data-ui="choice"]:focus-within { outline: 2px solid var(--wr-amber); outline-offset: 3px; }
+
+/* Session Tracker's inset-dot treatment for labeled pill actions everywhere.
+   Native choice inputs already supply their own state indicator. */
+[data-ui="action"]:not(.sidebar-link):not([aria-label])::before {
+  content: "";
+  display: block;
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: 0 0 0.75rem;
+  box-sizing: border-box;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: radial-gradient(circle, currentColor 0 2px, transparent 2.5px);
+  pointer-events: none;
+}
+
+.markdown-content h1, .markdown-content h2, .markdown-content h3 { font-weight: 600; margin: 1rem 0 0.5rem; color: var(--wr-text-primary); line-height: 1.35; }
+.markdown-content h1 { font-size: 1.35rem; }
+.markdown-content h2 { font-size: 1.15rem; }
+.markdown-content h3 { font-size: 1.05rem; }
+.markdown-content ul ul { list-style-type: circle; }
+.markdown-content ul ul ul { list-style-type: square; }
+.markdown-content .contains-task-list { list-style: none; padding-left: 0.25rem; }
+.markdown-content .task-list-item input { margin-right: 0.5rem; }
+
+@keyframes processingSweep { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+.processing-sweep { animation: processingSweep 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .processing-sweep { animation: none; width: 100%; opacity: 0.6; } }

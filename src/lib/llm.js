@@ -36,12 +36,13 @@ function reportUsage(usage) {
 }
 let serverTransport = null;
 export function setServerTransport(transport) { serverTransport = transport; }
-export async function callAnthropicStream({ messages, maxTokens = 2000, system, onToken, onDone, onUsage, onRecovery, signal }) {
+export async function callAnthropicStream({ messages, maxTokens = 2000, system, onToken, onDone, onUsage, onRecovery, onStatus, signal }) {
   if (serverTransport) return serverTransport({ messages, maxTokens, system, onToken, onDone, onUsage, signal });
   const key = getApiKey();
   if (!key && getProviderConfig().provider !== 'mitre_aip') throw new Error('No Anthropic API key configured. Add it in Settings.');
   const body = { model: getModelId(), max_tokens: maxTokens, messages, stream: true };
   if (system) body.system = system;
+  onStatus?.({stage:"connecting",at:Date.now()});
   const res = await fetch(ANTHROPIC_URL, {
     method: 'POST',
     headers: {
@@ -55,8 +56,9 @@ export async function callAnthropicStream({ messages, maxTokens = 2000, system, 
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || err.error || `Model API error ${res.status}`);
+    throw Object.assign(new Error(err.error?.message || err.error || `Model API error ${res.status}`), {status:res.status});
   }
+  onStatus?.({stage:"waiting",at:Date.now()});
   return readAnthropicStream(res.body, { onToken, onDone, onRecovery, signal, onUsage: usage => { reportUsage(usage); onUsage?.(usage); } });
 }
 

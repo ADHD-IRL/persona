@@ -1,3 +1,7 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import {loadDomainHierarchy,descendantDomainIds,domainPath} from '@/lib/domainHierarchy';
+import {distinctDomainColors} from '@/lib/domainColors';
+import DomainFilterTree from '@/components/agents/DomainFilterTree';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
@@ -28,6 +32,7 @@ export default function Agents() {
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [aiSeed, setAiSeed] = useState(null);
   const [pdfState, setPdfState] = useState({ busy: false, error: null });
+ useBackgroundWork(pdfState.busy,'SME export');
 
   // Deep links from the Threat Map: ?domain=<id> filters, ?q= searches,
   // ?generate=1&expert_type=&domain_id= opens the AI-generate modal pre-seeded
@@ -55,7 +60,7 @@ export default function Agents() {
     try {
       const [a, d] = await Promise.all([db.Agent.list(), db.Domain.list()]);
       setAgents(a);
-      setDomains(d);
+      setDomains(distinctDomainColors(await loadDomainHierarchy(db,d)));
     } catch (err) {
       if (retries > 0 && err?.message?.includes('Rate limit')) {
         isLoadingRef.current = false;
@@ -110,9 +115,10 @@ export default function Agents() {
     load();
   };
 
+  const filterIds=descendantDomainIds(domains,filterDomain);
   const filtered = agents.filter(a => {
     const matchSearch = !search || a.name?.toLowerCase().includes(search.toLowerCase()) || a.discipline?.toLowerCase().includes(search.toLowerCase());
-    const matchDomain = !filterDomain || a.domain_id === filterDomain;
+    const matchDomain = !filterDomain || filterIds.has(a.domain_id);
     return matchSearch && matchDomain;
   });
 
@@ -122,14 +128,14 @@ export default function Agents() {
   // portable JSON file — no ids or workspace refs, so it can be reimported
   // anywhere.
   const handleExport = () => {
-    const toExport = filtered.length ? filtered : agents;
+    const toExport = filtered;
     downloadPersonaExport(toExport, domains);
   };
 
   // Export personas to a formatted PDF (R-N13). Given a list, exports exactly
   // that; otherwise the selection if any, else the agents currently in view.
   // Every page carries the handling marking. Failures are shown, not swallowed.
-  const pdfTargets = () => (selected.size ? filtered.filter(a => selected.has(a.id)) : (filtered.length ? filtered : agents));
+  const pdfTargets = () => (selected.size ? filtered.filter(a => selected.has(a.id)) : filtered);
   const handleExportPdf = async (list) => {
     const toExport = list?.length ? list : pdfTargets();
     if (!toExport.length) return;
@@ -147,6 +153,7 @@ export default function Agents() {
   // falls back to discipline-based label for agents with unresolved domain_ids.
   const domainMap = Object.fromEntries(domains.map(d => [d.id, d]));
   const filterDomains = [
+    ...domains.filter(d=>d.parent_domain_id||domains.some(c=>c.parent_domain_id===d.id)),
     ...new Map(
       agents
         .filter(a => a.domain_id)
@@ -206,31 +213,12 @@ export default function Agents() {
 
           <div className="flex-1 min-h-0 flex flex-col">
             <p className="text-xs font-bold tracking-widest mb-2 font-mono flex-shrink-0" style={{ color: 'var(--wr-text-muted)' }}>DOMAIN</p>
-            <div className="space-y-1 flex-1 min-h-0 overflow-y-auto pr-1">
-              <button data-ui="action"
-                onClick={() => setFilterDomain('')}
-                className="w-full text-left text-xs px-2 py-1 rounded transition-colors"
-                style={{ color: !filterDomain ? 'var(--wr-amber)' : 'var(--wr-text-secondary)', backgroundColor: !filterDomain ? 'rgba(240,165,0,0.08)' : 'transparent' }}
-              >
-                All Domains <span style={{ color: 'var(--wr-text-muted)' }}>({agents.filter(a => a.domain_id).length})</span>
-              </button>
-              {filterDomains.map(d => (
-                <button data-ui="action"
-                  key={d.id}
-                  onClick={() => setFilterDomain(d.id)}
-                  className="w-full text-left text-xs px-2 py-1 rounded transition-colors flex items-center gap-2"
-                  style={{ color: filterDomain === d.id ? 'var(--wr-amber)' : 'var(--wr-text-secondary)', backgroundColor: filterDomain === d.id ? 'rgba(240,165,0,0.08)' : 'transparent' }}
-                >
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                  {d.name} <span style={{ color: 'var(--wr-text-muted)' }}>({agents.filter(a => a.domain_id === d.id).length})</span>
-                </button>
-              ))}
-            </div>
+            <DomainFilterTree domains={[...new Map(filterDomains.map(d=>[d.id,d])).values()]} agents={agents} value={filterDomain} onChange={setFilterDomain}/>
           </div>
         </div>
 
         {/* Agent Grid */}
-        <div className="flex-1 p-4">
+        <div className="flex-1 min-w-0 p-4">
           {pdfState.error && (
             <div data-ui="surface" className="mb-4 flex items-center gap-3 px-4 py-3 rounded text-sm" role="alert" style={{ backgroundColor: 'rgba(192,57,43,0.1)', border: '1px solid rgba(192,57,43,0.2)', color: '#C0392B' }}>
               <span className="flex-1">{pdfState.error}</span>
@@ -256,7 +244,7 @@ export default function Agents() {
             </div>
           )}
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid gap-3" style={{gridTemplateColumns:"repeat(auto-fill, minmax(min(100%, 280px), 1fr))"}}>
               {[1,2,3,4,5,6].map(i => (
                 <div key={i} className="h-52 rounded animate-pulse" style={{ backgroundColor: 'var(--wr-bg-card)' }} />
               ))}
@@ -275,29 +263,30 @@ export default function Agents() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filtered.map(agent => {
                 const domain = domainById(agent.domain_id);
-                const color = domain?.color || '#F0A500';
+                const color = domain?.color || '#94A3B8';
                 const isSelected = selected.has(agent.id);
                 return (
                   <div data-ui="surface"
                     key={agent.id}
-                    className="rounded overflow-hidden cursor-pointer transition-all"
+                    className="sme-card min-w-0 rounded overflow-hidden cursor-pointer transition-all"
                     style={{ 
                       backgroundColor: isSelected ? 'rgba(240,165,0,0.12)' : 'var(--wr-bg-card)',
-                      border: isSelected ? '2px solid var(--wr-amber)' : '1px solid var(--wr-border)',
+                      border: isSelected ? '2px solid var(--wr-amber)' : '1px solid '+color+'66',
                       opacity: isSelected ? 1 : 1
                     }}
                     onClick={() => toggleSelect(agent.id)}
                   >
-                    <div className="h-1" style={{ backgroundColor: color }} />
+                    <div className="h-1.5" aria-hidden="true" style={{ backgroundColor: color }} />
                     <div className="p-4">
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-sm" style={{ color: 'var(--wr-text-primary)' }}>{agent.name}</h3>
                           <p className="text-xs truncate" style={{ color: 'var(--wr-text-muted)' }}>{agent.discipline}</p>
                         </div>
-                        <SeverityBadge severity={agent.severity_default} size="xs" title={agentDefaultSeverityTitle(agent.severity_default)} />
+                        <div className="flex flex-col items-end gap-1 shrink-0"><SeverityBadge severity={agent.severity_default} size="xs" title={agentDefaultSeverityTitle(agent.severity_default)} />{agent.is_ai_generated&&<span className="text-[10px]" style={{color:"var(--wr-text-muted)"}}>AI generated</span>}</div>
                       </div>
 
+                      <p className="flex items-center gap-2 text-xs mt-3" style={{color:'var(--wr-text-secondary)'}}><span aria-hidden="true" className="w-2.5 h-2.5 rounded-full shrink-0" style={{backgroundColor:color}}/>{domain?domainPath(domains,domain.id):'Unassigned domain'}</p>
                       <div className="mt-3">
                         <VectorBars agent={agent} />
                       </div>
@@ -318,42 +307,11 @@ export default function Agents() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-1 mt-3 pt-3 border-t" style={{ borderColor: 'var(--wr-border)' }}>
-                        <button data-ui="action"
-                          onClick={() => setModal(agent)}
-                          className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/5"
-                          style={{ color: 'var(--wr-text-muted)' }}
-                        >
-                          <Edit2 className="w-3 h-3" /> Edit
-                        </button>
-                        <button data-ui="action"
-                          onClick={() => handleClone(agent)}
-                          className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/5"
-                          style={{ color: 'var(--wr-text-muted)' }}
-                        >
-                          <Copy className="w-3 h-3" /> Clone
-                        </button>
-                        <button data-ui="action"
-                          onClick={(e) => { e.stopPropagation(); handleExportPdf([agent]); }}
-                          disabled={pdfState.busy}
-                          title="Export this persona as a PDF"
-                          className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/5"
-                          style={{ color: 'var(--wr-text-muted)' }}
-                        >
-                          <FileText className="w-3 h-3" /> PDF
-                        </button>
-                        <button data-ui="action"
-                          onClick={() => handleDelete(agent)}
-                          className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-red-900/20 ml-auto"
-                          style={{ color: '#C0392B' }}
-                        >
-                          <Trash2 className="w-3 h-3" /> Delete
-                        </button>
-                        {agent.is_ai_generated && (
-                          <span data-ui="badge" className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(123,45,139,0.2)', color: '#9B59B6' }}>
-                            AI
-                          </span>
-                        )}
+                      <div className="sme-card-actions mt-3 pt-3 border-t" aria-label={'Actions for '+agent.name} role="group" style={{borderColor:'var(--wr-border)'}} onClick={e=>e.stopPropagation()}>
+                        <button type="button" data-ui="toolbar-action" className="sme-card-edit" onClick={()=>setModal(agent)}><Edit2 aria-hidden="true"/> Edit</button>
+                        <button type="button" data-ui="toolbar-action" onClick={()=>handleClone(agent)}><Copy aria-hidden="true"/> Clone</button>
+                        <button type="button" data-ui="toolbar-action" onClick={()=>handleExportPdf([agent])} disabled={pdfState.busy} title="Export this persona as a PDF"><FileText aria-hidden="true"/> PDF</button>
+                        <button type="button" data-ui="toolbar-action" className="sme-card-delete" onClick={()=>handleDelete(agent)}><Trash2 aria-hidden="true"/> Delete</button>
                       </div>
                     </div>
                   </div>

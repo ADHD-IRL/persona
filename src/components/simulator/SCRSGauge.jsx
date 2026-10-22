@@ -1,3 +1,4 @@
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { getPosture } from '@/lib/scrsEngine';
 import MetricHint, { HintDot } from '@/components/ui/MetricHint';
 import { RISK_HINTS } from '@/lib/riskGlossary';
@@ -99,9 +100,7 @@ export default function SCRSGauge({ scrs, size = 200, showLabel = true }) {
             }}>
             {posture.label}<HintDot />
           </span>
-          <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
-            {posture.description}
-          </p>
+          <MarkdownContent className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>{posture.description}</MarkdownContent>
         </div>
       )}
     </MetricHint>

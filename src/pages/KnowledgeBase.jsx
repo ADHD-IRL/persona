@@ -1,3 +1,5 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect } from 'react';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { BookMarked, Plus, X, Trash2, FileText, Upload } from 'lucide-react';
@@ -14,6 +16,7 @@ function AddDocModal({ onAdd, onClose }) {
   const [source, setSource] = useState('design-doc');
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
+ useBackgroundWork(busy,'Knowledge import',{});
 
   const onFile = (e) => {
     const file = e.target.files?.[0];
@@ -143,7 +146,7 @@ export default function KnowledgeBase() {
                   </div>
                   <button aria-label="Delete" data-ui="icon" onClick={() => remove(d)}><Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--wr-text-muted)' }} /></button>
                 </div>
-                {d.content && <p className="text-xs mt-2 line-clamp-2" style={{ color: 'var(--wr-text-muted)' }}>{d.content.slice(0, 160)}</p>}
+                {d.content && <MarkdownContent className="text-xs mt-2 line-clamp-2" style={{ color: 'var(--wr-text-muted)' }}>{d.content.slice(0, 160)}</MarkdownContent>}
               </div>
             ))}
           </div>

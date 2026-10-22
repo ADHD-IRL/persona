@@ -1,3 +1,4 @@
+import MarkdownContent from '@/components/ui/MarkdownContent';
 
 const SEV_COLOR = {
   CRITICAL: { text: '#C0392B', bg: 'rgba(192,57,43,0.08)', border: 'rgba(192,57,43,0.25)' },
@@ -37,9 +38,7 @@ function ThreatRow({ threat, index }) {
           {threat.name}
         </p>
         {threat.description && (
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--wr-text-secondary)' }}>
-            {threat.description}
-          </p>
+          <MarkdownContent className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--wr-text-secondary)' }}>{threat.description}</MarkdownContent>
         )}
       </td>
       <td className="px-4 py-3.5 w-28">

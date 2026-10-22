@@ -47,7 +47,7 @@ export function recommendPanel(agents, text, count = 5) {
   return selected;
 }
 export function changedInputs(previous, current) {
-  return ['question', 'mode', 'constraints', 'scenario', 'decision', 'options', 'assumptions', 'agents', 'knowledge', 'threats', 'chains', 'model', 'version'].filter(key => canonical(previous?.[key]) !== canonical(current?.[key]));
+  return ['question', 'mode', 'constraints', 'scenario', 'decision', 'options', 'assumptions', 'agents', 'knowledge', 'knowledge_sources', 'threats', 'chains', 'model', 'version'].filter(key => canonical(previous?.[key]) !== canonical(current?.[key]));
 }
 export function optionInputs(snapshot, option) {
   const { options: _options, ...common } = snapshot;

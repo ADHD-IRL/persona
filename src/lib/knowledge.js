@@ -56,14 +56,15 @@ function scoreChunk(chunkTokens, queryTerms) {
  * Retrieve the top-k most relevant knowledge chunks for a query.
  * @returns [{ id, title, content, score, document_id }]
  */
-export async function retrieveKnowledge(db, query, k = 5) {
+export async function retrieveKnowledge(db, query, k = 5, documentIds) {
   if (!db?.KnowledgeChunk) return [];
   const terms = [...new Set(tokenize(query))];
   if (!terms.length) return [];
   let chunks;
   try {
-    chunks = await db.KnowledgeChunk.list();
-  } catch {
+    chunks = documentIds===undefined ? await db.KnowledgeChunk.list() : (await Promise.all(documentIds.map(document_id=>db.KnowledgeChunk.filter({document_id})))).flat();
+  } catch (error) {
+    if(documentIds!==undefined)throw error;
     return [];
   }
   if (!chunks?.length) return [];

@@ -1,3 +1,5 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
@@ -15,6 +17,7 @@ function NewDecisionModal({ onCreate, onClose }) {
   const [criteria, setCriteria] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [busy, setBusy] = useState(false);
+ useBackgroundWork(busy,'Decision update');
 
   const setOpt = (i, v) => setOptions(o => o.map((x, j) => j === i ? v : x));
   const valid = title.trim() && options.filter(o => o.trim()).length >= 2;
@@ -118,7 +121,7 @@ export default function Decisions() {
                   <ChevronRight className="w-4 h-4" style={{ color: 'var(--wr-text-muted)' }} />
                 </div>
                 <p className="text-sm font-semibold mb-1" style={{ color: 'var(--wr-text-primary)' }}>{d.title}</p>
-                {d.description && <p className="text-xs line-clamp-2 mb-2" style={{ color: 'var(--wr-text-muted)' }}>{d.description}</p>}
+                {d.description && <MarkdownContent className="text-xs line-clamp-2 mb-2" style={{ color: 'var(--wr-text-muted)' }}>{d.description}</MarkdownContent>}
                 <p className="text-xs font-mono" style={{ color: 'var(--wr-text-muted)' }}>{optionCounts[d.id] || 0} options</p>
               </Link>
               <button data-ui="icon"

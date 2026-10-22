@@ -4,17 +4,17 @@
 
 1. Choose **Start session** under Run. Scenario and decision pages lead to this same guided start, carrying the selected context.
 2. Frame the question, review the SME panel, and run the analysis in the background. A comparison creates one debate per option.
-3. Use **Analysis progress and brief** for progress, stop/resume, and the combined analysis brief. You can watch saved responses here.
+3. Use the contextual progress card in **Session Tracker** to monitor active work, stop/resume, and view saved debate responses. Open **Run details** for the full run record.
 4. Choose **Continue in Session Tracker** for the desired debate. Review findings, manage follow-up, inspect evidence, compare earlier debates, prioritize decision impact, and record closeout there.
 
-Session Tracker remains the home page. Its **Analysis progress** card keeps running or failed jobs visible before a session exists. Completed and stopped jobs are under a disclosure. **Session history** is a browser for saved sessions, reached from the tracker; every session opens its tracker.
+Session Tracker remains the home page. Contextual cards show preparing, running, or failed work when attention is needed. Completed runs leave room for findings and the session brief. **Session history** is a browser for saved sessions, reached from the tracker; every session opens its tracker.
 
 ## Screen responsibilities
 
 | Screen | Purpose |
 | --- | --- |
 | Start session | Prepare and launch guided work |
-| Analysis progress and brief | Monitor, stop/resume, and read the analysis-wide brief |
+| Run details and brief | Monitor, stop/resume, and read the analysis-wide brief |
 | Session Tracker | Manage one debate's findings, evidence, follow-up and conclusion |
 | Debate transcript | Read saved responses from a guided run; no independent run controls |
 | Session history | Find an older session and open its tracker |

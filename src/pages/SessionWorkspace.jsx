@@ -1,5 +1,7 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect, useRef, Component } from 'react';
-import ReactMarkdown from 'react-markdown';
+
 import { scoreSourceCredibility, saveTurnSources, TIER_COLORS, TIER_LABELS, SOURCE_TYPE_LABELS } from '@/lib/sources';
 import { analyzeSourceValidity } from '@/lib/llm';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
@@ -144,9 +146,7 @@ function AgentAssessmentCard({ sa, agent, round, onGenerate, onUpdate, onReset }
             </button>
             {briefExpanded && (
               <div className="px-3 pb-3">
-                <p className="text-xs leading-relaxed whitespace-pre-wrap break-words" style={{ color: 'var(--wr-text-secondary)' }}>
-                  {sa.round0_briefing}
-                </p>
+                <MarkdownContent className="text-xs leading-relaxed break-words" style={{ color: 'var(--wr-text-secondary)' }}>{sa.round0_briefing}</MarkdownContent>
               </div>
             )}
           </div>
@@ -175,7 +175,7 @@ function AgentAssessmentCard({ sa, agent, round, onGenerate, onUpdate, onReset }
             ) : (
               <div>
                 <div className={expanded ? '' : 'line-clamp-4'}>
-                  <p className="text-xs leading-relaxed whitespace-pre-wrap break-words" style={{ color: 'var(--wr-text-secondary)' }}>{text}</p>
+                  <MarkdownContent className="text-xs leading-relaxed break-words" style={{ color: 'var(--wr-text-secondary)' }}>{text}</MarkdownContent>
                 </div>
                 <button data-ui="action" onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs mt-2 transition-colors hover:opacity-80" style={{ color: 'var(--wr-amber)' }}>
                   {expanded ? <><ChevronUp className="w-3 h-3" /> Show less</> : <><ChevronDown className="w-3 h-3" /> Show more</>}
@@ -240,18 +240,7 @@ function SynthSectionCard({ title, children }) {
 function SynthMarkdown({ text }) {
   if (!text) return <p className="text-xs italic" style={{ color: 'var(--wr-text-muted)' }}>Not available</p>;
   return (
-    <ReactMarkdown
-      components={{
-        h3: ({ children }) => <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--wr-text-primary)', marginBottom: 4, marginTop: 12 }}>{children}</h3>,
-        p: ({ children }) => <p style={{ fontSize: 13.5, color: 'var(--wr-text-secondary)', lineHeight: 1.75, marginBottom: 10 }}>{children}</p>,
-        ul: ({ children }) => <ul style={{ paddingLeft: 18, marginBottom: 10 }}>{children}</ul>,
-        ol: ({ children }) => <ol style={{ paddingLeft: 18, marginBottom: 10 }}>{children}</ol>,
-        li: ({ children }) => <li style={{ fontSize: 13.5, color: 'var(--wr-text-secondary)', lineHeight: 1.7, marginBottom: 3 }}>{children}</li>,
-        strong: ({ children }) => <strong style={{ fontWeight: 700, color: 'var(--wr-text-primary)' }}>{children}</strong>,
-      }}
-    >
-      {text}
-    </ReactMarkdown>
+    <MarkdownContent>{text}</MarkdownContent>
   );
 }
 
@@ -360,9 +349,9 @@ function SynthesisPanel({ synthesis, sessionId, onGenerate, generating, synthSta
           />
         </div>
         {streamText ? (
-          <div data-ui="surface" className="rounded p-4 text-xs leading-relaxed whitespace-pre-wrap break-words font-mono overflow-y-auto max-h-[60vh]"
+          <div data-ui="surface" className="rounded p-4 text-xs leading-relaxed break-words overflow-y-auto max-h-[60vh]"
             style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)', color: 'var(--wr-text-secondary)' }}>
-            {streamText}
+            <MarkdownContent>{streamText}</MarkdownContent>
             <span className="inline-block w-1.5 h-3 ml-0.5 animate-pulse" style={{ backgroundColor: 'var(--wr-amber)' }} />
           </div>
         ) : (
@@ -766,18 +755,7 @@ function SynthesisPanel({ synthesis, sessionId, onGenerate, generating, synthSta
           )}
           {!consensusText && !contestedText && !blindText && !mitigationText && !insightsText && (
             <div data-ui="surface" className="rounded-2xl p-5" style={{ backgroundColor: 'var(--wr-bg-card)', border: '1px solid var(--wr-border)' }}>
-              <ReactMarkdown
-                components={{
-                  h2: ({ children }) => <h2 style={{ fontWeight: 700, color: 'var(--wr-amber)', marginBottom: 8, marginTop: 24, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: 12, fontFamily: 'JetBrains Mono, monospace' }}>{children}</h2>,
-                  h3: ({ children }) => <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--wr-text-primary)', marginBottom: 6, marginTop: 16 }}>{children}</h3>,
-                  p: ({ children }) => <p style={{ fontSize: 13.5, color: 'var(--wr-text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>{children}</p>,
-                  ul: ({ children }) => <ul style={{ paddingLeft: 20, marginBottom: 12 }}>{children}</ul>,
-                  li: ({ children }) => <li style={{ fontSize: 13.5, color: 'var(--wr-text-secondary)', lineHeight: 1.7, marginBottom: 4 }}>{children}</li>,
-                  strong: ({ children }) => <strong style={{ fontWeight: 700, color: 'var(--wr-text-primary)' }}>{children}</strong>,
-                }}
-              >
-                {resolvedText}
-              </ReactMarkdown>
+              <MarkdownContent>{resolvedText}</MarkdownContent>
             </div>
           )}
         </>
@@ -982,7 +960,7 @@ function ValidityReport({ report }) {
           {report.overall_confidence} CONFIDENCE
         </span>
       </div>
-      {report.summary && <p className="text-xs" style={{ color: 'var(--wr-text-secondary)' }}>{report.summary}</p>}
+      {report.summary && <MarkdownContent className="text-xs" style={{ color: 'var(--wr-text-secondary)' }}>{report.summary}</MarkdownContent>}
       {report.contradictions?.length > 0 && (
         <div>
           <p className="text-xs font-bold font-mono mb-2" style={{ color: '#C0392B' }}>CONTRADICTIONS ({report.contradictions.length})</p>
@@ -1391,6 +1369,7 @@ const briefAllAgents = async () => {
   // generateRound(2) already cascades into synthesis, so we only need to chain
   // R1 → R2. The effect below advances to R2 once R1 is complete.
   const [runningFull, setRunningFull] = useState(false);
+ useBackgroundWork(runningFull||generatingAll||generatingSynthesis||loadingReactions||savingThreats||extracting,'Session debate and synthesis',{});
   const runFullSession = () => {
     if (!sessionAgents.length || generatingAll) return;
     setRunningFull(true);
@@ -2362,7 +2341,7 @@ const briefAllAgents = async () => {
                                   <span className="text-xs font-mono" style={{ color: 'var(--wr-amber)' }}>{t.category}</span>
                                 )}
                               </div>
-                              <p className="text-xs leading-relaxed" style={{ color: 'var(--wr-text-secondary)' }}>{t.description}</p>
+                              <MarkdownContent className="text-xs leading-relaxed" style={{ color: 'var(--wr-text-secondary)' }}>{t.description}</MarkdownContent>
                             </div>
                           </div>
                         ))}

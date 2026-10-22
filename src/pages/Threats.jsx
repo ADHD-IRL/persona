@@ -1,3 +1,5 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import RiskLibrary from '@/components/risks/RiskLibrary';
 import { useState } from 'react';
 import { generateThreats as generateThreatsLLM } from '@/lib/llm';
@@ -75,7 +77,7 @@ function ThreatModal({ threat, domains, scenarios, onSave, onClose }) {
                   </button>
                 ))}
               </div>
-              <p className="text-xs mt-1" style={{ color:'var(--wr-text-muted)' }}>{form.impact ? IMP[form.impact] : '1 Negligible … 5 Severe'}</p>
+              <MarkdownContent className="text-xs mt-1" style={{ color:'var(--wr-text-muted)' }}>{form.impact ? IMP[form.impact] : '1 Negligible … 5 Severe'}</MarkdownContent>
             </div>
           </div>
         </div>
@@ -92,6 +94,7 @@ function AiGenerateModal({ scenarios, domains, onGenerated, onClose }) {
  const [genError,setGenError]=useState(''), [saving,setSaving]=useState(false);
   const [scenarioId, setScenarioId] = useState('');
   const [loading, setLoading] = useState(false);
+ useBackgroundWork(loading||saving,'Threat recommendations');
   const [generated, setGenerated] = useState([]);
   const [selected, setSelected] = useState(new Set());
 
@@ -145,7 +148,7 @@ function AiGenerateModal({ scenarios, domains, onGenerated, onClose }) {
                   <span className="text-sm font-medium" style={{ color:'var(--wr-text-primary)' }}>{t.name}</span>
                   <SeverityBadge severity={t.severity} />
                 </div>
-                <p className="text-xs mt-1" style={{ color:'var(--wr-text-secondary)' }}>{t.description}</p>
+                <MarkdownContent className="text-xs mt-1" style={{ color:'var(--wr-text-secondary)' }}>{t.description}</MarkdownContent>
               </div>
             ))}
             <div className="flex justify-end gap-2 mt-4">

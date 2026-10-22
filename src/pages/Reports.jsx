@@ -1,3 +1,4 @@
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useWorkspace } from '@/lib/WorkspaceContext';
@@ -1089,7 +1090,7 @@ export default function Reports() {
             <div className="mt-4">
               <div data-ui="surface" className="rounded p-3 mb-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold mb-1" style={{ color: 'var(--wr-text-secondary)' }}>{scenarioForExport.name}</p>
-                {scenarioForExport.description && <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{scenarioForExport.description}</p>}
+                {scenarioForExport.description && <MarkdownContent className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{scenarioForExport.description}</MarkdownContent>}
                 <p className="text-xs mt-1" style={{ color: 'var(--wr-text-muted)' }}>
                   {scenarioForExport.context_document?.length || 0} characters in context document
                 </p>
@@ -1124,7 +1125,7 @@ export default function Reports() {
             <div className="mt-4">
               <div data-ui="surface" className="rounded p-3 mb-4" style={{ backgroundColor: 'var(--wr-bg-secondary)', border: '1px solid var(--wr-border)' }}>
                 <p className="text-xs font-bold mb-1" style={{ color: 'var(--wr-text-secondary)' }}>{chainForExport.name}</p>
-                {chainForExport.description && <p className="text-xs mb-1" style={{ color: 'var(--wr-text-muted)' }}>{chainForExport.description}</p>}
+                {chainForExport.description && <MarkdownContent className="text-xs mb-1" style={{ color: 'var(--wr-text-muted)' }}>{chainForExport.description}</MarkdownContent>}
                 <p className="text-xs" style={{ color: 'var(--wr-text-muted)' }}>{chainForExport.steps?.length || 0} steps · {chainForExport.is_ai_generated ? 'AI Generated' : 'Manual'}</p>
               </div>
               <WrButton onClick={exportChainMarkdown}>

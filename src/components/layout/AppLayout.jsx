@@ -1,11 +1,10 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import BackgroundWork from './BackgroundWork';
 import Sidebar from './Sidebar';
 import { useState, useEffect } from 'react';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 
 export default function AppLayout() {
   const { db } = useWorkspace();
-  const location = useLocation();
   const [stats, setStats] = useState({ agentCount: 0, activeSessions: 0 });
 
   useEffect(() => {
@@ -20,13 +19,14 @@ export default function AppLayout() {
       } catch (e) {}
     };
     loadStats();
-  }, [db, location.pathname]);
+    const timer=setInterval(loadStats,60000);return()=>clearInterval(timer);
+  }, [db]);
 
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: 'var(--wr-bg-primary)' }}>
       <Sidebar stats={stats} />
       <main className="flex-1 ml-56 min-h-screen overflow-auto">
-        <Outlet />
+        <BackgroundWork />
       </main>
     </div>
   );

@@ -1,3 +1,5 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
+import MarkdownContent from '@/components/ui/MarkdownContent';
 import {workflowAction} from '@/components/ui/WorkflowControls';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -72,6 +74,7 @@ export default function NewSession() {
   const [showRecs, setShowRecs] = useState(false);
   const [createFromRec, setCreateFromRec] = useState(null); // full agent object ready for modal
   const [generatingAgent, setGeneratingAgent] = useState(null); // rec being generated (shows spinner)
+ useBackgroundWork(saving||loadingRecs||!!generatingAgent,'Session preparation',{});
   const [showNewAgentModal, setShowNewAgentModal] = useState(false);
   const set = (k,v) => setForm(f => ({...f,[k]:v}));
 
@@ -280,9 +283,7 @@ export default function NewSession() {
                       {mode.label}
                     </span>
                   </div>
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--wr-text-muted)' }}>
-                    {mode.description}
-                  </p>
+                  <MarkdownContent className="text-xs leading-relaxed" style={{ color: 'var(--wr-text-muted)' }}>{mode.description}</MarkdownContent>
                 </button>
               );
             })}
@@ -441,7 +442,7 @@ export default function NewSession() {
                                 {rec.discipline}
                               </span>
                             </div>
-                            <p className="text-xs leading-relaxed" style={{ color: 'var(--wr-text-muted)' }}>{rec.rationale}</p>
+                            <MarkdownContent className="text-xs leading-relaxed" style={{ color: 'var(--wr-text-muted)' }}>{rec.rationale}</MarkdownContent>
                           </div>
                           <div className="flex flex-col gap-1.5 flex-shrink-0">
                             {existing ? (

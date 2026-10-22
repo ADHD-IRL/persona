@@ -1,3 +1,4 @@
+import {useBackgroundWork} from '@/components/layout/BackgroundWork';
 import { useState, useEffect } from 'react';
 import { useWorkspace } from '@/lib/WorkspaceContext';
 import { Settings2, Key, Loader2, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
@@ -22,6 +23,7 @@ export default function Settings() {
   const [models, setModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [saving, setSaving] = useState(false);
+ useBackgroundWork(saving||loadingModels,'Settings update');
   const [testing, setTesting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [testResult, setTestResult] = useState(null);

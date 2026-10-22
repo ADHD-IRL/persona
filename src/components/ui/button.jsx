@@ -10,15 +10,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+          "bg-amber-500 text-black font-semibold hover:bg-amber-400",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-red-700 text-white hover:bg-red-600",
         outline:
-          "border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground",
+          "border border-amber-500/40 text-amber-500 bg-transparent hover:bg-amber-500/10",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border border-[var(--wr-border)] text-[var(--wr-text-secondary)] bg-transparent hover:bg-white/5",
+        ghost: "border border-transparent text-[var(--wr-text-secondary)] hover:bg-white/5",
+        link: "text-amber-300 underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -38,7 +38,9 @@ const Button = React.forwardRef(({ className, variant, size, asChild = false, ..
   const Comp = asChild ? Slot : "button"
   return (
     (<Comp
-      data-ui="action"
+      data-ui={variant==='link'?'reference':size==='icon'?'icon':'action'}
+      data-variant={({default:'amber',destructive:'danger'})[variant]||variant||'amber'}
+      data-size={size==='default'||!size?'md':size}
       className={cn(buttonVariants({ variant, size, className }))}
       ref={ref}
       {...props} />)
